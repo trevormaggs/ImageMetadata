@@ -1,132 +1,209 @@
 package heif.boxes;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import common.SequentialByteReader;
 import heif.BoxFactory;
 import heif.HeifBoxType;
-import common.SequentialByteReader;
 
 /**
- * This derived class handles the Box identified as {@code iprp} - Item Properties Box. For
- * technical details, refer to the Specification document - {@code ISO/IEC 23008-12:2017} on Page
- * 28.
- * 
- * Basically, this {@code ItemPropertiesBox} class enables the association of any item with an
- * ordered set of item properties. Item properties are small data records.
+ * Represents the {@code iprp} (Item Properties Box) in a HEIF/HEIC file structure.
  * 
  * <p>
- * Version History:
+ * The {@code ItemPropertiesBox} allows the definition of properties that describe specific
+ * characteristics of media items, such as images or auxiliary data. Each property is stored
+ * in the {@code ipco} (ItemPropertyContainerBox), while associations between items and their
+ * properties are managed through one or more {@code ipma} (ItemPropertyAssociationBox) entries.
  * </p>
- *
+ * 
+ * <p>
+ * <b>Box Structure:</b>
+ * </p>
+ * 
  * <ul>
- * <li>1.0 - Initial release by Trevor Maggs on 2 June 2025</li>
+ * <li>{@code ipco} – Contains an implicitly indexed list of property boxes.</li>
+ * <li>{@code ipma} – Maps items to property indices defined in {@code ipco}.</li>
  * </ul>
- *
+ * 
+ * <p>
+ * <b>Specification Reference:</b>
+ * </p>
+ * <ul>
+ * <li>ISO/IEC 23008-12:2017, Section 6.5.5 (Page 28)</li>
+ * </ul>
+ * 
+ * <p>
+ * <b>Version History:</b>
+ * </p>
+ * <ul>
+ * <li>1.0 – Initial release by Trevor Maggs on 2 June 2025</li>
+ * </ul>
+ * 
  * @author Trevor Maggs
  * @since 2 June 2025
- * @implNote Additional testing is required to validate the reliability and robustness of this
- *           implementation
+ * @implNote This implementation assumes a flat box hierarchy. Additional testing is recommended
+ *           for nested or complex structures.
  */
 public class ItemPropertiesBox extends Box
 {
-    private List<Box> associations;
     private ItemPropertyContainerBox ipco;
+    private List<ItemPropertyAssociationBox> associations;
 
     /**
-     * An inner class to support the nested {@code ipco} container box - ItemProperty Container Box.
+     * Represents the {@code ipco} (ItemPropertyContainerBox), a nested container holding an
+     * implicitly indexed list of item property boxes.
+     * 
+     * <p>
+     * Each property describes an aspect of an image or media item, such as color information, pixel
+     * layout, or transformation metadata.
+     * </p>
+     * 
+     * <p>
      * Refer to the Specification document - {@code ISO/IEC 23008-12:2017} on Page 28 for more
      * information.
+     * </p>
      */
     private static class ItemPropertyContainerBox extends Box
     {
         private List<Box> properties;
 
         /**
-         * The {@code ItemPropertyContainerBox} box contains an implicitly indexed list of item
-         * properties.
+         * Constructs an {@code ItemPropertyContainerBox} resource by reading sequential boxes from
+         * the {@code SequentialByteReader}.
+         * 
+         * <p>
+         * Each property box is read, added to the property list, and skipped over to handle cases
+         * where specific handlers for sub-boxes may not yet be implemented.
+         * </p>
          * 
          * @param box
-         *        the super Box object
+         *        the parent Box containing size and header information
          * @param reader
-         *        a SequentialByteReader object for sequential byte array access
+         *        the sequential byte reader for parsing box data
+         * 
+         * @throws IllegalArgumentException
+         *         if a sub-box reports a negative size (corrupted file)
          */
         private ItemPropertyContainerBox(Box box, SequentialByteReader reader)
         {
             super(box);
 
-            int pos = reader.getCurrentPosition();
+            int startpos = reader.getCurrentPosition();
+            int endpos = startpos + remainingBytes();
 
             properties = new ArrayList<>();
 
             do
             {
-                Box newBox = BoxFactory.createBox(new Box(reader), reader);
+                Box newBox = BoxFactory.createBox(reader);
+
+                if (newBox.remainingBytes() < 0)
+                {
+                    throw new IllegalArgumentException("Negative box size detected at [" + newBox.getBoxName() + "]");
+                }
 
                 /*
-                 * Need to skip bytes in case some boxes do not have a proper
-                 * handler to process them. hvcC box is one of them.
+                 * Skip the content to allow parsing unhandled sub-boxes safely.
+                 * hvcC box is one of them.
                  */
                 reader.skip(newBox.remainingBytes());
+
                 properties.add(newBox);
 
-            } while (reader.getCurrentPosition() < pos + remainingBytes());
+            } while (reader.getCurrentPosition() < endpos);
 
-            byteUsed += reader.getCurrentPosition() - pos;
+            if (reader.getCurrentPosition() != endpos)
+            {
+                throw new IllegalStateException("Mismatch in expected box size for ipco");
+            }
+
+            byteUsed += reader.getCurrentPosition() - startpos;
         }
     }
 
     /**
-     * This constructor creates a derived Box object, providing some important information. In this
-     * class, the {@code ItemPropertiesBox} box enables the association of any item with an ordered
-     * set of item properties. Item properties are small data records.
+     * Constructs an {@code ItemPropertiesBox} by reading the {@code ipco} (property container) and
+     * one or more {@code ipma} (item-property association) boxes.
      * 
-     * The ItemPropertiesBox consists of two parts: {@code ItemPropertyContainerBox} (short for
-     * ipco) that contains an implicitly indexed list of item properties, and one or more
-     * ItemPropertyAssociation boxes that associate items with item properties.
+     * The ItemPropertiesBox consists of two parts: {@code ItemPropertyContainerBox} that contains
+     * an implicitly indexed list of item properties, and one or more ItemPropertyAssociation boxes
+     * that associate items with item properties.
      * 
      * @param box
-     *        the super Box object
+     *        the parent Box header containing size and type
      * @param reader
-     *        a SequentialByteReader object for sequential byte array access
+     *        a {@code SequentialByteReader} to read the box content
+     * 
+     * @throws IllegalArgumentException
+     *         if malformed data is encountered, such as a negative box size
      */
     public ItemPropertiesBox(Box box, SequentialByteReader reader)
     {
         super(box);
 
-        int pos = reader.getCurrentPosition();
+        int startpos = reader.getCurrentPosition();
+        int endpos = startpos + remainingBytes();
 
         associations = new ArrayList<>();
 
-        /* First part - manage ItemPropertyContainerBox */
         ipco = new ItemPropertyContainerBox(new Box(reader), reader);
 
         do
         {
-            /* Second part - manage ItemPropertyAssociationBox */
-            ItemPropertyAssociationBox impa = new ItemPropertyAssociationBox(new Box(reader), reader);
+            associations.add(new ItemPropertyAssociationBox(new Box(reader), reader));
 
-            associations.add(impa);
-            // reader.skip(impa.remainingBytes());
+        } while (reader.getCurrentPosition() < endpos);
 
-        } while (reader.getCurrentPosition() < pos + remainingBytes());
-
-        byteUsed += reader.getCurrentPosition() - pos;
+        if (reader.getCurrentPosition() != endpos)
+        {
+            throw new IllegalStateException("Mismatch in expected box size for iprp");
+        }
+        
+        byteUsed += reader.getCurrentPosition() - startpos;
     }
 
+    /**
+     * Retrieves the list of property boxes contained within the {@code ipco} section.
+     * 
+     * @return a list of property Box objects
+     */
+    public List<Box> getProperties()
+    {
+        return Collections.unmodifiableList(ipco.properties);
+    }
+
+    /**
+     * Retrieves the list of item-property associations from the {@code ipma} section.
+     * 
+     * @return a list of ItemPropertyAssociationBox objects
+     */
+    public List<ItemPropertyAssociationBox> getAssociations()
+    {
+        return associations;
+    }
+
+    /**
+     * Returns a combined list of all boxes contained in this {@code ItemPropertiesBox}, including
+     * both properties and associations.
+     * 
+     * @return a list of Box objects in reading order
+     */
     @Override
     public List<Box> addBoxList()
     {
         List<Box> combinedList = new ArrayList<>(ipco.properties);
+
         combinedList.addAll(associations);
 
-        return null;
+        return combinedList;
     }
 
     /**
-     * Displays a list of structured references associated with the specified HEIF based file,
-     * useful for analytical purposes.
-     *
-     * @return the string
+     * Provides a hierarchical string representation of the box structure, including all properties
+     * and their associations. Useful for debugging or analysis.
+     * 
+     * @return a formatted string representing the structure of this box
      */
     @Override
     public String showBoxStructure()
@@ -138,21 +215,14 @@ public class ItemPropertiesBox extends Box
 
         for (Box box : ipco.properties)
         {
-            line.append(String.format("\t\t\t'%s':%n", box.getBoxName()));
-        }
-
-        line.append(System.lineSeparator());
-
-        for (Box box : ipco.properties)
-        {
             if (HeifBoxType.getBoxType(box.getBoxName()) != HeifBoxType.UNKNOWN)
             {
-                line.append(String.format("\t%s%n", box.showBoxStructure()));
+                line.append(String.format("\t\t\t'%s': %s%n", box.getBoxName(), box.showBoxStructure()));
             }
 
             else
             {
-                line.append(String.format("\t\t\t%s%n", box.showBoxStructure()));
+                line.append(String.format("%s%n", box.showBoxStructure()));
             }
         }
 

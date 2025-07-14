@@ -178,7 +178,7 @@ public class Box
     {
         StringBuilder line = new StringBuilder();
 
-        line.append(String.format("%s '%s':", HeifBoxType.getBoxType(getBoxName()).getBoxName(), getBoxName()));
+        line.append(String.format("\t\t\t'%s':\t\t\t%s", getBoxName(), HeifBoxType.getBoxType(getBoxName()).getBoxName()));
 
         return line.toString();
     }

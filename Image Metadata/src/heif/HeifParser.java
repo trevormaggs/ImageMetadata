@@ -5,11 +5,14 @@ import java.nio.ByteOrder;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
+import java.util.Map;
 import common.AbstractImageParser;
 import common.BaseMetadata;
 import common.ImageReadErrorException;
 import common.Metadata;
 import common.SequentialByteReader;
+import heif.boxes.Box;
 import logger.LogFactory;
 
 /**
@@ -103,6 +106,16 @@ public class HeifParser extends AbstractImageParser
         BoxHandler handler = new BoxHandler(getImageFile(), heifReader);
 
         metadata = handler.processMetadata();
+
+        Map<HeifBoxType, List<Box>> map = handler.getBoxes();
+
+        for (List<Box> list : map.values())
+        {
+            for (Box box : list)
+            {
+                System.out.printf("%s\n", box.showBoxStructure());
+            }
+        }
 
         return metadata;
     }

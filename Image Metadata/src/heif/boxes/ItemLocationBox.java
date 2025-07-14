@@ -177,7 +177,7 @@ public class ItemLocationBox extends FullBox
      * 
      * @return the matching ExtentData resource, or null if not found
      */
-    public ExtentData findExtentData(int itemID)
+    public ExtentData findFirstExtentData(int itemID)
     {
         for (ExtentData extent : extentList)
         {
@@ -188,6 +188,29 @@ public class ItemLocationBox extends FullBox
         }
 
         return null;
+    }
+
+    /**
+     * Finds all extents in this box that match the given {@code itemID}.
+     *
+     * @param itemID
+     *        the item identifier to search for
+     * 
+     * @return a new list of matching ExtentData, or an empty list if none found
+     */
+    public List<ExtentData> findExtentDataList(int itemID)
+    {
+        List<ExtentData> matchingExtents = new ArrayList<>();
+
+        for (ExtentData extent : extentList)
+        {
+            if (extent.getItemID() == itemID)
+            {
+                matchingExtents.add(extent);
+            }
+        }
+
+        return matchingExtents;
     }
 
     /**

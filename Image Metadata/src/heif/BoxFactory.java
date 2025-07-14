@@ -5,8 +5,10 @@ import heif.boxes.*;
 
 public final class BoxFactory
 {
-    public static Box createBox(Box box, SequentialByteReader reader)
+    public static Box createBox(SequentialByteReader reader)
     {
+        Box box = new Box(reader);
+
         switch (HeifBoxType.getBoxType(box.getBoxName()))
         {
             case BOX_FILE_TYPE:
@@ -77,9 +79,7 @@ public final class BoxFactory
              * break;
              */
             default:
-            break;
+                return box;
         }
-
-        return box;
     }
 }

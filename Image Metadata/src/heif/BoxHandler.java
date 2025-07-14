@@ -2,6 +2,7 @@ package heif;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,30 +19,28 @@ import tif.TifParser;
 /**
  * Handles parsing of HEIF/HEIC file structures based on the ISO Base Media Format.
  *
- * <p>
- * This class provides access to primary HEIF box components, such as Exif, by
- * navigating through {@code iloc}, {@code iinf}, {@code pitm}, and related boxes.
- * </p>
- *
+ * Supports Exif extraction, box navigation, and hierarchical parsing.
+ * 
  * <p>
  * For detailed specifications, see:
+ * </p>
+ * 
  * <ul>
  * <li>{@code ISO/IEC 14496-12:2015}</li>
  * <li>{@code ISO/IEC 23008-12:2017}</li>
  * </ul>
- * </p>
  *
+ * @apiNote According to HEIF/HEIC standards, some box types are optional and may appear zero or one
+ *          time per file.
+ * 
  * @author Trevor Maggs
  * @since 17 June 2025
- *
- * @implNote According to HEIF/HEIC standards, some box types are optional and may appear zero or
- *           one time per file.
  */
 public class BoxHandler implements ImageHandler
 {
     private static final LogFactory LOGGER = LogFactory.getLogger(BoxHandler.class);
 
-    private final Map<HeifBoxType, Box> heifBoxMap;
+    private final Map<HeifBoxType, List<Box>> heifBoxMap;
     private final SequentialByteReader reader;
     private final Path imageFile;
 
@@ -70,9 +69,7 @@ public class BoxHandler implements ImageHandler
     {
         this.imageFile = fpath;
         this.reader = reader;
-        this.heifBoxMap = new LinkedHashMap<>();
-
-        parseBoxes();
+        this.heifBoxMap = new LinkedHashMap<HeifBoxType, List<Box>>();
     }
 
     /**
@@ -91,11 +88,12 @@ public class BoxHandler implements ImageHandler
     /**
      * Parses all HEIF boxes from the file stream and populates the internal box map.
      */
-    private void parseBoxes()
+    public void parse()
     {
         while (reader.getCurrentPosition() < reader.length())
         {
-            Box box = BoxFactory.createBox(new Box(reader), reader);
+            long startPos = reader.getCurrentPosition();
+            Box box = BoxFactory.createBox(reader);
 
             /*
              * TODO: We don't know how the data within the Media Data box can be effectively handled
@@ -103,13 +101,14 @@ public class BoxHandler implements ImageHandler
              * However, once a handler is developed, this should take care of that box correctly,
              * hopefully.
              */
-            if (HeifBoxType.BOX_MEDIA_DATA.isEqualBox(box.getBoxName()))
+            if (HeifBoxType.BOX_MEDIA_DATA.matchesBoxName(box.getBoxName()))
             {
-                LOGGER.warn("Skipping unhandled Media Data box [" + box.getBoxName() + "]");
+                LOGGER.warn("Skipping unhandled Media Data box [" + box.getBoxName() + "] at offset [" + startPos + "]");
                 break;
             }
 
-            heifBoxMap.putIfAbsent(box.getHeifType(), box);
+            heifBoxMap.putIfAbsent(box.getHeifType(), new ArrayList<Box>());
+            heifBoxMap.get(box.getHeifType()).add(box);
 
             List<Box> children = box.addBoxList();
 
@@ -117,7 +116,8 @@ public class BoxHandler implements ImageHandler
             {
                 for (Box child : children)
                 {
-                    heifBoxMap.put(child.getHeifType(), child);
+                    heifBoxMap.putIfAbsent(child.getHeifType(), new ArrayList<Box>());
+                    heifBoxMap.get(child.getHeifType()).add(child);
                 }
             }
         }
@@ -137,8 +137,8 @@ public class BoxHandler implements ImageHandler
      */
     public byte[] getExifBlock() throws ImageReadErrorException
     {
-        ItemLocationBox iloc = getILOC();
         ItemInformationBox iinf = getIINF();
+        ItemLocationBox iloc = getILOC();
 
         if (iinf == null || !iinf.hasExifBlock())
         {
@@ -146,39 +146,55 @@ public class BoxHandler implements ImageHandler
         }
 
         int exifID = iinf.getExifID();
-        ExtentData extent = (iloc != null) ? iloc.findExtentData(exifID) : null;
+        List<ExtentData> extents = (iloc != null) ? iloc.findExtentDataList(exifID) : null;
 
-        if (extent == null)
+        if (extents == null || extents.isEmpty())
         {
             throw new ImageReadErrorException("Item Location Box missing or no entry for Exif ID [" + exifID + "]");
         }
 
-        reader.mark();
-        reader.seek(extent.getExtentOffset());
+        int totalLength = 0;
+        List<byte[]> parts = new ArrayList<byte[]>();
 
-        if (extent.getExtentLength() < 8)
+        for (ExtentData extent : extents)
         {
-            throw new ImageReadErrorException("Extent too small to contain Exif header in [" + imageFile + "]");
+            reader.mark();
+            reader.seek(extent.getExtentOffset());
+
+            if (extent.getExtentLength() < 8)
+            {
+                throw new ImageReadErrorException("Extent too small to contain Exif header in [" + imageFile + "]");
+            }
+
+            int exifTiffHeaderOffset = reader.readInteger();
+
+            if (extent.getExtentLength() < exifTiffHeaderOffset + 4)
+            {
+                throw new ImageReadErrorException("Invalid TIFF header offset for Exif block in [" + imageFile + "]");
+            }
+
+            reader.skip(exifTiffHeaderOffset);
+            byte[] exifPart = reader.peek(reader.getCurrentPosition(), extent.getExtentLength() - exifTiffHeaderOffset - 4);
+            reader.reset();
+
+            parts.add(exifPart);
+            totalLength += exifPart.length;
         }
 
-        int exifTiffHeaderOffset = reader.readInteger();
+        int pos = 0;
+        byte[] exifData = new byte[totalLength];
 
-        if (extent.getExtentLength() < exifTiffHeaderOffset + 4)
+        for (byte[] part : parts)
         {
-            throw new ImageReadErrorException("Invalid TIFF header offset for Exif block in [" + imageFile + "]");
+            System.arraycopy(part, 0, exifData, pos, part.length);
+            pos += part.length;
         }
 
-        reader.skip(exifTiffHeaderOffset);
-
-        byte[] exifBlock = reader.peek(reader.getCurrentPosition(), extent.getExtentLength() - exifTiffHeaderOffset - 4);
-
-        reader.reset();
-
-        return exifBlock;
+        return exifData;
     }
 
     /**
-     * Retrieves a specific box by its {@code HeifBoxType} and expected class.
+     * Retrieves the first matching box of a specific type and class.
      *
      * @param <T>
      *        the generic box type
@@ -192,8 +208,20 @@ public class BoxHandler implements ImageHandler
     @SuppressWarnings("unchecked")
     private <T extends Box> T getBox(HeifBoxType type, Class<T> clazz)
     {
-        Box box = heifBoxMap.get(type);
-        return clazz.isInstance(box) ? (T) box : null;
+        List<Box> boxes = heifBoxMap.get(type);
+
+        if (boxes != null)
+        {
+            for (Box box : boxes)
+            {
+                if (clazz.isInstance(box))
+                {
+                    return (T) box;
+                }
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -267,11 +295,11 @@ public class BoxHandler implements ImageHandler
     }
 
     /**
-     * Returns a map of parsed HEIF boxes.
-     *
-     * @return the box map, keyed by {@code HeifBoxType}
+     * Returns the parsed box map.
+     * 
+     * @return the map of box lists, keyed by HeifBoxType
      */
-    public Map<HeifBoxType, Box> getBoxes()
+    public Map<HeifBoxType, List<Box>> getBoxes()
     {
         return heifBoxMap;
     }
@@ -289,6 +317,8 @@ public class BoxHandler implements ImageHandler
     @Override
     public Metadata<? extends BaseMetadata> processMetadata() throws IOException, ImageReadErrorException
     {
+        parse();
+        
         byte[] exifData = getExifBlock();
 
         return new TifParser(imageFile, exifData).getMetadata();

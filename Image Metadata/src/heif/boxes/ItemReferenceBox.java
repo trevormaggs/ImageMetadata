@@ -124,7 +124,7 @@ public class ItemReferenceBox extends FullBox
 
         for (Box box : references)
         {
-            line.append(String.format("\t\t%s%n", box.showBoxStructure()));
+            line.append(String.format("%s%n", box.showBoxStructure()));
         }
 
         return line.toString();

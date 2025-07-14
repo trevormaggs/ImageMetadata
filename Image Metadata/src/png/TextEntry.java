@@ -1,0 +1,106 @@
+package png;
+
+import common.DateParser;
+import tif.TagHint;
+import tif.TagEntries.TagPngChunk;
+
+/**
+ * Represents a textual metadata entry within a PNG chunk, consisting of a tag type,
+ * keyword, and associated text value.
+ *
+ * Typically used to store entries from textual chunks such as {@code tEXt}, {@code iTXt}, or
+ * {@code zTXt}.
+ *
+ * <p>
+ * Change History:
+ * </p>
+ * 
+ * <ul>
+ * <li>Version 1.0 – Initial release by Trevor Maggs on 21 June 2025</li>
+ * </ul>
+ *
+ * @version 1.0
+ * @author Trevor Maggs
+ * @since 21 June 2025
+ */
+public class TextEntry
+{
+    private final TagPngChunk tag;
+    private final String keyword;
+    private final String text;
+
+    /**
+     * Constructs a {@code TextEntry} with a PNG tag, keyword, and associated text value.
+     *
+     * @param tag
+     *        the tag indicating the PNG chunk type
+     * @param keyword
+     *        the keyword name identifying the entry
+     * @param text
+     *        the text value associated with the keyword
+     */
+    public TextEntry(TagPngChunk tag, String keyword, String text)
+    {
+        this.tag = tag;
+        this.keyword = keyword;
+        this.text = text;
+    }
+
+    /**
+     * Returns the tag associated with this entry.
+     *
+     * @return the {@link TagPngChunk} type
+     */
+    public TagPngChunk getTag()
+    {
+        return tag;
+    }
+
+    /**
+     * Returns the keyword for this entry.
+     *
+     * @return the keyword string
+     */
+    public String getKeyword()
+    {
+        return keyword;
+    }
+
+    public TextKeyword getKeywordEnum()
+    {
+        return TextKeyword.getKeyword(keyword);
+    }
+
+    /**
+     * Returns the interpreted value of this text entry. If the associated tag suggests a date hint,
+     * the value will be parsed as a date.
+     *
+     * @return the raw or parsed value string
+     */
+    public String getValue()
+    {
+        if (getKeywordEnum().getHint() == TagHint.HINT_DATE)
+        {
+            return DateParser.convertToDate(text).toString();
+        }
+
+        return text;
+    }
+
+    /**
+     * Returns a formatted string representation of this text entry.
+     *
+     * @return a detailed multi-line string
+     */
+    @Override
+    public String toString()
+    {
+        StringBuilder line = new StringBuilder();
+
+        line.append(String.format(" %-20s %s%n", "[Tag Type]", tag));
+        line.append(String.format(" %-20s %s%n", "[Keyword]", keyword));
+        line.append(String.format(" %-20s %s%n", "[Text]", text));
+
+        return line.toString();
+    }
+}

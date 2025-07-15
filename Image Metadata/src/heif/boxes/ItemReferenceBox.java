@@ -75,7 +75,7 @@ public class ItemReferenceBox extends FullBox
             Box newBox = new SingleItemTypeReferenceBox(new Box(reader), reader, (getVersion() != 0));
             references.add(newBox);
 
-        } while (reader.getCurrentPosition() < pos + remainingBytes());
+        } while (reader.getCurrentPosition() < pos + available());
 
         byteUsed += reader.getCurrentPosition() - pos;
     }

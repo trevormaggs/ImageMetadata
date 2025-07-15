@@ -90,7 +90,7 @@ public class ItemPropertiesBox extends Box
             super(box);
 
             int startpos = reader.getCurrentPosition();
-            int endpos = startpos + remainingBytes();
+            int endpos = startpos + available();
 
             properties = new ArrayList<>();
 
@@ -98,7 +98,7 @@ public class ItemPropertiesBox extends Box
             {
                 Box newBox = BoxFactory.createBox(reader);
 
-                if (newBox.remainingBytes() < 0)
+                if (newBox.available() < 0)
                 {
                     throw new IllegalArgumentException("Negative box size detected at [" + newBox.getBoxName() + "]");
                 }
@@ -107,7 +107,7 @@ public class ItemPropertiesBox extends Box
                  * Skip the content to allow parsing unhandled sub-boxes safely.
                  * hvcC box is one of them.
                  */
-                reader.skip(newBox.remainingBytes());
+                reader.skip(newBox.available());
 
                 properties.add(newBox);
 
@@ -143,7 +143,7 @@ public class ItemPropertiesBox extends Box
         super(box);
 
         int startpos = reader.getCurrentPosition();
-        int endpos = startpos + remainingBytes();
+        int endpos = startpos + available();
 
         associations = new ArrayList<>();
 
@@ -159,7 +159,7 @@ public class ItemPropertiesBox extends Box
         {
             throw new IllegalStateException("Mismatch in expected box size for iprp");
         }
-        
+
         byteUsed += reader.getCurrentPosition() - startpos;
     }
 
@@ -180,7 +180,7 @@ public class ItemPropertiesBox extends Box
      */
     public List<ItemPropertyAssociationBox> getAssociations()
     {
-        return associations;
+        return Collections.unmodifiableList(associations);
     }
 
     /**

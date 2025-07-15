@@ -2,6 +2,7 @@ package heif.boxes;
 
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.List;
 import heif.HeifBoxType;
 import heif.HeifBoxType.BoxCategory;
@@ -10,6 +11,7 @@ import common.SequentialByteReader;
 
 public class Box
 {
+    private static final long BOX_SIZE_TO_EOF = Long.MAX_VALUE;
     private ByteOrder order;
     private long boxsize;
     private byte[] boxtype;
@@ -46,14 +48,16 @@ public class Box
 
         else if (boxsize == 0)
         {
-            // TODO: Make a decision how this logic is best managed.
-            // This is when the box is the last one in the stream.
-            boxsize = -1;
+            boxsize = BOX_SIZE_TO_EOF;
         }
 
         if (getBoxName().equals("uuid"))
         {
-            usertype = new String(reader.readBytes(16), StandardCharsets.UTF_8);
+            // TESTING
+            byte[] uuidBytes = reader.readBytes(16);
+
+            usertype = ByteValueConverter.toHex(uuidBytes);
+            System.out.println(usertype); // Outputs UUID in uppercase hexadecimal
         }
 
         byteUsed = reader.getCurrentPosition() - pos;
@@ -69,7 +73,7 @@ public class Box
     public Box(Box box)
     {
         this.boxsize = box.boxsize;
-        this.boxtype = box.boxtype;
+        this.boxtype = box.boxtype.clone();
         this.usertype = box.usertype;
         this.byteUsed = box.byteUsed;
         this.order = box.order;
@@ -94,7 +98,7 @@ public class Box
      */
     public String getBoxName()
     {
-        return new String(boxtype, StandardCharsets.UTF_8);
+        return new String(boxtype, StandardCharsets.US_ASCII);
     }
 
     /**
@@ -103,9 +107,9 @@ public class Box
      *
      * @return The size of this box
      */
-    public int getBoxSize()
+    public long getBoxSize()
     {
-        return (int) boxsize;
+        return boxsize;
     }
 
     /**
@@ -113,8 +117,13 @@ public class Box
      *
      * @return the size of the remaining bytes
      */
-    public int remainingBytes()
+    public int available()
     {
+        if (boxsize == BOX_SIZE_TO_EOF)
+        {
+            return Integer.MAX_VALUE;
+        }
+
         return (int) (boxsize - byteUsed);
     }
 
@@ -145,7 +154,7 @@ public class Box
      */
     public boolean isContainerType()
     {
-        return (HeifBoxType.getBoxType(getBoxName()).getBoxCategory() == BoxCategory.CONTAINER);
+        return (type.getBoxCategory() == BoxCategory.CONTAINER);
     }
 
     /**
@@ -178,19 +187,19 @@ public class Box
     {
         StringBuilder line = new StringBuilder();
 
-        line.append(String.format("\t\t\t'%s':\t\t\t%s", getBoxName(), HeifBoxType.getBoxType(getBoxName()).getBoxName()));
+        line.append(String.format("\t\t\t'%s':\t\t\t%s", getBoxName(), type.getBoxName()));
 
         return line.toString();
     }
 
     /**
-     * XXX
+     * Returns an empty list by default. Subclasses that contain child boxes should override this.
      *
-     * @return
+     * @return a list of contained boxes, or an empty list if none.
      */
     public List<Box> addBoxList()
     {
-        return null;
+        return Collections.emptyList();
     }
 
     /**
@@ -210,7 +219,7 @@ public class Box
 
         if (getUserType().length() > 0)
         {
-            line.append(String.format("  %-24 %s%n", "[User Type]", getUserType()));
+            line.append(String.format("  %-24s %s%n", "[User Type]", getUserType()));
         }
 
         return line.toString();

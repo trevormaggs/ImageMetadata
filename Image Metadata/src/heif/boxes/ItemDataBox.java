@@ -39,7 +39,7 @@ public class ItemDataBox extends Box
     {
         super(box);
 
-        int count = remainingBytes();
+        int count = available();
         int pos = reader.getCurrentPosition();
 
         data = new int[count];

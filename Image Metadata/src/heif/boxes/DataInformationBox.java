@@ -24,7 +24,7 @@ import common.SequentialByteReader;
  * @since 2 June 2025
  * @implNote Additional testing is required to validate the reliability and robustness of this
  *           implementation
- */  
+ */
 public class DataInformationBox extends Box
 {
     private DataReferenceBox dref;
@@ -68,7 +68,7 @@ public class DataInformationBox extends Box
             line.append(System.lineSeparator());
             line.append(String.format("\t\t%s '%s':\tentryCount=%d", this.getClass().getSimpleName(), getBoxName(), entryCount));
             line.append(System.lineSeparator());
-            
+
             for (int i = 0; i < entryCount; i++)
             {
                 line.append(String.format("\t\t\tName: '%s'\tLocation: '%s'", dataEntry[i].name, dataEntry[i].location));
@@ -119,9 +119,9 @@ public class DataInformationBox extends Box
 
             int pos = reader.getCurrentPosition();
 
-            if (remainingBytes() > 0)
+            if (available() > 0)
             {
-                String[] parts = ByteValueConverter.splitNullDelimitedStrings(reader.readBytes(getBoxSize()));
+                String[] parts = ByteValueConverter.splitNullDelimitedStrings(reader.readBytes((int) getBoxSize()));
 
                 if (BitFlags().get(0) && parts.length > 0)
                 {

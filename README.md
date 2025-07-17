@@ -1,12 +1,8 @@
-Sure! Here’s the README intro without the Contributing section:
-
----
-
 # Image Metadata Parsing Toolkit
 
-Welcome to the **Image Metadata Parsing Toolkit** — a Java library dedicated to extracting and analysing **Exif metadata** from various image formats, including TIFF, JPEG, PNG, and HEIF/HEIC.
+Welcome to the **Image Metadata Parsing Toolkit** — a Java library dedicated to extracting and analysing **Exif metadata** from certain image formats, specifically TIFF, JPEG, PNG, HEIF/HEIC and possibly WEBP.
 
-This project is primarily a showcase of my programming and documentation skills, demonstrating proficiency in Java, binary file parsing, metadata standards, and producing clear, comprehensive technical documentation. It combines practical utility with clean, extensible design to solve real-world problems in image metadata extraction.
+This project is a **development in progress**, aimed at showcasing my programming and documentation skills by building a robust and extensible image metadata parser. It demonstrates proficiency in Java, binary file parsing, metadata standards, and producing clear, comprehensive technical documentation. The library combines practical utility with clean, modular design to solve real-world problems in image metadata extraction.
 
 Currently, the focus is exclusively on **Exif metadata** parsing, providing reliable access to detailed camera and image capture information embedded within images.
 
@@ -32,7 +28,4 @@ Explore the full API documentation here: [Javadoc Documentation](https://trevorm
 2. Import the project into your favourite Java IDE supporting Java 8 or above.
 3. Review the [Javadoc documentation](https://trevormaggs.github.io/ImageMetadata/) for detailed API usage.
 4. Use the library to parse Exif metadata from supported image files as needed.
-
----
-
-If you want, I can help you add build or test instructions next!
+   

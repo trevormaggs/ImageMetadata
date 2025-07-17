@@ -3,262 +3,252 @@ package common;
 import java.nio.ByteOrder;
 
 /**
- * This class performs reader operations intended for obtaining data from a byte array at random.
+ * Performs random-access reading of primitive data types from a byte array.
+ * 
+ * <p>
+ * Supports reading of signed and unsigned integers, floating-point values, and byte sequences, with
+ * configurable byte order (big-endian or little-endian).
+ * </p>
  * 
  * <p>
  * Change History:
  * </p>
  * 
  * <ul>
- * <li>Version 1.0 - Initial release by Trevor Maggs on 21 June 2025</li>
+ * <li>Version 1.0 – Initial release by Trevor Maggs on 21 June 2025</li>
  * </ul>
  * 
- * @version 0.1
- * @author Trevor Maggs, trevmaggs@tpg.com.au
+ * @version 1.0
+ * @author Trevor Maggs
  * @since 21 June 2025
  */
 public class RandomAccessByteReader extends AbstractByteReader
 {
     /**
-     * Constructs an instance to store the specified byte array containing the payload data to be
-     * read from the beginning of the array.
+     * Constructs an instance to read from the specified byte array, starting at index 0.
      *
      * @param buf
-     *        an array of bytes that acts as a buffer within this instance
+     *        the byte array to read from
      */
-    public RandomAccessByteReader(byte[] buf)
+    public RandomAccessByteReader(final byte[] buf)
     {
         this(buf, 0);
     }
 
     /**
-     * Constructs an instance to store the byte array containing payload data and the byte order to
-     * interpret the input bytes correctly. The data will be read from the beginning of the array.
+     * Constructs an instance to read from the specified byte array, starting at index 0, using the
+     * given byte order.
      *
      * @param buf
-     *        an array of bytes acting as the buffer for this instance
+     *        the byte array to read from
      * @param order
-     *        the byte order, either {@code ByteOrder.BIG_ENDIAN} or {@code ByteOrder.LITTLE_ENDIAN}
+     *        the byte order to use
      */
-    public RandomAccessByteReader(byte[] buf, ByteOrder order)
+    public RandomAccessByteReader(final byte[] buf, final ByteOrder order)
     {
         this(buf, 0, order);
     }
 
     /**
-     * Constructs an instance to store a byte array that contains payload or raw data. The data will
-     * be read from the specified offset within the array.
+     * Constructs an instance to read from the specified byte array, starting at the given offset.
      *
      * @param buf
-     *        an array of bytes that acts as a buffer for this instance
+     *        the byte array to read from
      * @param offset
-     *        specifies the starting position within the specified array
+     *        the starting index
      */
-    public RandomAccessByteReader(byte[] buf, int offset)
+    public RandomAccessByteReader(final byte[] buf, final int offset)
     {
         this(buf, offset, ByteOrder.BIG_ENDIAN);
     }
 
     /**
-     * Constructs an instance to store the specified byte array containing payload data and the byte
-     * order to interpret the input bytes correctly. The offset specifies the starting position
-     * within the array to be read from.
+     * Constructs an instance to read from the specified byte array, starting at the given offset,
+     * using the specified byte order.
      *
      * @param buf
-     *        an array of bytes acting as the buffer for this instance
+     *        the byte array to read from
      * @param offset
-     *        specifies the starting position within the specified array
+     *        the starting index
      * @param order
-     *        the byte order, either {@code ByteOrder.BIG_ENDIAN} or {@code ByteOrder.LITTLE_ENDIAN}
+     *        the byte order to use
      */
-    public RandomAccessByteReader(byte[] buf, int offset, ByteOrder order)
+    public RandomAccessByteReader(final byte[] buf, final int offset, final ByteOrder order)
     {
         super(buf, offset, order);
     }
 
     /**
-     * Reads a single byte at the specified position in the byte array.
-     * 
+     * Reads a single byte at the specified index.
+     *
      * @param index
-     *        the position of the first byte in the sub-array
+     *        the byte index
      * 
-     * @return the byte at the specified position
+     * @return the byte value
      */
-    public byte readByte(int index)
+    public byte readByte(final int index)
     {
         return getByte(index);
     }
 
     /**
-     * Reads an unsigned 8-bit integer at the specified position in the byte array. The returned
-     * value is a short type to allow the unsigned byte to be returned without any form of data
-     * corruption.
+     * Reads an unsigned 8-bit integer at the specified index.
      *
      * @param index
-     *        the position of the first byte in the sub-array
+     *        the byte index
      * 
-     * @return the byte at the specified position, which can have a value ranging from 0 to 255
+     * @return the unsigned value in the range [0, 255]
      */
-    public short readUnsignedByte(int index)
+    public short readUnsignedByte(final int index)
     {
         return (short) (readByte(index) & 0xFF);
     }
 
     /**
-     * Reads up to the length of a sub-array starting at the specified position in the byte array.
+     * Reads up to the specified length of bytes, starting at the given index.
      *
      * @param index
-     *        the position of the first byte in the sub-array
+     *        the starting index
      * @param length
-     *        the total number of bytes in the sub-array
-     *
-     * @return a new byte array containing the specified subset of the original array
+     *        the number of bytes to read
+     * 
+     * @return a new byte array containing the data
      */
-    public byte[] readBytes(int index, int length)
+    public byte[] readBytes(final int index, final int length)
     {
         return getBytes(index, length);
     }
 
     /**
-     * Reads two bytes at the specified position and returns the result as a short (16-bit) signed
-     * value, based on the current byte ordering.
-     * 
+     * Reads a signed 16-bit integer from the specified index.
+     *
      * @param index
-     *        the position of the first byte in the sub-array
+     *        the starting index
      * 
-     * @return a signed short 2-byte value
+     * @return the signed short value
      */
-    public short readShort(int index)
+    public short readShort(final int index)
     {
-        byte byte1 = getByte(index);
-        byte byte2 = getByte(index + 1);
+        byte b1 = getByte(index);
+        byte b2 = getByte(index + 1);
 
         if (getByteOrder() == ByteOrder.BIG_ENDIAN)
         {
-            return (short) ((byte1 << 8) & 0xFF00 | byte2 & 0xFF);
+            return (short) (((b1 & 0xFF) << 8) | (b2 & 0xFF));
         }
 
         else
         {
-            return (short) ((byte2 << 8) & 0xFF00 | byte1 & 0xFF);
+            return (short) (((b2 & 0xFF) << 8) | (b1 & 0xFF));
         }
     }
 
     /**
-     * Reads two bytes from the specified position and returns the result as an unsigned value,
-     * based on the current byte ordering. The return value is an integer type to allow the unsigned
-     * short to be returned without truncation.
-     * 
+     * Reads an unsigned 16-bit integer from the specified index.
+     *
      * @param index
-     *        the position of the first byte in the sub-array
+     *        the starting index
      * 
-     * @return an unsigned integer value
+     * @return the unsigned value in the range [0, 65535]
      */
-    public int readUnsignedShort(int index)
+    public int readUnsignedShort(final int index)
     {
-        return ((int) readShort(index) & 0xFFFF);
+        return readShort(index) & 0xFFFF;
     }
 
     /**
-     * Reads four bytes at the specified position and returns the result as a signed integer
-     * (32-bit) value, based on the current byte ordering.
-     * 
+     * Reads a signed 32-bit integer from the specified index.
+     *
      * @param index
-     *        the position of the first byte in the sub-array
+     *        the starting index
      * 
-     * @return a signed integer value
+     * @return the signed integer value
      */
-    public int readInteger(int index)
+    public int readInteger(final int index)
     {
-        int byte1 = getByte(index) & 0xFF;
-        int byte2 = getByte(index + 1) & 0xFF;
-        int byte3 = getByte(index + 2) & 0xFF;
-        int byte4 = getByte(index + 3) & 0xFF;
+        int b1 = getByte(index) & 0xFF;
+        int b2 = getByte(index + 1) & 0xFF;
+        int b3 = getByte(index + 2) & 0xFF;
+        int b4 = getByte(index + 3) & 0xFF;
 
         if (getByteOrder() == ByteOrder.BIG_ENDIAN)
         {
-            return (byte1 << 24 | byte2 << 16 | byte3 << 8 | byte4);
+            return (b1 << 24) | (b2 << 16) | (b3 << 8) | b4;
         }
 
         else
         {
-            return (byte4 << 24 | byte3 << 16 | byte2 << 8 | byte1);
+            return (b4 << 24) | (b3 << 16) | (b2 << 8) | b1;
         }
     }
 
     /**
-     * Reads four bytes at the specified position and returns the result as an unsigned value, based
-     * on the current byte ordering. The return value is a long type to allow the unsigned integer
-     * to be returned without truncation.
-     * 
+     * Reads an unsigned 32-bit integer from the specified index.
+     *
      * @param index
-     *        the position of the first byte in the sub-array
+     *        the starting index
      * 
-     * @return an unsigned long value
+     * @return the unsigned value as a long in the range [0, 2^32 - 1]
      */
-    public long readUnsignedInteger(int index)
+    public long readUnsignedInteger(final int index)
     {
-        return (long) readInteger(index) & 0xFFFFFFFFL;
+        return readInteger(index) & 0xFFFFFFFFL;
     }
 
     /**
-     * Returns an 8-byte value as a signed long, based on the current byte ordering.
-     * 
+     * Reads a signed 64-bit integer from the specified index.
+     *
      * @param index
-     *        the position of the first byte in the sub-array
+     *        the starting index
      * 
-     * @return an 8-byte signed long value
+     * @return the signed long value
      */
-    public long readLong(int index)
+    public long readLong(final int index)
     {
-        int byte1 = getByte(index) & 0xFF;
-        int byte2 = getByte(index + 1) & 0xFF;
-        int byte3 = getByte(index + 2) & 0xFF;
-        int byte4 = getByte(index + 3) & 0xFF;
-        int byte5 = getByte(index + 4) & 0xFF;
-        int byte6 = getByte(index + 5) & 0xFF;
-        int byte7 = getByte(index + 6) & 0xFF;
-        int byte8 = getByte(index + 7) & 0xFF;
+        long b1 = getByte(index) & 0xFFL;
+        long b2 = getByte(index + 1) & 0xFFL;
+        long b3 = getByte(index + 2) & 0xFFL;
+        long b4 = getByte(index + 3) & 0xFFL;
+        long b5 = getByte(index + 4) & 0xFFL;
+        long b6 = getByte(index + 5) & 0xFFL;
+        long b7 = getByte(index + 6) & 0xFFL;
+        long b8 = getByte(index + 7) & 0xFFL;
 
         if (getByteOrder() == ByteOrder.BIG_ENDIAN)
         {
-            // Motorola - MSB first
-            return (long) (byte1 << 56 | byte2 << 48 | byte3 << 40 | byte4 << 32 |
-                    byte5 << 24 | byte6 << 16 | byte7 << 8 | byte8);
+            return (b1 << 56) | (b2 << 48) | (b3 << 40) | (b4 << 32) |
+                    (b5 << 24) | (b6 << 16) | (b7 << 8) | b8;
         }
 
         else
         {
-            // Intel ordering - LSB first
-            return (long) (byte8 << 56 | byte7 << 48 | byte6 << 40 | byte5 << 32 |
-                    byte4 << 24 | byte3 << 16 | byte2 << 8 | byte1);
+            return (b8 << 56) | (b7 << 48) | (b6 << 40) | (b5 << 32) |
+                    (b4 << 24) | (b3 << 16) | (b2 << 8) | b1;
         }
     }
 
     /**
-     * Retrieves 4 bytes from the byte array and returns the result as a float value, based on the
-     * current byte ordering.
-     * 
+     * Reads a 32-bit IEEE 754 floating-point value from the specified index.
+     *
      * @param index
-     *        the position of the first byte in the sub-array
+     *        the starting index
      * 
-     * @return a float value extracted from the byte array
+     * @return the float value
      */
-    public float getFloat32(int index)
+    public float readFloat(final int index)
     {
         return Float.intBitsToFloat(readInteger(index));
     }
 
     /**
-     * Retrieves 8 bytes from the byte array and returns the result as a double value, based on the
-     * current byte ordering.
-     * 
+     * Reads a 64-bit IEEE 754 floating-point value from the specified index.
+     *
      * @param index
-     *        the position of the first byte in the sub-array
+     *        the starting index
      * 
-     * @return a double value extracted from the byte array
+     * @return the double value
      */
-    public double getDouble64(int index)
+    public double readDouble(final int index)
     {
         return Double.longBitsToDouble(readLong(index));
     }

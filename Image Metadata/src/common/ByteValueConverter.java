@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * Utility class providing static methods for converting raw byte arrays to primitive types,
  * strings, and {@link RationalNumber} representations, especially in the context of image metadata
- * parsing (e.g., TIFF or PNG).
+ * parsing, for example: TIFF or PNG.
  *
  * <p>
  * This class is non-instantiable and thread-safe due to its state-less and static design.

@@ -21,7 +21,7 @@ import java.io.IOException;
  * </ul>
  *
  * @version 0.1
- * @author Trevor Maggs, <a href="mailto:trevmaggs@tpg.com.au">trevmaggs@tpg.com.au</a>
+ * @author Trevor Maggs
  * @since 21 June 2025
  */
 public interface ImageHandler
@@ -31,6 +31,7 @@ public interface ImageHandler
      * may include directories, fields, and values extracted from the file's internal structure.
      *
      * @return a {@link Metadata} instance containing structured metadata units
+     * 
      * @throws ImageReadErrorException
      *         if the image is malformed or cannot be interpreted
      * @throws IOException

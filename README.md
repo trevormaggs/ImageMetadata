@@ -6,6 +6,8 @@ This project is a **development in progress**, aimed at showcasing my programmin
 
 Currently, the focus is exclusively on **Exif metadata** parsing, providing reliable access to detailed camera and image capture information embedded within images.
 
+**No external libraries** are used at this stage, the entire implementation is built from the ground up using standard Java 8.
+
 In future development phases, support will be expanded to include other metadata formats and standards commonly used in imaging workflows, such as XMP, IPTC, and proprietary vendor metadata.
 
 ## Key Features
@@ -13,7 +15,7 @@ In future development phases, support will be expanded to include other metadata
 * Accurate extraction of Exif metadata from TIFF, JPEG, PNG, and HEIF/HEIC files
 * Low-level parsing of file structures to locate and decode Exif segments or boxes
 * Support for standard Exif tags with extensibility for custom metadata
-* Java 8 compatible for easy integration in diverse environments
+* Core Java 8 implementation with no external dependencies
 * Lightweight and modular design for efficient use in applications
 
 Explore the full API documentation here: [Javadoc Documentation](https://trevormaggs.github.io/ImageMetadata/)

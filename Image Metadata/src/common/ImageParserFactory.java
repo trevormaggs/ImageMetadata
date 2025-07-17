@@ -84,7 +84,7 @@ public final class ImageParserFactory
     }
 
     /**
-     * A public static entry point to return the appropriate parser for the specified image file.
+     * A public static entry point to fetch the appropriate parser for the specified image file.
      *
      * @param fpath
      *        the path to the image file

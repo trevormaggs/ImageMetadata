@@ -3,72 +3,85 @@ package heif.boxes;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import common.ByteValueConverter;
 import common.SequentialByteReader;
 
 /**
- * This derived Box class handles the Box identified as {@code iinf} - Item Information Box. For
- * technical details, refer to the Specification document - {@code ISO/IEC 14496-12:2015} on Page 81
- * to 83.
+ * Represents the {@code iinf} (Item Information Box), which describes items within the HEIF file.
+ * This is often used to locate EXIF metadata, thumbnails, or other auxiliary images.
+ * 
+ * <p>
+ * Specification Reference: ISO/IEC 14496-12:2015, Pages 81–83.
+ * </p>
  * 
  * <p>
  * Version History:
  * </p>
- *
  * <ul>
  * <li>1.0 - Initial release by Trevor Maggs on 31 May 2025</li>
  * </ul>
- *
+ * 
  * @author Trevor Maggs
  * @since 31 May 2025
- * @implNote Additional testing is required to confirm the reliability and robustness of this
- *           implementation
  */
 public class ItemInformationBox extends FullBox
 {
-    private long entryCount;
-    private List<Box> infeList;
+    private static final String TYPE_URI = "uri ";
+    private static final String TYPE_MIME = "mime";
+    private static final String TYPE_EXIF = "Exif";
+
+    private final long entryCount;
+    private final List<ItemInfoEntry> entries;
 
     /**
-     * This constructor creates a derived Box object, providing additional information about
-     * selected items. This aids in determining if HEIC image files contain an embedded EXIF
-     * segment.
+     * Parses the {@code ItemInformationBox} from the specified reader.
      *
      * @param box
-     *        the super Box object
+     *        the parent box header
      * @param reader
-     *        a SequentialByteReader object for sequential byte array access
+     *        the sequential byte reader for HEIF content
      */
     public ItemInformationBox(Box box, SequentialByteReader reader)
     {
         super(box, reader);
 
+        List<ItemInfoEntry> tempEntries = new ArrayList<>();
         int pos = reader.getCurrentPosition();
 
-        infeList = new ArrayList<>();
-        entryCount = (getVersion() == 0 ? reader.readUnsignedShort() : reader.readUnsignedInteger());
+        this.entryCount = (getVersion() == 0) ? reader.readUnsignedShort() : reader.readUnsignedInteger();
 
         for (int i = 0; i < entryCount; i++)
         {
-            infeList.add(new ItemInfoEntry(new Box(reader), reader));
+            tempEntries.add(new ItemInfoEntry(new Box(reader), reader));
         }
+
+        this.entries = Collections.unmodifiableList(tempEntries);
 
         byteUsed += reader.getCurrentPosition() - pos;
     }
 
     /**
-     * Checks whether this entry is a reference to an Exif block that may be present in the HEIF box
-     * structure.
+     * Returns the list of all {@link ItemInfoEntry} entries in this box.
      *
-     * @return true if this entry is an Exif reference
+     * @return an unmodifiable list of {@code ItemInfoEntry}
      */
-    public boolean hasExifBlock()
+    public List<ItemInfoEntry> getEntries()
     {
-        for (Box box : infeList)
-        {
-            ItemInfoEntry infe = ((ItemInfoEntry) box);
+        return entries;
+    }
 
+    /**
+     * Checks whether this {@code ItemInformationBox} contains an EXIF metadata reference.
+     *
+     * @return boolean true if an EXIF reference exists, otherwise false
+     */
+    public boolean containsExif()
+    {
+        for (ItemInfoEntry infe : entries)
+        {
             if (infe.isExif())
             {
                 return true;
@@ -79,18 +92,15 @@ public class ItemInformationBox extends FullBox
     }
 
     /**
-     * Returns the Item ID used for identifying the Exif block.
+     * Retrieves the Item ID associated with the EXIF metadata entry.
      *
-     * @return a positive Exif ID number, otherwise a value of -1 is returned if no Exif information
-     *         is present
+     * @return the EXIF Item ID if present, otherwise -1
      */
-    public int getExifID()
+    public int findExifItemID()
     {
-        for (Box box : infeList)
+        for (ItemInfoEntry infe : entries)
         {
-            ItemInfoEntry infe = ((ItemInfoEntry) box);
-
-            if (infe.isExif())
+            if (infe.getItemType().isPresent() && infe.isExif())
             {
                 return infe.getItemID();
             }
@@ -100,33 +110,31 @@ public class ItemInformationBox extends FullBox
     }
 
     /**
-     * Searches and finds and returns the Item Information Entry box entry based on the specified
-     * item ID number.
+     * Retrieves the {@link ItemInfoEntry} matching the given {@code itemID}.
      *
      * @param itemID
-     *        an ID number identifying the box
-     *
-     * @return an ItemInfoEntry object if a match is found, otherwise null
+     *        the item ID to search for
+     * 
+     * @return an Optional containing the matching entry if found, otherwise Optional.empty() is
+     *         returned
      */
-    public ItemInfoEntry getEntry(int itemID)
+    public Optional<ItemInfoEntry> getEntry(int itemID)
     {
-        for (Box box : infeList)
+        for (ItemInfoEntry infe : entries)
         {
-            ItemInfoEntry infe = ((ItemInfoEntry) box);
-
             if (infe.itemID == itemID)
             {
-                return infe;
+                return Optional.ofNullable(infe);
             }
         }
 
-        return null;
+        return Optional.empty();
     }
 
     /**
-     * Returns a string representation of this {@code ItemInformationBox}.
+     * Returns a formatted string describing the box contents.
      *
-     * @return a formatted string describing the box contents.
+     * @return a string representation of this {@code ItemInformationBox} resource
      */
     @Override
     public String toString()
@@ -141,7 +149,7 @@ public class ItemInformationBox extends FullBox
      * @param prefix
      *        Optional heading or label to prepend. Can be {@code null}.
      * 
-     * @return A formatted string suitable for debugging, inspection, or textual analysis
+     * @return a formatted string suitable for debugging, inspection, or textual analysis
      */
     @Override
     public String toString(String prefix)
@@ -157,121 +165,112 @@ public class ItemInformationBox extends FullBox
 
         sb.append(String.format("\t%s '%s':\tItem_count=%d%n", this.getClass().getSimpleName(), getTypeAsString(), entryCount));
 
-        for (Box box : infeList)
+        for (ItemInfoEntry infe : entries)
         {
-            ItemInfoEntry infe = ((ItemInfoEntry) box);
-            sb.append(String.format("\t\t%d)\t'%s': item_ID=%d,\titem_type='%s'%n", j++, infe.getTypeAsString(), infe.itemID, infe.itemType));
+            sb.append(String.format("\t\t%d)\t'%s': item_ID=%d,\titem_type='%s'%n", j++, infe.getTypeAsString(), infe.getItemID(), infe.getItemType().orElse("")));
         }
 
         return sb.toString();
     }
 
     /**
-     * A nested class used to manage the {@code ItemInfoEntry} box. This box type is known as
-     * {@code infe} as part of the Item Information Box.
+     * Represents an {@code infe} (Item Info Entry) box inside an {@code iinf} box.
      */
     public static class ItemInfoEntry extends FullBox
     {
-        private int itemID;
-        private int itemProtectionIndex;
-        private String itemType;
-        private String itemName;
-        private String contentType;
-        private String contentEncoding;
-        private String itemUriType;
-        private String extensionType;
-        private boolean exifID;
+        private final int itemID;
+        private final int itemProtectionIndex;
+        private final String itemType;
+        private final String itemName;
+        private final String contentType;
+        private final String contentEncoding;
+        private final String itemUriType;
+        private final String extensionType;
+        private final boolean exifID;
 
         /**
-         * This constructor creates a derived Box object, providing additional information about
-         * selected items. This aids in determining if HEIC image files contain an embedded EXIF
-         * directory.
+         * Parses an {@code ItemInfoEntry} from the specified reader.
          *
          * @param box
-         *        the super Box object
+         *        the parent box header
          * @param reader
-         *        a SequentialByteReader object for sequential byte array access
+         *        the byte reader for entry content
          */
         public ItemInfoEntry(Box box, SequentialByteReader reader)
         {
             super(box, reader);
 
+            byte[] payload = reader.readBytes(available());
             String[] items;
             int version = getVersion();
-            byte[] payload = reader.readBytes(available());
+
+            String type = null;
+            String name = null;
+            String cType = null;
+            String encoding = null;
+            String uri = null;
+            String extType = null;
 
             if (version == 0 || version == 1)
             {
-                itemID = ByteValueConverter.toUnsignedShort(payload, 0, box.getByteOrder());
-                itemProtectionIndex = ByteValueConverter.toUnsignedShort(payload, 2, box.getByteOrder());
+                this.itemID = ByteValueConverter.toUnsignedShort(payload, 0, box.getByteOrder());
+                this.itemProtectionIndex = ByteValueConverter.toUnsignedShort(payload, 2, box.getByteOrder());
 
                 items = ByteValueConverter.splitNullDelimitedStrings(Arrays.copyOfRange(payload, 4, payload.length));
 
                 if (items.length > 0)
                 {
-                    itemName = items[0];
-                    contentType = (items.length > 1 ? items[1] : "");
-                    contentEncoding = (items.length > 2 ? items[2] : "");
-                    extensionType = (version == 1 && items.length > 3 ? items[3] : "");
-                    // this is optional ItemInfoExtension(extensionType);
+                    name = items[0];
+                    cType = items.length > 1 ? items[1] : null;
+                    encoding = items.length > 2 ? items[2] : null;
+                    extType = (version == 1 && items.length > 3) ? items[3] : null;
                 }
             }
 
-            if (version > 1)
+            else
             {
-                int index = 2;
+                int index = (version == 2) ? 2 : 4;
 
-                if (version == 2)
-                {
-                    // Length: 2 bytes
-                    itemID = ByteValueConverter.toUnsignedShort(payload, 0, box.getByteOrder());
-                }
+                this.itemID = (version == 2 ? ByteValueConverter.toUnsignedShort(payload, 0, box.getByteOrder()) : ByteValueConverter.toInteger(payload, 0, box.getByteOrder()));
 
-                else if (version == 3)
-                {
-                    // Length: 4 bytes
-                    itemID = ByteValueConverter.toInteger(payload, 0, box.getByteOrder());
-                    index = 4;
-                }
-
-                // Length: 2 bytes
-                itemProtectionIndex = ByteValueConverter.toUnsignedShort(payload, index, box.getByteOrder());
+                this.itemProtectionIndex = ByteValueConverter.toUnsignedShort(payload, index, box.getByteOrder());
                 index += 2;
 
-                // Length: 4 bytes
-                itemType = new String(Arrays.copyOfRange(payload, index, index + 4), StandardCharsets.UTF_8);
+                type = new String(Arrays.copyOfRange(payload, index, index + 4), StandardCharsets.UTF_8);
                 index += 4;
 
-                // Length: variable
                 items = ByteValueConverter.splitNullDelimitedStrings(Arrays.copyOfRange(payload, index, payload.length));
 
                 if (items.length > 0)
                 {
-                    itemName = items[0];
+                    name = items[0];
 
-                    if (itemType.equals("mime"))
+                    if (TYPE_MIME.equals(type))
                     {
-                        contentType = (items.length > 1 ? items[1] : "");
-                        contentEncoding = (items.length > 2 ? items[2] : "");
+                        cType = items.length > 1 ? items[1] : null;
+                        encoding = items.length > 2 ? items[2] : null;
                     }
 
-                    else if (itemType.equals("uri "))
+                    else if (TYPE_URI.equals(type))
                     {
-                        itemUriType = (items.length > 1 ? items[1] : "");
+                        uri = items.length > 1 ? items[1] : null;
                     }
                 }
             }
 
-            if (itemType.equalsIgnoreCase("Exif"))
-            {
-                exifID = true;
-            }
+            this.itemType = type;
+            this.itemName = name;
+            this.contentType = cType;
+            this.contentEncoding = encoding;
+            this.itemUriType = uri;
+            this.extensionType = extType;
+            this.exifID = TYPE_EXIF.equalsIgnoreCase(type);
         }
 
         /**
-         * Returns the ID of the item.
-         * 
-         * @return an integer representing the Item ID
+         * Returns the Item ID.
+         *
+         * @return the item ID
          */
         public int getItemID()
         {
@@ -279,9 +278,9 @@ public class ItemInformationBox extends FullBox
         }
 
         /**
-         * Returns true if this entry references to an EXIF segment block.
-         * 
-         * @return true if the Exif structure exists, otherwise false
+         * Indicates if this entry refers to EXIF data.
+         *
+         * @return boolean true if this is an EXIF reference, otherwise false
          */
         public boolean isExif()
         {
@@ -289,78 +288,73 @@ public class ItemInformationBox extends FullBox
         }
 
         /**
-         * Returns the a value either 0 for an unprotected item, or the one-based index into the
-         * item protection box defining the protection applied to this item (the first box in the
-         * item protection box has the index 1).
-         * 
-         * @return a long with the Item Protection Index data
+         * Returns the protection index of this item.
+         *
+         * @return the item protection index (0 if unprotected)
          */
-        public long getItemProtectionIndex()
+        public int getItemProtectionIndex()
         {
             return itemProtectionIndex;
         }
 
         /**
-         * Returns the 32-bit value, typically 4 printable characters, that is a defined valid item
-         * type indicator, such as {@code mime}.
-         * 
-         * @return string
+         * Returns the item type as a 4-character code.
+         *
+         * @return an Optional containing the item type if present
          */
-        public String getItemType()
+        public Optional<String> getItemType()
         {
-            return (itemType == null ? "" : itemType);
+            return Optional.ofNullable(itemType);
         }
 
         /**
-         * Returns the symbolic name of the item.
-         * 
-         * @return string
+         * Returns the item name.
+         *
+         * @return an Optional containing the item name if present
          */
-        public String getItemName()
+        public Optional<String> getItemName()
         {
-            return (itemName == null ? "" : itemName);
+            return Optional.ofNullable(itemName);
         }
 
         /**
-         * Returns the content type of the item.
-         * 
-         * @return string
+         * Returns the content type for MIME entries.
+         *
+         * @return an Optional containing the content type if present
          */
-        public String getContentType()
+        public Optional<String> getContentType()
         {
-            return (contentType == null ? "" : contentType);
+            return Optional.ofNullable(contentType);
         }
 
         /**
-         * Returns the absolute URI, that is used as a type indicator.
-         * 
-         * @return string
+         * Returns the URI type for URI entries.
+         *
+         * @return an Optional containing the URI type if present
          */
-        public String getItemUriType()
+        public Optional<String> getItemUriType()
         {
-            return (itemUriType == null ? "" : itemUriType);
+            return Optional.ofNullable(itemUriType);
         }
 
         /**
-         * Returns the string used to indicate that the binary file is encoded and needs to be
-         * decoded before interpreted.
-         * 
-         * @return string
+         * Returns the content encoding for MIME entries.
+         *
+         * @return an Optional containing the encoding if present
          */
-        public String getContentEncoding()
+        public Optional<String> getContentEncoding()
         {
-            return (contentEncoding == null ? "" : contentEncoding);
+            return Optional.ofNullable(contentEncoding);
         }
 
         /**
-         * Returns the printable four-character code that identifies the extension fields of version
-         * 1 with respect to version 0 of the Item information entry.
-         * 
-         * @return string
+         * Returns the extension type for version 1 entries.
+         *
+         * @return an Optional containing the extension type if present
          */
-        public String getExtensionType()
+        public Optional<String> getExtensionType()
         {
-            return (extensionType == null ? "" : extensionType);
+            return Optional.ofNullable(extensionType);
         }
     }
 }

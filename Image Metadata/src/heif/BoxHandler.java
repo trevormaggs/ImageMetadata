@@ -140,12 +140,12 @@ public class BoxHandler implements ImageHandler
         ItemInformationBox iinf = getIINF();
         ItemLocationBox iloc = getILOC();
 
-        if (iinf == null || !iinf.hasExifBlock())
+        if (iinf == null || !iinf.containsExif())
         {
             throw new ImageReadErrorException("Exif block not found in Item Information Box for [" + imageFile + "]");
         }
 
-        int exifID = iinf.getExifID();
+        int exifID = iinf.findExifItemID();
         List<ExtentData> extents = (iloc != null) ? iloc.findExtentsForItem(exifID) : null;
 
         if (extents == null || extents.isEmpty())

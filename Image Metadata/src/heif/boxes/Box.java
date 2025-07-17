@@ -204,6 +204,7 @@ public class Box
      *
      * @param prefix
      *        optional prefix to prepend
+     *        
      * @return formatted string
      */
     public String toString(String prefix)

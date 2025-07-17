@@ -1,11 +1,10 @@
 package heif.boxes;
 
-import java.util.Arrays;
 import common.SequentialByteReader;
 
 /**
  * This derived Box class handles the Box identified as {@code idat} - Item Data Box. For technical
- * details, refer to the Specification document - {@code ISO/IEC 23008-12:2017} on Page 86.
+ * details, refer to the Specification document - {@code ISO/IEC 14496-12:2015} on Page 86.
  *
  * This box contains the data of metadata items that use the construction method indicating that an
  * item’s data extents are stored within this box.
@@ -20,12 +19,12 @@ import common.SequentialByteReader;
  *
  * @author Trevor Maggs
  * @since 2 June 2025
- * @implNote Additional testing is required to validate the reliability and robustness of this
- *           implementation
+ * @implNote This implementation assumes a flat byte array. No item parsing is performed beyond raw
+ *           byte extraction. Further testing is needed for edge cases and compatibility.
  */
 public class ItemDataBox extends Box
 {
-    private int[] data;
+    private byte[] data;
 
     /**
      * This constructor creates a derived Box object, providing additional data of metadata items.
@@ -42,55 +41,78 @@ public class ItemDataBox extends Box
         int count = available();
         int pos = reader.getCurrentPosition();
 
-        data = new int[count];
+        data = new byte[count];
 
         for (int i = 0; i < count; i++)
         {
-            data[i] = reader.readUnsignedByte();
+            data[i] = (byte) reader.readUnsignedByte();
         }
 
         byteUsed += reader.getCurrentPosition() - pos;
     }
 
     /**
-     * Displays a list of structured references associated with the specified HEIF based file,
-     * useful for analytical purposes.
+     * Returns a copy of the raw data stored in this {@code ItemDataBox} resource.
      *
-     * @return the string
+     * @return the item data as a byte array
      */
-    @Override
-    public String showBoxStructure()
+    public byte[] getData()
     {
-        StringBuilder line = new StringBuilder();
-
-        line.append(String.format("\t%s '%s':", this.getClass().getSimpleName(), getBoxName()));
-        line.append(System.lineSeparator());
-        line.append(String.format("\t\tData bytes: "));
-
-        for (int i = 0; i < data.length; i++)
-        {
-            line.append(String.format("0x%02X ", data[i]));
-            // line.append(String.format("%d ", data[i]));
-        }
-        
-        line.append(System.lineSeparator());
-
-        return line.toString();
+        return data.clone();
     }
 
     /**
-     * Generates a string representation of the derived Box structure.
+     * Returns a string representation of this {@code ItemDataBox} resource.
      *
-     * @return a formatted string
+     * @return a formatted string describing the box contents.
      */
     @Override
     public String toString()
     {
-        StringBuilder line = new StringBuilder();
+        return toString(null);
+    }
 
-        line.append(super.toString());
-        line.append(String.format("  %-24s %s%n", "[Data]", Arrays.toString(data)));
+    /**
+     * Returns a human-readable debug string, summarising the raw data stored in this
+     * {@code ItemDataBox}. Useful for logging or diagnostics.
+     *
+     * @param prefix
+     *        optional heading or label to prepend. Can be {@code null}.
+     * 
+     * @return a formatted string suitable for debugging, inspection, or textual analysis.
+     */
 
-        return line.toString();
+    @Override
+    public String toString(String prefix)
+    {
+        StringBuilder sb = new StringBuilder();
+
+        if (prefix != null && !prefix.isEmpty())
+        {
+            sb.append(prefix).append(System.lineSeparator());
+            sb.append(System.lineSeparator());
+        }
+
+        sb.append(String.format("\t%s '%s':", this.getClass().getSimpleName(), getTypeAsString()));
+        sb.append(System.lineSeparator());
+
+        if (data.length < 65)
+        {
+            sb.append(String.format("\t\tData bytes: "));
+
+            for (byte b : data)
+            {
+                sb.append(String.format("0x%02X ", b));
+            }
+        }
+
+        else
+        {
+            sb.append(String.format("\t\tData size: %d bytes (hex dump omitted)%n", data.length));
+        }
+
+        sb.append(System.lineSeparator());
+
+        return sb.toString();
     }
 }

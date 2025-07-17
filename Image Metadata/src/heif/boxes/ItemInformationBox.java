@@ -58,7 +58,8 @@ public class ItemInformationBox extends FullBox
     }
 
     /**
-     * Checks whether this entry is a reference to an Exif block that may be present in the HEIF box structure.
+     * Checks whether this entry is a reference to an Exif block that may be present in the HEIF box
+     * structure.
      *
      * @return true if this entry is an Exif reference
      */
@@ -123,66 +124,53 @@ public class ItemInformationBox extends FullBox
     }
 
     /**
-     * Displays a list of structured references associated with the specified HEIF based file,
-     * useful for analytical purposes.
+     * Returns a string representation of this {@code ItemInformationBox}.
      *
-     * @return the string
-     */
-    @Override
-    public String showBoxStructure()
-    {
-        int j = 1;
-        StringBuilder line = new StringBuilder();
-
-        line.append(String.format("\t%s '%s':\tItem_count=%d%n", this.getClass().getSimpleName(), getBoxName(), entryCount));
-
-        for (Box box : infeList)
-        {
-            ItemInfoEntry infe = ((ItemInfoEntry) box);
-
-            line.append(String.format("\t\t%d)\t'%s': item_ID=%d,\titem_type='%s'%n", j++, infe.getBoxName(), infe.itemID, infe.itemType));
-        }
-
-        return line.toString();
-    }
-
-    /**
-     * Generates a string representation of the derived Box structure.
-     *
-     * @return a formatted string
+     * @return a formatted string describing the box contents.
      */
     @Override
     public String toString()
     {
-        StringBuilder line = new StringBuilder();
+        return toString(null);
+    }
 
-        line.append(super.toString());
+    /**
+     * Returns a human-readable debug string, summarising structured references associated with this
+     * HEIF-based file. Useful for logging or diagnostics.
+     *
+     * @param prefix
+     *        Optional heading or label to prepend. Can be {@code null}.
+     * 
+     * @return A formatted string suitable for debugging, inspection, or textual analysis
+     */
+    @Override
+    public String toString(String prefix)
+    {
+        int j = 1;
+        StringBuilder sb = new StringBuilder();
+
+        if (prefix != null && !prefix.isEmpty())
+        {
+            sb.append(prefix).append(System.lineSeparator());
+            sb.append(System.lineSeparator());
+        }
+
+        sb.append(String.format("\t%s '%s':\tItem_count=%d%n", this.getClass().getSimpleName(), getTypeAsString(), entryCount));
 
         for (Box box : infeList)
         {
             ItemInfoEntry infe = ((ItemInfoEntry) box);
-
-            line.append(System.lineSeparator());
-            line.append(String.format("  \t%-24s %s%n", "[Version]", infe.getVersion()));
-            line.append(String.format("  \t%-24s %s%n", "[Item ID]", infe.getItemID()));
-            line.append(String.format("  \t%-24s %s%n", "[Exif Block]", infe.isExif()));
-            line.append(String.format("  \t%-24s %s%n", "[Item Protection Index]", infe.getItemProtectionIndex()));
-            line.append(String.format("  \t%-24s %s%n", "[Item Type]", infe.getItemType()));
-            line.append(String.format("  \t%-24s %s%n", "[Item Name]", infe.getItemName()));
-            line.append(String.format("  \t%-24s %s%n", "[Content Type]", infe.getContentType()));
-            line.append(String.format("  \t%-24s %s%n", "[Content Encoding]", infe.getContentEncoding()));
-            line.append(String.format("  \t%-24s %s%n", "[Item URI Type]", infe.getItemUriType()));
-            line.append(String.format("  \t%-24s %s%n", "[Extension Type]", infe.getExtensionType()));
+            sb.append(String.format("\t\t%d)\t'%s': item_ID=%d,\titem_type='%s'%n", j++, infe.getTypeAsString(), infe.itemID, infe.itemType));
         }
 
-        return line.toString();
+        return sb.toString();
     }
 
     /**
      * A nested class used to manage the {@code ItemInfoEntry} box. This box type is known as
      * {@code infe} as part of the Item Information Box.
      */
-    private static class ItemInfoEntry extends FullBox
+    public static class ItemInfoEntry extends FullBox
     {
         private int itemID;
         private int itemProtectionIndex;
@@ -204,7 +192,7 @@ public class ItemInformationBox extends FullBox
          * @param reader
          *        a SequentialByteReader object for sequential byte array access
          */
-        private ItemInfoEntry(Box box, SequentialByteReader reader)
+        public ItemInfoEntry(Box box, SequentialByteReader reader)
         {
             super(box, reader);
 
@@ -285,7 +273,7 @@ public class ItemInformationBox extends FullBox
          * 
          * @return an integer representing the Item ID
          */
-        private int getItemID()
+        public int getItemID()
         {
             return itemID;
         }
@@ -295,7 +283,7 @@ public class ItemInformationBox extends FullBox
          * 
          * @return true if the Exif structure exists, otherwise false
          */
-        private boolean isExif()
+        public boolean isExif()
         {
             return exifID;
         }
@@ -307,7 +295,7 @@ public class ItemInformationBox extends FullBox
          * 
          * @return a long with the Item Protection Index data
          */
-        private long getItemProtectionIndex()
+        public long getItemProtectionIndex()
         {
             return itemProtectionIndex;
         }
@@ -318,7 +306,7 @@ public class ItemInformationBox extends FullBox
          * 
          * @return string
          */
-        private String getItemType()
+        public String getItemType()
         {
             return (itemType == null ? "" : itemType);
         }
@@ -328,7 +316,7 @@ public class ItemInformationBox extends FullBox
          * 
          * @return string
          */
-        private String getItemName()
+        public String getItemName()
         {
             return (itemName == null ? "" : itemName);
         }
@@ -338,7 +326,7 @@ public class ItemInformationBox extends FullBox
          * 
          * @return string
          */
-        private String getContentType()
+        public String getContentType()
         {
             return (contentType == null ? "" : contentType);
         }
@@ -348,7 +336,7 @@ public class ItemInformationBox extends FullBox
          * 
          * @return string
          */
-        private String getItemUriType()
+        public String getItemUriType()
         {
             return (itemUriType == null ? "" : itemUriType);
         }
@@ -359,7 +347,7 @@ public class ItemInformationBox extends FullBox
          * 
          * @return string
          */
-        private String getContentEncoding()
+        public String getContentEncoding()
         {
             return (contentEncoding == null ? "" : contentEncoding);
         }
@@ -370,7 +358,7 @@ public class ItemInformationBox extends FullBox
          * 
          * @return string
          */
-        private String getExtensionType()
+        public String getExtensionType()
         {
             return (extensionType == null ? "" : extensionType);
         }

@@ -30,6 +30,64 @@ public class DataInformationBox extends Box
     private DataReferenceBox dref;
 
     /**
+     * This constructor creates a derived Box object, providing additional information from other
+     * contained boxes, specifically {@code dref} - Data Reference Box and its nested contained
+     * boxes, where further additional information on URL location and name is provided.
+     * 
+     * @param box
+     *        the super Box object
+     * @param reader
+     *        a SequentialByteReader object for sequential byte array access
+     */
+    public DataInformationBox(Box box, SequentialByteReader reader)
+    {
+        super(box);
+
+        int pos = reader.getCurrentPosition();
+        dref = new DataReferenceBox(new Box(reader), reader);
+        byteUsed += reader.getCurrentPosition() - pos;
+    }
+
+    /**
+     * Returns a string representation of this {@code DataInformationBox}.
+     *
+     * @return a formatted string describing the box contents.
+     */
+    @Override
+    public String toString()
+    {
+        return toString(null);
+    }
+
+    /**
+     * Returns a human-readable debug string, summarising structured references associated with this
+     * HEIF-based file. Useful for logging or diagnostics.
+     *
+     * @param prefix
+     *        Optional heading or label to prepend. Can be {@code null}.
+     * 
+     * @return A formatted string suitable for debugging, inspection, or textual analysis
+     */
+    @Override
+    public String toString(String prefix)
+    {
+        StringBuilder sb = new StringBuilder();
+
+        if (prefix != null && !prefix.isEmpty())
+        {
+            sb.append(prefix).append(System.lineSeparator());
+            sb.append(System.lineSeparator());
+        }
+
+        HeifBoxType box = HeifBoxType.getBoxType(getTypeAsString());
+
+        sb.append(String.format("\t%s '%s':\t(%s)", this.getClass().getSimpleName(), getTypeAsString(), box.getBoxCategory()));
+        sb.append(dref.toString(prefix));
+
+        return sb.toString();
+    }
+
+    /**
      * An inner class designed to fill up the {@code dref} box type.
      */
     public static class DataReferenceBox extends FullBox
@@ -55,52 +113,46 @@ public class DataInformationBox extends Box
         }
 
         /**
-         * Displays a list of structured references associated with the specified HEIF based file,
-         * useful for analytical purposes.
+         * Returns a string representation of this {@code DataReferenceBox}.
          *
-         * @return the string
-         */
-        @Override
-        public String showBoxStructure()
-        {
-            StringBuilder line = new StringBuilder();
-
-            line.append(System.lineSeparator());
-            line.append(String.format("\t\t%s '%s':\tentryCount=%d", this.getClass().getSimpleName(), getBoxName(), entryCount));
-            line.append(System.lineSeparator());
-
-            for (int i = 0; i < entryCount; i++)
-            {
-                line.append(String.format("\t\t\tName: '%s'\tLocation: '%s'", dataEntry[i].name, dataEntry[i].location));
-            }
-
-            return line.toString();
-        }
-
-        /**
-         * Generates a string representation of the basic Box structure.
-         *
-         * @return a formatted string
+         * @return a formatted string describing the box contents.
          */
         @Override
         public String toString()
         {
-            StringBuilder line = new StringBuilder();
+            return toString(null);
+        }
 
-            line.append(super.toString());
-            line.append(System.lineSeparator());
+        /**
+         * Returns a human-readable debug string, summarising structured references associated with
+         * this HEIF-based file. Useful for logging or diagnostics.
+         *
+         * @param prefix
+         *        Optional heading or label to prepend. Can be {@code null}.
+         * 
+         * @return A formatted string suitable for debugging, inspection, or textual analysis
+         */
+        @Override
+        public String toString(String prefix)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            if (prefix != null && !prefix.isEmpty())
+            {
+                sb.append(prefix).append(System.lineSeparator());
+                sb.append(System.lineSeparator());
+            }
+
+            sb.append(System.lineSeparator());
+            sb.append(String.format("\t\t%s '%s':\tentryCount=%d", this.getClass().getSimpleName(), getTypeAsString(), entryCount));
+            sb.append(System.lineSeparator());
 
             for (int i = 0; i < entryCount; i++)
             {
-                DataEntryBox entry = dataEntry[i];
-
-                line.append(entry.toString());
-                line.append(System.lineSeparator());
-                line.append(String.format("  \t%-20s %s%n", "[Name]", entry.name.isEmpty() ? "<Empty>" : entry.name));
-                line.append(String.format("  \t%-20s %s%n", "[Location]", entry.location.isEmpty() ? "<Empty>" : entry.location));
+                sb.append(String.format("\t\t\tName: '%s'\tLocation: '%s'", dataEntry[i].name, dataEntry[i].location));
             }
 
-            return line.toString();
+            return sb.toString();
         }
     }
 
@@ -123,9 +175,9 @@ public class DataInformationBox extends Box
             {
                 String[] parts = ByteValueConverter.splitNullDelimitedStrings(reader.readBytes((int) getBoxSize()));
 
-                if (BitFlags().get(0) && parts.length > 0)
+                if (getBitFlags().get(0) && parts.length > 0)
                 {
-                    if (getBoxName().contains("url"))
+                    if (getTypeAsString().contains("url"))
                     {
                         location = parts[0];
                     }
@@ -140,59 +192,5 @@ public class DataInformationBox extends Box
 
             byteUsed += reader.getCurrentPosition() - pos;
         }
-    }
-
-    /**
-     * This constructor creates a derived Box object, providing additional information from other
-     * contained boxes, specifically {@code dref} - Data Reference Box and its nested contained
-     * boxes, where further additional information on URL location and name is provided.
-     * 
-     * @param box
-     *        the super Box object
-     * @param reader
-     *        a SequentialByteReader object for sequential byte array access
-     */
-    public DataInformationBox(Box box, SequentialByteReader reader)
-    {
-        super(box);
-
-        int pos = reader.getCurrentPosition();
-        dref = new DataReferenceBox(new Box(reader), reader);
-        byteUsed += reader.getCurrentPosition() - pos;
-    }
-
-    /**
-     * Displays a list of structured references associated with the specified HEIF based file,
-     * useful for analytical purposes.
-     *
-     * @return the string
-     */
-    @Override
-    public String showBoxStructure()
-    {
-        StringBuilder line = new StringBuilder();
-        HeifBoxType box = HeifBoxType.getBoxType(getBoxName());
-
-        line.append(String.format("\t%s '%s':\t(%s)", this.getClass().getSimpleName(), getBoxName(), box.getBoxCategory()));
-        line.append(dref.showBoxStructure());
-
-        return line.toString();
-    }
-
-    /**
-     * Generates a string representation of the basic Box structure.
-     *
-     * @return a formatted string
-     */
-    @Override
-    public String toString()
-    {
-        StringBuilder line = new StringBuilder();
-
-        line.append(super.toString());
-        line.append(System.lineSeparator());
-        line.append(dref);
-
-        return line.toString();
     }
 }

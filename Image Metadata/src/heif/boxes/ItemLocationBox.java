@@ -1,6 +1,7 @@
 package heif.boxes;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import common.SequentialByteReader;
 
@@ -21,7 +22,6 @@ import common.SequentialByteReader;
  * <p>
  * Version History:
  * </p>
- * 
  * <ul>
  * <li>1.0 - Initial release by Trevor Maggs on 2 June 2025</li>
  * </ul>
@@ -38,7 +38,7 @@ public class ItemLocationBox extends FullBox
     private int baseOffsetSize;
     private int indexSize;
     private int itemCount;
-    private List<ExtentData> extentList;
+    private final List<ItemLocationEntry> items;
 
     /**
      * Constructs an {@code ItemLocationBox} by parsing the provided {@code iloc} box data.
@@ -47,85 +47,180 @@ public class ItemLocationBox extends FullBox
      *        the parent {@code Box} containing common box values
      * @param reader
      *        a {@code SequentialByteReader} for sequential access to the box content
+     * 
+     * @throws UnsupportedOperationException
+     *         if external data references (dataReferenceIndex != 0) are found
      */
     public ItemLocationBox(Box box, SequentialByteReader reader)
     {
         super(box, reader);
 
-        int tmp;
-        int extentCount;
         int pos = reader.getCurrentPosition();
 
-        extentList = new ArrayList<>();
-
-        tmp = reader.readUnsignedByte();
-
+        int tmp = reader.readUnsignedByte();
         offsetSize = (tmp & 0xF0) >> 4;
         lengthSize = (tmp & 0x0F);
 
         tmp = reader.readUnsignedByte();
-
         baseOffsetSize = (tmp & 0xF0) >> 4;
 
         if (isVersion1or2())
         {
             indexSize = (tmp & 0x0F);
         }
+        else
+        {
+            indexSize = 0;
+        }
 
-        itemCount = (getVersion() < 2 ? reader.readUnsignedShort() : (getVersion() == 2 ? (int) reader.readUnsignedInteger() : 0));
+        itemCount = (getVersion() < 2) ? reader.readUnsignedShort() : (getVersion() == 2 ? (int) reader.readUnsignedInteger() : 0);
+
+        items = new ArrayList<>();
 
         for (int i = 0; i < itemCount; i++)
         {
-            int extentIndex = 0;
-            int constructionMethod = 0;
-            int dataReferenceIndex;
-            long baseOffset;
-            long extentOffset;
-            int extentLength;
             final int itemID = (getVersion() < 2) ? reader.readUnsignedShort() : (int) reader.readUnsignedInteger();
+
+            int constructionMethod = 0;
 
             if (isVersion1or2())
             {
                 constructionMethod = reader.readUnsignedShort() & 0x000F;
             }
 
-            dataReferenceIndex = reader.readUnsignedShort();
-            baseOffset = (baseOffsetSize == 8 ? reader.readLong() : (baseOffsetSize == 4 ? reader.readUnsignedInteger() : 0));
-            extentCount = reader.readUnsignedShort();
+            int dataReferenceIndex = reader.readUnsignedShort();
+
+            if (dataReferenceIndex != 0)
+            {
+                throw new UnsupportedOperationException("External data reference index [" + dataReferenceIndex + "] not supported");
+            }
+
+            long baseOffset = readSizedValue(baseOffsetSize, reader);
+            int extentCount = reader.readUnsignedShort();
+            List<ExtentData> extents = new ArrayList<>(extentCount);
 
             for (int j = 0; j < extentCount; j++)
             {
+                int extentIndex = 0;
+
                 if (isVersion1or2() && indexSize > 0)
                 {
                     extentIndex = (int) readSizedValue(indexSize, reader);
                 }
 
-                extentOffset = readSizedValue(offsetSize, reader);
-                extentLength = (int) readSizedValue(lengthSize, reader);
+                long extentOffset = readSizedValue(offsetSize, reader);
+                int extentLength = (int) readSizedValue(lengthSize, reader);
 
-                extentList.add(new ExtentData(itemID, extentCount, extentIndex, extentOffset + baseOffset, extentLength, constructionMethod, dataReferenceIndex));
+                extents.add(new ExtentData(itemID, extentIndex, extentOffset + baseOffset, extentLength));
             }
+
+            items.add(new ItemLocationEntry(itemID, constructionMethod, dataReferenceIndex, baseOffset, extents));
         }
 
         byteUsed += reader.getCurrentPosition() - pos;
     }
 
     /**
-     * Reads a value from the stream based on the specified size indicator.
+     * Finds the item with the specified {@code itemID}.
+     *
+     * @param itemID
+     *        the item identifier to search for
      * 
-     * <p>
-     * Allowed input values are:
-     * </p>
+     * @return the matching {@code ItemLocationEntry}, or {@code null} if not found
+     */
+    public ItemLocationEntry findItem(int itemID)
+    {
+        for (ItemLocationEntry item : items)
+        {
+            if (item.getItemID() == itemID)
+            {
+                return item;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Finds all extents associated with the specified {@code itemID}.
+     *
+     * @param itemID
+     *        the item identifier to search for
+     * 
+     * @return an unmodifiable list of extents for the item, or empty list if none found
+     */
+    public List<ExtentData> findExtentsForItem(int itemID)
+    {
+        ItemLocationEntry item = findItem(itemID);
+
+        return item == null ? Collections.emptyList() : Collections.unmodifiableList(item.getExtents());
+    }
+
+    /**
+     * Returns the list of all items.
+     *
+     * @return an unmodifiable list of items
+     */
+    public List<ItemLocationEntry> getItems()
+    {
+        return Collections.unmodifiableList(items);
+    }
+
+    /**
+     * Returns a string representation of this {@code ItemLocationBox} resource.
+     *
+     * @return a formatted string describing the box contents
+     */
+    @Override
+    public String toString()
+    {
+        return toString(null);
+    }
+
+    /**
+     * Returns a human-readable debug string, summarising structured references associated with this
+     * HEIF-based file. Useful for logging or diagnostics.
+     *
+     * @param prefix
+     *        Optional heading or label to prepend. Can be {@code null}.
+     * 
+     * @return A formatted string suitable for debugging, inspection, or textual analysis
+     */
+    @Override
+    public String toString(String prefix)
+    {
+        StringBuilder sb = new StringBuilder();
+
+        if (prefix != null && !prefix.isEmpty())
+        {
+            sb.append(prefix).append(System.lineSeparator()).append(System.lineSeparator());
+        }
+
+        sb.append(String.format("\t%s '%s':\titemCount=%d%n", this.getClass().getSimpleName(), getTypeAsString(), itemCount));
+
+        for (ItemLocationEntry item : items)
+        {
+            sb.append(String.format("\t\tItemID=%-4d constructionMethod=%-3d dataRefIdx=%-12d baseOffset=0x%X%n", item.getItemID(), item.getConstructionMethod(), item.getDataReferenceIndex(), item.getBaseOffset()));
+
+            for (ExtentData extent : item.getExtents())
+            {
+                sb.append(String.format("\t\t\t\t\textentIndex=%-10d extentOffset=0x%08X extentLength=%d%n", extent.getExtentIndex(), extent.getExtentOffset(), extent.getExtentLength()));
+            }
+
+            // sb.append(System.lineSeparator());
+        }
+
+        return sb.toString();
+    }
+
+    /**
+     * Reads a value from the stream based on the specified size indicator.
      * 
      * <ul>
      * <li>{@code 0} – value is always zero (no bytes read)</li>
      * <li>{@code 4} – reads a 4-byte unsigned integer</li>
      * <li>{@code 8} – reads an 8-byte unsigned integer</li>
      * </ul>
-     * 
-     * <p>
-     * For details, refer to ISO/IEC 14496-12:2015, page 77.
-     * </p>
      * 
      * @param input
      *        the number of bytes to read: {0, 4, 8}
@@ -139,24 +234,17 @@ public class ItemLocationBox extends FullBox
      */
     private long readSizedValue(int input, SequentialByteReader reader)
     {
-        long value;
-
         switch (input)
         {
             case 0:
-                value = 0L;
-            break;
+                return 0L;
             case 4:
-                value = reader.readUnsignedInteger();
-            break;
+                return reader.readUnsignedInteger();
             case 8:
-                value = reader.readLong();
-            break;
+                return reader.readLong();
             default:
-                throw new IllegalArgumentException("The value is out of bounds. It must be {0, 4, 8}. Actual: [" + input + "]");
+                throw new IllegalArgumentException("Invalid input size: " + input);
         }
-
-        return value;
     }
 
     /**
@@ -170,132 +258,23 @@ public class ItemLocationBox extends FullBox
     }
 
     /**
-     * Finds the first extent matching the specified {@code itemID}.
-     *
-     * @param itemID
-     *        the item identifier to search for
-     * 
-     * @return the matching ExtentData resource, or null if not found
+     * Represents one item entry, holding multiple extents.
      */
-    public ExtentData findFirstExtentData(int itemID)
-    {
-        for (ExtentData extent : extentList)
-        {
-            if (extent.getItemID() == itemID)
-            {
-                return extent;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Finds all extents in this box that match the given {@code itemID}.
-     *
-     * @param itemID
-     *        the item identifier to search for
-     * 
-     * @return a new list of matching ExtentData, or an empty list if none found
-     */
-    public List<ExtentData> findExtentDataList(int itemID)
-    {
-        List<ExtentData> matchingExtents = new ArrayList<>();
-
-        for (ExtentData extent : extentList)
-        {
-            if (extent.getItemID() == itemID)
-            {
-                matchingExtents.add(extent);
-            }
-        }
-
-        return matchingExtents;
-    }
-
-    /**
-     * Returns a structured summary of this {@code ItemLocationBox}, including item references,
-     * extent counts, offsets, and lengths. Useful for analytical or debugging purposes.
-     *
-     * @return a formatted string representing the box structure
-     */
-    @Override
-    public String showBoxStructure()
-    {
-        StringBuilder line = new StringBuilder();
-
-        line.append(String.format("\t%s '%s':\titemCount=%d", this.getClass().getSimpleName(), getBoxName(), itemCount));
-        line.append(System.lineSeparator());
-
-        for (ExtentData extent : extentList)
-        {
-            line.append(String.format("\t\titem_ID=%d,\textent_count=%d,\textent_offset=0x%04X,\textent_length=%d%n", extent.getItemID(), extent.extentCount, extent.getExtentOffset(), extent.getExtentLength()));
-        }
-
-        return line.toString();
-    }
-
-    /**
-     * Generates a string representation of the derived Box structure.
-     *
-     * @return a formatted string
-     */
-    @Override
-    public String toString()
-    {
-        StringBuilder line = new StringBuilder();
-
-        line.append(super.toString());
-        line.append(String.format("  %-24s %s%n", "[Offset Size]", offsetSize));
-        line.append(String.format("  %-24s %s%n", "[Length Size]", lengthSize));
-        line.append(String.format("  %-24s %s%n", "[Base Offset Size]", baseOffsetSize));
-        line.append(String.format("  %-24s %s%n", "[Index Size]", indexSize));
-        line.append(String.format("  %-24s %s%n", "[Item Count]", itemCount));
-
-        for (ExtentData list : extentList)
-        {
-            line.append(System.lineSeparator());
-            line.append(String.format("  \t%-24s %s%n", "[Item ID]", list.itemID));
-            line.append(String.format("  \t%-24s %s%n", "[Extent Count]", list.extentCount));
-            line.append(String.format("  \t%-24s %s%n", "[Extent Index]", list.extentIndex));
-            line.append(String.format("  \t%-24s 0x%016X%n", "[Offset]", list.offset));
-            line.append(String.format("  \t%-24s %s%n", "[Length]", list.length));
-            line.append(String.format("  \t%-24s %s%n", "[Construction Method]", list.constructionMethod));
-            line.append(String.format("  \t%-24s %s%n", "[Data Reference Index]", list.dataReferenceIndex));
-
-        }
-
-        return line.toString();
-    }
-
-    /**
-     * Represents a single extent entry in the {@code ItemLocationBox}.
-     *
-     * <p>
-     * Each {@code ExtentData} instance describes the location of a resource, such as image
-     * properties, thumbnails, or Exif metadata. It records the offset, length, construction method,
-     * and reference information.
-     * </p>
-     */
-    public static class ExtentData
+    public static class ItemLocationEntry
     {
         private final int itemID;
-        private final int extentCount;
-        private final int extentIndex;
-        private final long offset;
-        private final int length;
         private final int constructionMethod;
         private final int dataReferenceIndex;
+        private final long baseOffset;
+        private final List<ExtentData> extents;
 
-        private ExtentData(int itemID, int extentCount, int extentIndex, long offset, int length, int construct, int dref)
+        public ItemLocationEntry(int itemID, int constructionMethod, int dataReferenceIndex, long baseOffset, List<ExtentData> extents)
         {
             this.itemID = itemID;
-            this.extentCount = extentCount;
-            this.extentIndex = extentIndex;
-            this.offset = offset;
-            this.length = length;
-            this.constructionMethod = construct;
-            this.dataReferenceIndex = dref;
+            this.constructionMethod = constructionMethod;
+            this.dataReferenceIndex = dataReferenceIndex;
+            this.baseOffset = baseOffset;
+            this.extents = extents;
         }
 
         public int getItemID()
@@ -303,35 +282,63 @@ public class ItemLocationBox extends FullBox
             return itemID;
         }
 
+        public int getConstructionMethod()
+        {
+            return constructionMethod;
+        }
+
+        public int getDataReferenceIndex()
+        {
+            return dataReferenceIndex;
+        }
+
+        public long getBaseOffset()
+        {
+            return baseOffset;
+        }
+
+        public List<ExtentData> getExtents()
+        {
+            return extents;
+        }
+    }
+
+    /**
+     * Represents a single extent entry in the {@code ItemLocationBox}.
+     */
+    public static class ExtentData
+    {
+        private final int itemID;
+        private final int extentIndex;
+        private final long extentOffset;
+        private final int extentLength;
+
+        public ExtentData(int itemID, int extentIndex, long extentOffset, int extentLength)
+        {
+            this.itemID = itemID;
+            this.extentIndex = extentIndex;
+            this.extentOffset = extentOffset;
+            this.extentLength = extentLength;
+        }
+
+        public int getItemID()
+        {
+            return itemID;
+        }
+
+        public int getExtentIndex()
+        {
+            return extentIndex;
+        }
+
         public long getExtentOffset()
         {
-            return offset;
+            return extentOffset;
         }
 
         public int getExtentLength()
         {
-            return length;
-        }
-
-        /**
-         * Returns a formatted string representing this extent's fields and values.
-         *
-         * @return a detailed string representation of this {@code ExtentData}
-         */
-        @Override
-        public String toString()
-        {
-            StringBuilder line = new StringBuilder();
-
-            line.append(String.format("  \t%-20s %s%n", "[Item ID]", getItemID()));
-            line.append(String.format("  \t%-20s %s%n", "[Extent Count]", extentCount));
-            line.append(String.format("  \t%-20s %s%n", "[Extent Index]", extentIndex));
-            line.append(String.format("  \t%-20s 0x%016X%n", "[Offset]", getExtentOffset()));
-            line.append(String.format("  \t%-20s %s%n", "[Length]", getExtentLength()));
-            line.append(String.format("  \t%-20s %s%n", "[Construction Method]", constructionMethod));
-            line.append(String.format("  \t%-20s %s%n", "[Data Reference Index]", dataReferenceIndex));
-
-            return line.toString();
+            return extentLength;
         }
     }
 }

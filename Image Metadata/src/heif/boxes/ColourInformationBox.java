@@ -61,39 +61,38 @@ public class ColourInformationBox extends Box
     }
 
     /**
-     * Displays a list of structured references associated with the specified HEIF based file,
-     * useful for analytical purposes.
+     * Returns a string representation of this {@code ColourInformationBox}.
      *
-     * @return the string
-     */
-    @Override
-    public String showBoxStructure()
-    {
-        StringBuilder line = new StringBuilder();
-
-        line.append(String.format("\t\t%s '%s': colourType=%s'", this.getClass().getSimpleName(), getBoxName(), colourType));
-
-        return line.toString();
-    }
-
-    /**
-     * Generates a string representation of the derived Box structure.
-     *
-     * @return a formatted string
+     * @return a formatted string describing the box contents.
      */
     @Override
     public String toString()
     {
-        StringBuilder line = new StringBuilder();
+        return toString(null);
+    }
 
-        line.append(super.toString());
+    /**
+     * Returns a human-readable debug string, summarising structured references associated with this
+     * HEIF-based file. Useful for logging or diagnostics.
+     *
+     * @param prefix
+     *        Optional heading or label to prepend. Can be {@code null}.
+     * 
+     * @return A formatted string suitable for debugging, inspection, or textual analysis
+     */
+    @Override
+    public String toString(String prefix)
+    {
+        StringBuilder sb = new StringBuilder();
 
-        line.append(String.format("  %-24s %s%n", "[Colour Type]", colourType));
-        line.append(String.format("  %-24s %s%n", "[Colour Primaries]", colourPrimaries));
-        line.append(String.format("  %-24s %s%n", "[Trx. Characteristics]", transferCharacteristics));
-        line.append(String.format("  %-24s %s%n", "[Matrix Coefficients]", matrixCoefficients));
-        line.append(String.format("  %-24s %s%n", "[Full Range Flag]", fullRangeFlag));
+        if (prefix != null && !prefix.isEmpty())
+        {
+            sb.append(prefix).append(System.lineSeparator());
+            sb.append(System.lineSeparator());
+        }
 
-        return line.toString();
+        sb.append(String.format("\t\t%s '%s': colourType=%s'", this.getClass().getSimpleName(), getTypeAsString(), colourType));
+
+        return sb.toString();
     }
 }

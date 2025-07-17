@@ -1,5 +1,6 @@
 package heif;
 
+import java.nio.charset.StandardCharsets;
 import common.SequentialByteReader;
 import heif.boxes.*;
 
@@ -9,7 +10,7 @@ public final class BoxFactory
     {
         Box box = new Box(reader);
 
-        switch (HeifBoxType.getBoxType(box.getBoxName()))
+        switch (HeifBoxType.getBoxType(box.getTypeAsString()))
         {
             case BOX_FILE_TYPE:
                 return new FileTypeBox(box, reader);
@@ -81,5 +82,16 @@ public final class BoxFactory
             default:
                 return box;
         }
+    }
+
+    public static String peekBoxType(SequentialByteReader reader)
+    {
+        reader.mark();
+        reader.skip(4); // size
+
+        String boxType = new String(reader.readBytes(4), StandardCharsets.UTF_8);
+        reader.reset();
+
+        return boxType;
     }
 }

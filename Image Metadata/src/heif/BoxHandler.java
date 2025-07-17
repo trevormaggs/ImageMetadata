@@ -101,16 +101,16 @@ public class BoxHandler implements ImageHandler
              * However, once a handler is developed, this should take care of that box correctly,
              * hopefully.
              */
-            if (HeifBoxType.BOX_MEDIA_DATA.matchesBoxName(box.getBoxName()))
+            if (HeifBoxType.BOX_MEDIA_DATA.matchesBoxName(box.getTypeAsString()))
             {
-                LOGGER.warn("Skipping unhandled Media Data box [" + box.getBoxName() + "] at offset [" + startPos + "]");
+                LOGGER.warn("Skipping unhandled Media Data box [" + box.getTypeAsString() + "] at offset [" + startPos + "]");
                 break;
             }
 
             heifBoxMap.putIfAbsent(box.getHeifType(), new ArrayList<Box>());
             heifBoxMap.get(box.getHeifType()).add(box);
 
-            List<Box> children = box.addBoxList();
+            List<Box> children = box.getBoxList();
 
             if (children != null)
             {
@@ -146,7 +146,7 @@ public class BoxHandler implements ImageHandler
         }
 
         int exifID = iinf.getExifID();
-        List<ExtentData> extents = (iloc != null) ? iloc.findExtentDataList(exifID) : null;
+        List<ExtentData> extents = (iloc != null) ? iloc.findExtentsForItem(exifID) : null;
 
         if (extents == null || extents.isEmpty())
         {

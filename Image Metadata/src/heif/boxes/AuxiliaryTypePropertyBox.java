@@ -1,7 +1,6 @@
 package heif.boxes;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import common.ByteValueConverter;
 import common.SequentialByteReader;
 
@@ -13,7 +12,7 @@ import common.SequentialByteReader;
  * Auxiliary images shall be associated with an {@code AuxiliaryTypeProperty} as defined here. It
  * includes a URN identifying the type of the auxiliary image. it may also include other fields, as
  * required by the URN.
- * 
+ *
  * <p>
  * Version History:
  * </p>
@@ -34,7 +33,7 @@ public class AuxiliaryTypePropertyBox extends FullBox
 
     /**
      * This constructor creates a derived Box object to augment the item property list.
-     * 
+     *
      * @param box
      *        the super Box object
      * @param reader
@@ -53,35 +52,38 @@ public class AuxiliaryTypePropertyBox extends FullBox
     }
 
     /**
-     * Displays a list of structured references associated with the specified HEIF based file,
-     * useful for analytical purposes.
+     * Returns a string representation of this {@code AuxiliaryTypePropertyBox}.
      *
-     * @return the string
-     */
-    @Override
-    public String showBoxStructure()
-    {
-        StringBuilder line = new StringBuilder();
-
-        line.append(String.format("\t\t%s '%s': auxType=%s", this.getClass().getSimpleName(), getBoxName(), auxType));
-
-        return line.toString();
-    }
-
-    /**
-     * Generates a string representation of the derived Box structure.
-     *
-     * @return a formatted string
+     * @return a formatted string describing the box contents.
      */
     @Override
     public String toString()
     {
-        StringBuilder line = new StringBuilder();
+        return toString(null);
+    }
 
-        line.append(super.toString());
-        line.append(String.format("  %-24s %s%n", "[Auxiliary Type]", auxType));
-        line.append(String.format("  %-24s %s%n", "[Auxiliary Sub Type]", Arrays.toString(auxSubtype)));
+    /**
+     * Returns a human-readable debug string, summarising structured references associated with this
+     * HEIF-based file. Useful for logging or diagnostics.
+     *
+     * @param prefix
+     *        Optional heading or label to prepend. Can be {@code null}.
+     *
+     * @return A formatted string suitable for debugging, inspection, or textual analysis
+     */
+    @Override
+    public String toString(String prefix)
+    {
+        StringBuilder sb = new StringBuilder();
 
-        return line.toString();
+        if (prefix != null && !prefix.isEmpty())
+        {
+            sb.append(prefix).append(System.lineSeparator());
+            sb.append(System.lineSeparator());
+        }
+
+        sb.append(String.format("\t\t%s '%s': auxType=%s", this.getClass().getSimpleName(), getTypeAsString(), auxType));
+
+        return sb.toString();
     }
 }

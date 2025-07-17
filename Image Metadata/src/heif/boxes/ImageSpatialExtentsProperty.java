@@ -51,36 +51,38 @@ public class ImageSpatialExtentsProperty extends FullBox
     }
 
     /**
-     * Displays a list of structured references associated with the specified HEIF based file,
-     * useful for analytical purposes.
+     * Returns a string representation of this {@code ImageSpatialExtentsProperty}.
      *
-     * @return the string
-     */
-    @Override
-    public String showBoxStructure()
-    {
-        StringBuilder line = new StringBuilder();
-
-        line.append(String.format("\t\t%s '%s': imageWidth=%d, imageHeight=%d", this.getClass().getSimpleName(), getBoxName(), imageWidth, imageHeight));
-
-        return line.toString();
-    }
-
-    /**
-     * Generates a string representation of the derived Box structure.
-     *
-     * @return a formatted string
+     * @return a formatted string describing the box contents.
      */
     @Override
     public String toString()
     {
-        StringBuilder line = new StringBuilder();
+        return toString(null);
+    }
 
-        line.append(super.toString());
+    /**
+     * Returns a human-readable debug string, summarising structured references associated with this
+     * HEIF-based file. Useful for logging or diagnostics.
+     *
+     * @param prefix
+     *        Optional heading or label to prepend. Can be {@code null}.
+     * 
+     * @return A formatted string suitable for debugging, inspection, or textual analysis
+     */
+    @Override
+    public String toString(String prefix)
+    {
+        StringBuilder sb = new StringBuilder();
 
-        line.append(String.format("  %-24s %s%n", "[Image Width]", imageWidth));
-        line.append(String.format("  %-24s %s%n", "[Image Height]", imageHeight));
+        if (prefix != null && !prefix.isEmpty())
+        {
+            sb.append(prefix).append(System.lineSeparator());
+            sb.append(System.lineSeparator());
+        }
 
-        return line.toString();
+        sb.append(String.format("\t\t%s '%s': imageWidth=%d, imageHeight=%d", this.getClass().getSimpleName(), getTypeAsString(), imageWidth, imageHeight));
+
+        return sb.toString();
     }
 }

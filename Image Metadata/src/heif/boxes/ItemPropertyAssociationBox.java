@@ -3,78 +3,53 @@ package heif.boxes;
 import common.SequentialByteReader;
 
 /**
- * This derived class handles the Box identified as {@code ipma} - Item Properties Box. For
- * technical details, refer to the Specification document - {@code ISO/IEC 23008-12:2017} on Page
- * 28.
- * 
- * Basically, this {@code ItemPropertiesBox} class enables the association of any item with an
- * ordered set of item properties. Item properties are small data records.
- * 
+ * Represents the {@code ipma} (Item Property Association Box) in HEIF/ISOBMFF files.
+ *
  * <p>
- * Version History:
+ * The {@code ipma} box defines associations between items and their properties. Each item can
+ * reference multiple properties, and each property can be marked as essential or non-essential for
+ * decoding the item.
  * </p>
  *
+ * <p>
+ * This class supports both version 0 and version 1 of the {@code ipma} box format. The structure is
+ * specified in ISO/IEC 23008-12:2017 (HEIF) documents.
+ * </p>
+ *
+ * <p>
+ * <b>Specification References:</b>
+ * </p>
+ * 
+ * <ul>
+ * <li>ISO/IEC 23008-12:2017, Page 28</li>
+ * </ul>
+ *
+ * <h3>Version History:</h3>
  * <ul>
  * <li>1.0 - Initial release by Trevor Maggs on 2 June 2025</li>
  * </ul>
  *
  * @author Trevor Maggs
  * @since 2 June 2025
- * @implNote This is not a perfect solution yet. Rigorous testing is required to validate the
- *           reliability and robustness of this implementation
+ * @implNote Further testing is required to confirm full compliance and interoperability.
  */
 public class ItemPropertyAssociationBox extends FullBox
 {
-    public int entryCount;
-    public ItemPropertyEntry[] entries;
+    /** The number of property association entries. */
+    private final int entryCount;
+
+    /** The array of item property entries, each describing associations for one item. */
+    private final ItemPropertyEntry[] entries;
 
     /**
-     * 
-     * Refer to the {@code ISO/IEC 23008-12:2017} on Page 29 under Semantics for more information.
-     * 
-     * Item property entry data.
+     * Constructs an {@code ItemPropertyAssociationBox} object, parsing its structure from the
+     * specified {@link SequentialByteReader}.
+     *
+     * @param box
+     *        the base {@link Box} object containing size and type information
+     * @param reader
+     *        the {@link SequentialByteReader} for sequential byte access
      */
-    public static class ItemPropertyEntry
-    {
-        public int itemID;
-        public int associationCount;
-        public ItemPropertyEntryAssociation[] associations;
-
-        /**
-         * Refer to the {@code ISO/IEC 23008-12:2017} on Page 29 under Semantics for more
-         * information.
-         */
-        private static class ItemPropertyEntryAssociation
-        {
-            /**
-             * This variable is set to 1 to indicate that the associated property is essential to
-             * the item, otherwise it is non-essential.
-             */
-            private boolean essential;
-
-            /**
-             * The variable is either 0 indicating that no property is associated (the essential
-             * indicator shall also be 0), or is the 1-based index of the associated property box in
-             * the ItemPropertyContainerBox contained in the same ItemPropertiesBox.
-             */
-            private int propertyIndex;
-        }
-
-        private ItemPropertyEntry(int itemid, int count)
-        {
-            this.itemID = itemid;
-            this.associationCount = count;
-            this.associations = new ItemPropertyEntryAssociation[count];
-        }
-
-        private void setAssociationValues(int index, boolean essential, int propertyIndex)
-        {
-            associations[index] = new ItemPropertyEntryAssociation();
-            associations[index].essential = essential;
-            associations[index].propertyIndex = propertyIndex;
-        }
-    }
-
     public ItemPropertyAssociationBox(Box box, SequentialByteReader reader)
     {
         super(box, reader);
@@ -86,21 +61,21 @@ public class ItemPropertyAssociationBox extends FullBox
 
         for (int i = 0; i < entryCount; i++)
         {
-            int itemID = (int) (getVersion() < 1 ? reader.readUnsignedShort() : reader.readUnsignedInteger());
+            int itemID = (getVersion() < 1) ? reader.readUnsignedShort() : (int) reader.readUnsignedInteger();
             int associationCount = reader.readUnsignedByte();
 
-            entries[i] = new ItemPropertyEntry(itemID, associationCount);
+            ItemPropertyEntry entry = new ItemPropertyEntry(itemID, associationCount);
 
             for (int j = 0; j < associationCount; j++)
             {
                 boolean essential;
                 int propertyIndex;
 
-                if (BitFlags().get(0))
+                if (getBitFlags().get(0))
                 {
-                    int value = (int) (reader.readUnsignedInteger());
+                    int value = (int) reader.readUnsignedShort();
 
-                    essential = (((value & 0x8000) >> 15) == 1);
+                    essential = ((value & 0x8000) != 0);
                     propertyIndex = (value & 0x7FFF);
                 }
 
@@ -108,76 +83,171 @@ public class ItemPropertyAssociationBox extends FullBox
                 {
                     int value = reader.readUnsignedByte();
 
-                    essential = (((value & 0x80) >> 7) == 1);
+                    essential = ((value & 0x80) != 0);
                     propertyIndex = (value & 0x7F);
                 }
 
-                entries[i].setAssociationValues(j, essential, propertyIndex);
+                entry.setAssociation(j, essential, propertyIndex);
             }
+
+            entries[i] = entry;
         }
 
         byteUsed += reader.getCurrentPosition() - pos;
     }
 
     /**
-     * Displays a list of structured references associated with the specified HEIF based file,
-     * useful for analytical purposes.
-     *
-     * @return the string
+     * @return the number of item property association entries.
      */
-    @Override
-    public String showBoxStructure()
+    public int getEntryCount()
     {
-        StringBuilder line = new StringBuilder();
-
-        line.append(String.format("\t%s '%s': entry_count=%d%n", this.getClass().getSimpleName(), getBoxName(), entryCount));
-        
-        for (int i = 0; i < entries.length; i++)
-        {
-            ItemPropertyEntry property = entries[i];
-
-            line.append(String.format("\t\t%d)\titem_ID=%d, association_count=%d", i + 1, property.itemID, property.associationCount));
-            line.append(System.lineSeparator());
-            
-            for (int j = 0; j < property.associationCount; j++)
-            {
-                ItemPropertyEntry.ItemPropertyEntryAssociation ref = property.associations[j];
-                line.append(String.format("\t\t\t\tessential=%s, property_index=%d%n", ref.essential, ref.propertyIndex));
-            }
-        }
-
-        return line.toString();
+        return entryCount;
     }
 
     /**
-     * Generates a string representation of the derived Box structure.
+     * @return the list of {@link ItemPropertyEntry} objects.
+     */
+    public ItemPropertyEntry[] getEntries()
+    {
+        return entries;
+    }
+
+    /**
+     * Returns a string representation of this {@code ItemPropertyAssociationBox}.
      *
-     * @return a formatted string
+     * @return a formatted string describing the box contents.
      */
     @Override
     public String toString()
     {
-        StringBuilder line = new StringBuilder();
+        return toString(null);
+    }
 
-        line.append(super.toString());
-        line.append(String.format("  %-24s %s%n", "[Entry Count]", entryCount));
+    /**
+     * Returns a detailed string representation of this box with an optional prefix.
+     *
+     * @param prefix
+     *        an optional label to prepend; may be {@code null}.
+     * 
+     * @return a formatted string suitable for logging or inspection
+     */
+    @Override
+    public String toString(String prefix)
+    {
+        StringBuilder sb = new StringBuilder();
 
-        for (ItemPropertyEntry property : entries)
+        if (prefix != null && !prefix.isEmpty())
         {
-            line.append(System.lineSeparator());
-            line.append(String.format("  \t%-24s %s%n", "[Item ID]", property.itemID));
-            line.append(String.format("  \t%-24s %s%n", "[Association Count]", property.associationCount));
+            sb.append(prefix).append(System.lineSeparator()).append(System.lineSeparator());
+        }
 
-            for (int i = 0; i < property.associationCount; i++)
+        sb.append(String.format("\t%s '%s': entry_count=%d%n", this.getClass().getSimpleName(), getTypeAsString(), entryCount));
+
+        for (int i = 0; i < entries.length; i++)
+        {
+            ItemPropertyEntry entry = entries[i];
+            sb.append(String.format("\t\t%d)\titem_ID=%d, association_count=%d%n", i + 1, entry.getItemID(), entry.getAssociationCount()));
+
+            for (ItemPropertyEntryAssociation assoc : entry.getAssociations())
             {
-                ItemPropertyEntry.ItemPropertyEntryAssociation ref = property.associations[i];
-
-                line.append(System.lineSeparator());
-                line.append(String.format("  \t\t%-20s %s%n", "[Essential]", ref.essential));
-                line.append(String.format("  \t\t%-20s %s%n", "[Property Index]", ref.propertyIndex));
+                sb.append(String.format("\t\t\t\tessential=%s, property_index=%d%n", assoc.isEssential(), assoc.getPropertyIndex()));
             }
         }
 
-        return line.toString();
+        return sb.toString();
+    }
+
+    /**
+     * Represents a single item's property associations in the {@code ipma} box.
+     */
+    public static class ItemPropertyEntry
+    {
+        private final int itemID;
+        private final int associationCount;
+        private final ItemPropertyEntryAssociation[] associations;
+
+        /**
+         * Constructs an {@code ItemPropertyEntry} with the specified item ID and number of
+         * associations.
+         *
+         * @param itemID
+         *        the identifier of the item
+         * @param count
+         *        the number of property associations for this item
+         */
+        public ItemPropertyEntry(int itemID, int count)
+        {
+            this.itemID = itemID;
+            this.associationCount = count;
+            this.associations = new ItemPropertyEntryAssociation[count];
+        }
+
+        /**
+         * Sets the association at the specified index.
+         *
+         * @param index
+         *        the index to set
+         * @param essential
+         *        {@code true} if the property is essential; otherwise, {@code false}
+         * @param propertyIndex
+         *        the 1-based index of the property in the {@code ipco} box
+         */
+        public void setAssociation(int index, boolean essential, int propertyIndex)
+        {
+            associations[index] = new ItemPropertyEntryAssociation(essential, propertyIndex);
+        }
+
+        /** @return the ID of the associated item */
+        public int getItemID()
+        {
+            return itemID;
+        }
+
+        /** @return the number of associations for this item */
+        public int getAssociationCount()
+        {
+            return associationCount;
+        }
+
+        /** @return the list of associations for this item */
+        public ItemPropertyEntryAssociation[] getAssociations()
+        {
+            return associations;
+        }
+    }
+
+    /**
+     * Represents a single association between an item and a property.
+     */
+    public static class ItemPropertyEntryAssociation
+    {
+        private final boolean essential;
+        private final int propertyIndex;
+
+        /**
+         * Constructs an association between an item and a property.
+         *
+         * @param essential
+         *        whether the property is essential
+         * @param propertyIndex
+         *        the 1-based index of the property in the {@code ipco} box
+         */
+        public ItemPropertyEntryAssociation(boolean essential, int propertyIndex)
+        {
+            this.essential = essential;
+            this.propertyIndex = propertyIndex;
+        }
+
+        /** @return {@code true} if the property is essential, otherwise {@code false} */
+        public boolean isEssential()
+        {
+            return essential;
+        }
+
+        /** @return the 1-based property index in the {@code ipco} box */
+        public int getPropertyIndex()
+        {
+            return propertyIndex;
+        }
     }
 }

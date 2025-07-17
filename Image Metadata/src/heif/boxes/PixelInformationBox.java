@@ -1,41 +1,42 @@
 package heif.boxes;
 
 import java.util.Arrays;
+
 import common.SequentialByteReader;
 
 /**
- * This derived Box class handles the Box identified as {@code pixi} - Pixel information Box. For
- * technical details, refer to the Specification document -
- * {@code ISO/IEC 23008-12:2017 in Page 13}.
+ * Represents the {@code pixi} (Pixel Information Box), which provides bit depth and number of
+ * channels for a reconstructed image.
  * 
- * The {@code PixelInformationProperty} descriptive item property indicates the number and bit depth
- * of colour components in the reconstructed image of the associated image item.
+ * <p>
+ * Specification Reference: ISO/IEC 23008-12:2017 on Page 13.
+ * </p>
  * 
  * <p>
  * Version History:
  * </p>
- *
+ * 
  * <ul>
- * <li>1.0 - Initial release by Trevor Maggs on 2 June 2025</li>
+ * <li>1.0 – Initial release by Trevor Maggs on 2 June 2025</li>
  * </ul>
- *
+ * 
  * @author Trevor Maggs
  * @since 2 June 2025
- * @implNote Additional testing is required to validate the reliability and robustness of this
- *           implementation
+ * @implNote This implementation may require additional verification for robustness and format edge
+ *           cases.
  */
 public class PixelInformationBox extends FullBox
 {
-    int numChannels;
-    int[] bitsPerChannel;
+    private final int numChannels;
+    private final int[] bitsPerChannel;
 
     /**
-     * This constructor creates a derived Box object to augment the item property list.
-     * 
+     * Constructs a {@code PixelInformationBox} by parsing the specified box header and its content.
+     *
      * @param box
-     *        the super Box object
+     *        the parent {@link Box} containing size and type information
      * @param reader
-     *        a SequentialByteReader object for sequential byte array access
+     *        the reader for parsing box content
      */
     public PixelInformationBox(Box box, SequentialByteReader reader)
     {
@@ -44,6 +45,12 @@ public class PixelInformationBox extends FullBox
         int pos = reader.getCurrentPosition();
 
         numChannels = reader.readUnsignedByte();
+
+        if (numChannels <= 0 || numChannels > 255)
+        {
+            throw new IllegalArgumentException("Channel count must be between 0 and 255. Found [" + numChannels + "]");
+        }
+
         bitsPerChannel = new int[numChannels];
 
         for (int i = 0; i < bitsPerChannel.length; i++)
@@ -55,35 +62,58 @@ public class PixelInformationBox extends FullBox
     }
 
     /**
-     * Displays a list of structured references associated with the specified HEIF based file,
-     * useful for analytical purposes.
+     * Returns the number of image channels described by this box.
      *
-     * @return the string
+     * @return the number of channels
      */
-    @Override
-    public String showBoxStructure()
+    public int getNumChannels()
     {
-        StringBuilder line = new StringBuilder();
-
-        line.append(String.format("\t\t%s '%s': numChannels=%s, bitsPerChannel=%s", this.getClass().getSimpleName(), getBoxName(), numChannels, Arrays.toString(bitsPerChannel)));
-
-        return line.toString();
+        return numChannels;
     }
 
     /**
-     * Generates a string representation of the derived Box structure.
+     * Returns a copy of the array of bits per channel.
      *
-     * @return a formatted string
+     * @return bits per channel array
+     */
+    public int[] getBitsPerChannel()
+    {
+        return bitsPerChannel.clone();
+    }
+
+    /**
+     * Returns a string representation of this {@code PixelInformationBox} resource.
+     *
+     * @return a formatted string describing the box contents
      */
     @Override
     public String toString()
     {
-        StringBuilder line = new StringBuilder();
+        return toString(null);
+    }
 
-        line.append(super.toString());
-        line.append(String.format("  %-24s %s%n", "[Num Channels]", numChannels));
-        line.append(String.format("  %-24s %s%n", "[Bits Per Channel]", Arrays.toString(bitsPerChannel)));
+    /**
+     * Returns a human-readable debug string, summarising structured references associated with this
+     * HEIF-based file. Useful for logging or diagnostics.
+     *
+     * @param prefix
+     *        Optional heading or label to prepend. Can be {@code null}.
+     * 
+     * @return A formatted string suitable for debugging, inspection, or textual analysis
+     */
+    @Override
+    public String toString(String prefix)
+    {
+        StringBuilder sb = new StringBuilder();
 
-        return line.toString();
+        if (prefix != null && !prefix.isEmpty())
+        {
+            sb.append(prefix).append(System.lineSeparator());
+            sb.append(System.lineSeparator());
+        }
+
+        sb.append(String.format("\t\t%s '%s': numChannels=%s, bitsPerChannel=%s", this.getClass().getSimpleName(), getTypeAsString(), numChannels, Arrays.toString(bitsPerChannel)));
+
+        return sb.toString();
     }
 }

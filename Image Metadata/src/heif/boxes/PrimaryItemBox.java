@@ -3,43 +3,45 @@ package heif.boxes;
 import common.SequentialByteReader;
 
 /**
- * This derived box, namely the {@code pitm} handler type, the primary data may be one of the
- * referenced items when it is desired that it be stored elsewhere, or divided into extents, or the
- * primary metadata may be contained in the meta-box (e.g. in an XML box). Either this box must
- * occur, or there must be a box within the meta-box (e.g. an XML box) containing the primary
- * information in the format required by the identified handler.
+ * Represents the {@code pitm} (Primary Item Box) in HEIF/ISOBMFF files.
  * 
- * This object itself takes a total of 16 or 32 bytes, depending on the version of the box. There
- * should be either zero or one instance of the {@code pitm} box.
- * 
- * This implementation follows the guide recommended in the Specification -
- * {@code ISO/IEC 14496-12:2015} on Page 80.
- *
  * <p>
- * Version History:
+ * The Primary Item Box designates a specific item as the "primary" item for a given context.
+ * Typically, this is the main image or media item. The actual data may be stored elsewhere in the
+ * file or referenced via other boxes, for example, {@code iref}, {@code iloc}.
  * </p>
- *
+ * 
+ * <p>
+ * Normally, the content of this box takes either 2 or 4 bytes depending on its version. (When
+ * considering the box header, the total size is typically 14 or 16 bytes, depending on field
+ * lengths.)
+ * </p>
+ * 
+ * <p>
+ * Specification Reference: ISO/IEC 14496-12:2015, Section 8.11.4 (Page 80).
+ * </p>
+ * 
+ * <h3>Version History:</h3>
  * <ul>
  * <li>1.0 - Initial release by Trevor Maggs on 31 May 2025</li>
  * </ul>
  *
  * @author Trevor Maggs
  * @since 31 May 2025
- * @implNote Additional testing is required to confirm the reliability and robustness of this
- *           implementation
+ * @implNote Additional testing is required to confirm full compliance and robustness.
  */
 public class PrimaryItemBox extends FullBox
 {
     private long itemID;
 
     /**
-     * This constructor creates a derived Box object, extending the super class {@code FullBox} to
-     * provide more specific information about this box.
-     * 
+     * Constructs a {@code PrimaryItemBox}, reading its fields from the specified
+     * {@link SequentialByteReader} parameter.
+     *
      * @param box
-     *        the super Box object
+     *        the parent {@link Box} containing size and type information
      * @param reader
-     *        a SequentialByteReader object for sequential byte array access
+     *        The reader for sequential byte parsing
      */
     public PrimaryItemBox(Box box, SequentialByteReader reader)
     {
@@ -47,7 +49,7 @@ public class PrimaryItemBox extends FullBox
 
         int pos = reader.getCurrentPosition();
 
-        itemID = (getVersion() == 0 ? reader.readUnsignedShort() : reader.readUnsignedInteger());
+        itemID = (getVersion() == 0) ? reader.readUnsignedShort() : reader.readUnsignedInteger();
 
         byteUsed += reader.getCurrentPosition() - pos;
     }
@@ -55,42 +57,44 @@ public class PrimaryItemBox extends FullBox
     /**
      * Returns the identifier of the primary item.
      *
-     * @return the Primary Item ID
+     * @return the primary item ID
      */
-    public int getItemID()
+    public long getItemID()
     {
-        return (int) itemID;
+        return itemID;
     }
 
     /**
-     * Displays a list of structured references associated with the specified HEIF based file,
-     * useful for analytical purposes.
+     * Returns a string representation of this {@code PrimaryItemBox}.
      *
-     * @return the string
-     */
-    @Override
-    public String showBoxStructure()
-    {
-        StringBuilder line = new StringBuilder();
-
-        line.append(String.format("\t%s '%s':\t\tItem_ID=%d", this.getClass().getSimpleName(), getBoxName(), getItemID()));
-
-        return line.toString();
-    }
-
-    /**
-     * Generates a string representation of the derived Box structure.
-     *
-     * @return a formatted string
+     * @return a formatted string describing the box contents.
      */
     @Override
     public String toString()
     {
-        StringBuilder line = new StringBuilder();
+        return toString(null);
+    }
 
-        line.append(super.toString());
-        line.append(String.format("  %-24s %s%n", "[Item ID]", itemID));
+    /**
+     * Returns a human-readable debug string, summarising this {@code PrimaryItemBox}.
+     *
+     * @param prefix
+     *        an optional label or heading to prepend. Can be {@code null}
+     * 
+     * @return a formatted string suitable for logging or inspection.
+     */
+    @Override
+    public String toString(String prefix)
+    {
+        StringBuilder sb = new StringBuilder();
 
-        return line.toString();
+        if (prefix != null && !prefix.isEmpty())
+        {
+            sb.append(prefix).append(System.lineSeparator()).append(System.lineSeparator());
+        }
+
+        sb.append(String.format("\t%s '%s':\t\tPrimaryItemID=%d", this.getClass().getSimpleName(), getTypeAsString(), getItemID()));
+
+        return sb.toString();
     }
 }

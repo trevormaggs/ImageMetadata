@@ -39,6 +39,7 @@ import java.util.Arrays;
  */
 public enum HeifBoxType
 {
+    UUID("uuid", BoxCategory.BOX),
     BOX_FILE_TYPE("ftyp", BoxCategory.BOX),
     BOX_PRIMARY_ITEM("pitm", BoxCategory.BOX),
     BOX_ITEM_PROPERTY_ASSOCIATION("ipma", BoxCategory.BOX),
@@ -104,7 +105,7 @@ public enum HeifBoxType
      *
      * @return the box type string (For example, "ftyp", "meta", "idat")
      */
-    public String getBoxName()
+    public String getTypeName()
     {
         return boxname;
     }

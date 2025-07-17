@@ -1,8 +1,8 @@
 package heif.boxes;
 
 import java.util.BitSet;
-import heif.HeifBoxType;
 import common.SequentialByteReader;
+import heif.HeifBoxType;
 
 /**
  * This code creates a complete class that stores ubiquitous high-level data applicable for the
@@ -44,16 +44,16 @@ public class FullBox extends Box
 
         int pos = reader.getCurrentPosition();
 
-        /* Total 4 bytes are read here plus 8 bytes in the parent Box class */
+        /* Reads 4 additional bytes (1 byte version + 3 bytes flags), on top of the Box header */
         version = reader.readUnsignedByte();
 
         byte[] b = reader.readBytes(3);
 
         /*
-         * Because the static valueOf method requires the byte array to be a little-endian
-         * representation. Therefore, we need to reverse the bytes in the array first since the HEIF
-         * based files follows the big-endian format.
-         * 
+         * The static BitSet.valueOf(byte[]) method expects the input array to be in little-endian
+         * order. Since HEIF files use big-endian format, we need to reverse the byte array before
+         * calling valueOf.
+         *
          * See: https://docs.oracle.com/javase/8/docs/api/java/util/BitSet.html#valueOf-byte:A-
          */
         byte[] reversed = new byte[b.length];
@@ -80,7 +80,7 @@ public class FullBox extends Box
         super(box);
 
         this.version = box.version;
-        this.flagBit = box.flagBit;
+        this.flagBit = (BitSet) box.flagBit.clone();
     }
 
     /**
@@ -108,59 +108,74 @@ public class FullBox extends Box
      *
      * @return a BitSet object
      */
-    public BitSet BitFlags()
+    public BitSet getBitFlags()
     {
-        return flagBit;
+        return (BitSet) flagBit.clone();
     }
 
+    public int getFlagsAsInt()
+    {
+        int result = 0;
+        byte[] bytes = flagBit.toByteArray();
+
+        for (int i = 0; i < bytes.length; i++)
+        {
+            result |= (bytes[i] & 0xFF) << (8 * i);
+        }
+
+        return result;
+    }
     /**
      * Returns a string that represents the binary form of the flag map.
      *
      * @return string exhibiting the binary representation
      */
-    public String formatFlagString()
+    public String getFlagsAsBinaryString()
     {
         StringBuilder sb = new StringBuilder();
 
-        for (int i = 0; i < flagBit.length(); i++)
+        for (int i = flagBit.length() - 1; i >= 0; i--)
         {
-            sb.append(flagBit.get(i) == true ? 1 : 0);
+            sb.append(flagBit.get(i) ? '1' : '0');
         }
 
         return sb.toString();
     }
 
     /**
-     * Displays a list of structured references associated with the specified HEIF based file,
-     * useful for analytical purposes.
+     * Returns a string representation of this {@code FullBox}.
      *
-     * @return the string
-     */
-    @Override
-    public String showBoxStructure()
-    {
-        StringBuilder line = new StringBuilder();
-        HeifBoxType box = HeifBoxType.getBoxType(getBoxName());
-
-        line.append(String.format("%s '%s':\t\t\t\t\t(%s)", this.getClass().getSimpleName(), getBoxName(), box.getBoxCategory()));        
-
-        return line.toString();
-    }
-
-    /**
-     * Generates a string representation of the derived Box structure.
-     *
-     * @return a formatted string
+     * @return a formatted string describing the box contents.
      */
     @Override
     public String toString()
     {
-        StringBuilder line = new StringBuilder();
+        return toString(null);
+    }
 
-        line.append(super.toString());
-        line.append(String.format("  %-24s %s%n", "[Version]", getVersion()));
-        line.append(String.format("  %-24s %s%n", "[Flags]", formatFlagString()));
+    /**
+     * Returns a human-readable debug string, summarising structured references associated with this
+     * HEIF-based file. Useful for logging or diagnostics.
+     *
+     * @param prefix
+     *        Optional heading or label to prepend. Can be {@code null}.
+     * 
+     * @return A formatted string suitable for debugging, inspection, or textual analysis
+     */
+    @Override
+    public String toString(String prefix)
+    {
+        HeifBoxType box = getHeifType();
+        StringBuilder sb = new StringBuilder();
 
-        return line.toString();
+        if (prefix != null && !prefix.isEmpty())
+        {
+            sb.append(prefix).append(System.lineSeparator());
+            sb.append(System.lineSeparator());
+        }
+
+        sb.append(String.format("%s '%s':\t\t\t\t\t(%s)", this.getClass().getSimpleName(), getTypeAsString(), box.getBoxCategory()));
+
+        return sb.toString();
     }
 }

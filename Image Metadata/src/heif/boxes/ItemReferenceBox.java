@@ -1,36 +1,146 @@
 package heif.boxes;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import common.SequentialByteReader;
 
 /**
- * This derived class handles the Box identified as {@code iref} - Item Reference Box. For technical
- * details, refer to the Specification document - {@code ISO/IEC 14496-12:2015} on Page 87.
- * 
- * Basically, it allows the linking of one item to others via typed references. All references for
- * one item of a specific type are collected into a single item type reference box.
+ * Represents the {@code iref} (Item Reference Box) in HEIF/ISOBMFF files.
  * 
  * <p>
- * Version History:
+ * The Item Reference Box allows one item to reference other items using typed references. Each set
+ * of references for a specific type is stored in a {@code SingleItemTypeReferenceBox}. This
+ * structure enables relationships between media items, such as thumbnails, auxiliary images, or
+ * alternate representations.
  * </p>
  *
+ * <p>
+ * Specification Reference: ISO/IEC 14496-12:2015, Section 8.11.12 (Page 87).
+ * </p>
+ * 
+ * <h3>Version History:</h3>
  * <ul>
  * <li>1.0 - Initial release by Trevor Maggs on 31 May 2025</li>
  * </ul>
  *
  * @author Trevor Maggs
  * @since 31 May 2025
- * @implNote Additional testing is required to confirm the reliability and robustness of this
- *           implementation
+ * @implNote This class requires additional testing to ensure full specification compliance and
+ *           robustness.
  */
 public class ItemReferenceBox extends FullBox
 {
     private List<Box> references;
 
     /**
-     * An inner class designed to fill up a {@code SingleItemTypeReferenceBox} box for referencing
-     * purposes.
+     * Constructs an {@code ItemReferenceBox}, reading its references from the specified
+     * {@link SequentialByteReader} resource.
+     *
+     * @param box
+     *        the parent {@link Box} containing size and type information
+     * @param reader
+     *        the reader for sequential byte parsing
+     */
+    public ItemReferenceBox(Box box, SequentialByteReader reader)
+    {
+        super(box, reader);
+
+        int startpos = reader.getCurrentPosition();
+        int endpos = startpos + available();
+
+        references = new ArrayList<>();
+
+        do
+        {
+            references.add(new SingleItemTypeReferenceBox(new Box(reader), reader, (getVersion() != 0)));
+
+        } while (reader.getCurrentPosition() < endpos);
+
+        if (reader.getCurrentPosition() != endpos)
+        {
+            throw new IllegalStateException("Mismatch in expected box size for [" + getTypeAsString() + "]");
+        }
+
+        byteUsed += reader.getCurrentPosition() - startpos;
+    }
+
+    /**
+     * Returns the list of {@code SingleItemTypeReferenceBox} entries contained in this
+     * {@code ItemReferenceBox} resource.
+     *
+     * @return an unmodifiable list of references
+     */
+    public List<Box> getReferences()
+    {
+        return Collections.unmodifiableList(references);
+    }
+
+    /**
+     * Returns the list of child boxes.
+     *
+     * @return the list of reference boxes, or an empty list if none exist
+     */
+    @Override
+    public List<Box> getBoxList()
+    {
+        return references != null ? references : Collections.emptyList();
+    }
+
+    /**
+     * Returns a string representation of this {@code ItemReferenceBox} resource.
+     *
+     * @return a formatted string describing the box contents
+     */
+    @Override
+    public String toString()
+    {
+        return toString(null);
+    }
+
+    /**
+     * Returns a human-readable debug string, summarising the {@code ItemReferenceBox} contents
+     * associated with this HEIF-based file. Useful for logging or diagnostics.
+     *
+     * @param prefix
+     *        an optional label or prefix for the output. Can be {@code null}
+     * 
+     * @return a formatted string suitable for logging, inspection, or analysis
+     */
+    @Override
+    public String toString(String prefix)
+    {
+        StringBuilder sb = new StringBuilder();
+
+        if (prefix != null && !prefix.isEmpty())
+        {
+            sb.append(prefix).append(System.lineSeparator()).append(System.lineSeparator());
+        }
+
+        sb.append(String.format("\t%s '%s':", this.getClass().getSimpleName(), getTypeAsString()));
+
+        /*
+         * sb.append(System.lineSeparator());
+         * 
+         * for (Box ref : references)
+         * {
+         * SingleItemTypeReferenceBox box = (SingleItemTypeReferenceBox) ref;
+         * sb.append(box.toString("\t"));
+         * sb.append(System.lineSeparator());
+         * }
+         */
+
+        return sb.toString();
+    }
+
+    /**
+     * Represents a {@code SingleItemTypeReferenceBox} resource, which stores a group of item
+     * references of a specific type.
+     * 
+     * <p>
+     * Each reference links a {@code fromItemID} to one or more {@code toItemID} targets. The
+     * reference type is identified by the box's name, for example, {@code thmb} for thumbnail.
+     * </p>
      */
     public static class SingleItemTypeReferenceBox extends Box
     {
@@ -38,129 +148,62 @@ public class ItemReferenceBox extends FullBox
         private int referenceCount;
         private long[] toItemID;
 
+        /**
+         * Constructs a {@code SingleItemTypeReferenceBox} by reading its fields from the given
+         * {@link SequentialByteReader}.
+         *
+         * @param box
+         *        the parent {@link Box} containing size and type information
+         * @param reader
+         *        the reader for sequential byte parsing
+         * @param large
+         *        indicates whether 32-bit item IDs are used ({@code version != 0})
+         */
         public SingleItemTypeReferenceBox(Box box, SequentialByteReader reader, boolean large)
         {
             super(box);
 
-            fromItemID = (large ? reader.readUnsignedInteger() : reader.readUnsignedShort());
+            fromItemID = large ? reader.readUnsignedInteger() : reader.readUnsignedShort();
             referenceCount = reader.readUnsignedShort();
             toItemID = new long[referenceCount];
 
             for (int j = 0; j < referenceCount; j++)
             {
-                toItemID[j] = (large ? reader.readUnsignedInteger() : reader.readUnsignedShort());
+                toItemID[j] = large ? reader.readUnsignedInteger() : reader.readUnsignedShort();
             }
         }
-    }
 
-    /**
-     * This constructor creates a derived Box object, providing additional information about the
-     * linking of one item to others via typed references.
-     *
-     * @param box
-     *        the super Box object
-     * @param reader
-     *        a SequentialByteReader object for sequential byte array access
-     */
-    public ItemReferenceBox(Box box, SequentialByteReader reader)
-    {
-        super(box, reader);
-
-        int pos = reader.getCurrentPosition();
-
-        references = new ArrayList<>();
-
-        do
+        /**
+         * Returns a debug-friendly string representation of this reference.
+         *
+         * @param prefix
+         *        optional prefix or label. Can be {@code null}
+         * 
+         * @return a formatted string listing the reference details
+         */
+        @Override
+        public String toString(String prefix)
         {
-            Box newBox = new SingleItemTypeReferenceBox(new Box(reader), reader, (getVersion() != 0));
-            references.add(newBox);
+            StringBuilder sb = new StringBuilder();
 
-        } while (reader.getCurrentPosition() < pos + available());
-
-        byteUsed += reader.getCurrentPosition() - pos;
-    }
-
-    @Override
-    public List<Box> addBoxList()
-    {
-        // return references;
-        return null;
-    }
-
-    /**
-     * Displays a list of structured references associated with the specified HEIF based file,
-     * useful for analytical purposes.
-     *
-     * @return the string
-     */
-    @Override
-    public String showBoxStructure()
-    {
-        StringBuilder line = new StringBuilder();
-
-        line.append(String.format("\t%s '%s':", this.getClass().getSimpleName(), getBoxName()));
-        line.append(System.lineSeparator());
-
-        for (Box list : references)
-        {
-            SingleItemTypeReferenceBox box = ((SingleItemTypeReferenceBox) list);
-            line.append(String.format("\t\treferenceType='%s': from_item_ID=%d,\tref_count=%d,\tto_item_ID=", box.getBoxName(), box.fromItemID, box.referenceCount));
-
-            for (int j = 0; j < box.referenceCount; j++)
+            if (prefix != null && !prefix.isEmpty())
             {
-                if (j < box.referenceCount - 1)
-                {
-                    line.append(String.format("%d, ", box.toItemID[j]));
-                }
+                sb.append(prefix).append(System.lineSeparator()).append(System.lineSeparator());
+            }
 
-                else
+            sb.append(String.format("\t\treferenceType='%s': from_item_ID=%d, ref_count=%d, to_item_ID=", getTypeAsString(), fromItemID, referenceCount));
+
+            for (int j = 0; j < referenceCount; j++)
+            {
+                sb.append(toItemID[j]);
+
+                if (j < referenceCount - 1)
                 {
-                    line.append(String.format("%d%n", box.toItemID[j]));
+                    sb.append(", ");
                 }
             }
+
+            return sb.toString();
         }
-
-        line.append(System.lineSeparator());
-
-        for (Box box : references)
-        {
-            line.append(String.format("%s%n", box.showBoxStructure()));
-        }
-
-        return line.toString();
-    }
-
-    /**
-     * Generates a string representation of the derived Box structure.
-     *
-     * @return a formatted string
-     */
-    @Override
-    public String toString()
-    {
-        StringBuilder line = new StringBuilder();
-
-        line.append(super.toString());
-
-        for (Box box : references)
-        {
-            line.append(System.lineSeparator());
-
-            SingleItemTypeReferenceBox ref = ((SingleItemTypeReferenceBox) box);
-
-            line.append(String.format("  \t%-24s %s%n", "[From Item ID]", ref.fromItemID));
-            line.append(String.format("  \t%-24s %s%n", "[Reference Count]", ref.referenceCount));
-            line.append(String.format("  \t%-24s ", "[To Item ID]"));
-
-            for (long item : ref.toItemID)
-            {
-                // line.append(String.format("0x%02X ", item));
-                line.append(String.format("%d ", item));
-            }
-
-            line.append(System.lineSeparator());
-        }
-
-        return line.toString();
     }
 }

@@ -112,7 +112,7 @@ public final class TestScanner
                         System.out.printf("%s\n", dir.getNumericValue(EXIF_TAG_METERING_MODE));
                     }
                     
-                    //System.out.printf("%s\n", tif);
+                    // System.out.printf("%s\n", tif);
                 }
 
                 else if (meta instanceof MetadataPNG)

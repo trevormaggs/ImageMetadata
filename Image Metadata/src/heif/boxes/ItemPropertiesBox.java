@@ -22,15 +22,16 @@ import heif.HeifBoxType;
  * </p>
  * 
  * <ul>
- * <li>{@code ipco} – Contains an implicitly indexed list of property boxes.</li>
- * <li>{@code ipma} – Maps items to property indices defined in {@code ipco}.</li>
+ * <li>{@code ipco} – Contains an implicitly indexed list of property boxes</li>
+ * <li>{@code ipma} – Maps items to property indices defined in {@code ipco}</li>
  * </ul>
  * 
  * <p>
  * <b>Specification Reference:</b>
  * </p>
+ * 
  * <ul>
- * <li>ISO/IEC 23008-12:2017, Section 6.5.5 (Page 28)</li>
+ * <li>ISO/IEC 23008-12:2017 (Page 28)</li>
  * </ul>
  * 
  * <p>
@@ -49,78 +50,6 @@ public class ItemPropertiesBox extends Box
 {
     private ItemPropertyContainerBox ipco;
     private List<ItemPropertyAssociationBox> associations;
-
-    /**
-     * Represents the {@code ipco} (ItemPropertyContainerBox), a nested container holding an
-     * implicitly indexed list of item property boxes.
-     * 
-     * <p>
-     * Each property describes an aspect of an image or media item, such as color information, pixel
-     * layout, or transformation metadata.
-     * </p>
-     * 
-     * <p>
-     * Refer to the Specification document - {@code ISO/IEC 23008-12:2017} on Page 28 for more
-     * information.
-     * </p>
-     */
-    private static class ItemPropertyContainerBox extends Box
-    {
-        private List<Box> properties;
-
-        /**
-         * Constructs an {@code ItemPropertyContainerBox} resource by reading sequential boxes from
-         * the {@code SequentialByteReader}.
-         * 
-         * <p>
-         * Each property box is read, added to the property list, and skipped over to handle cases
-         * where specific handlers for sub-boxes may not yet be implemented.
-         * </p>
-         * 
-         * @param box
-         *        the parent Box containing size and header information
-         * @param reader
-         *        the sequential byte reader for parsing box data
-         * 
-         * @throws IllegalArgumentException
-         *         if a sub-box reports a negative size (corrupted file)
-         */
-        private ItemPropertyContainerBox(Box box, SequentialByteReader reader)
-        {
-            super(box);
-
-            int startpos = reader.getCurrentPosition();
-            int endpos = startpos + available();
-
-            properties = new ArrayList<>();
-
-            do
-            {
-                Box newBox = BoxFactory.createBox(reader);
-
-                if (newBox.available() < 0)
-                {
-                    throw new IllegalArgumentException("Negative box size detected at [" + newBox.getBoxName() + "]");
-                }
-
-                /*
-                 * Skip the content to allow parsing unhandled sub-boxes safely.
-                 * hvcC box is one of them.
-                 */
-                reader.skip(newBox.available());
-
-                properties.add(newBox);
-
-            } while (reader.getCurrentPosition() < endpos);
-
-            if (reader.getCurrentPosition() != endpos)
-            {
-                throw new IllegalStateException("Mismatch in expected box size for ipco");
-            }
-
-            byteUsed += reader.getCurrentPosition() - startpos;
-        }
-    }
 
     /**
      * Constructs an {@code ItemPropertiesBox} by reading the {@code ipco} (property container) and
@@ -149,6 +78,11 @@ public class ItemPropertiesBox extends Box
 
         ipco = new ItemPropertyContainerBox(new Box(reader), reader);
 
+        if (!ipco.getTypeAsString().equals("ipco"))
+        {
+            throw new IllegalArgumentException("Expected [ipco] box but found [" + ipco.getTypeAsString() + "]");
+        }
+
         do
         {
             associations.add(new ItemPropertyAssociationBox(new Box(reader), reader));
@@ -157,7 +91,7 @@ public class ItemPropertiesBox extends Box
 
         if (reader.getCurrentPosition() != endpos)
         {
-            throw new IllegalStateException("Mismatch in expected box size for iprp");
+            throw new IllegalStateException("Mismatch in expected box size for [" + getTypeAsString() + "]");
         }
 
         byteUsed += reader.getCurrentPosition() - startpos;
@@ -190,7 +124,7 @@ public class ItemPropertiesBox extends Box
      * @return a list of Box objects in reading order
      */
     @Override
-    public List<Box> addBoxList()
+    public List<Box> getBoxList()
     {
         List<Box> combinedList = new ArrayList<>(ipco.properties);
 
@@ -200,60 +134,135 @@ public class ItemPropertiesBox extends Box
     }
 
     /**
-     * Provides a hierarchical string representation of the box structure, including all properties
-     * and their associations. Useful for debugging or analysis.
-     * 
-     * @return a formatted string representing the structure of this box
-     */
-    @Override
-    public String showBoxStructure()
-    {
-        StringBuilder line = new StringBuilder();
-
-        line.append(String.format("\t%s '%s':%n", this.getClass().getSimpleName(), getBoxName()));
-        line.append(String.format("\t\t%s '%s':%n", ipco.getClass().getSimpleName(), ipco.getBoxName()));
-
-        for (Box box : ipco.properties)
-        {
-            if (HeifBoxType.getBoxType(box.getBoxName()) != HeifBoxType.UNKNOWN)
-            {
-                line.append(String.format("\t\t\t'%s': %s%n", box.getBoxName(), box.showBoxStructure()));
-            }
-
-            else
-            {
-                line.append(String.format("%s%n", box.showBoxStructure()));
-            }
-        }
-
-        return line.toString();
-    }
-
-    /**
-     * Generates a string representation of the basic Box structure.
+     * Returns a string representation of this {@code ItemPropertiesBox} resource.
      *
-     * @return a formatted string
+     * @return a formatted string describing the box contents
      */
     @Override
     public String toString()
     {
-        StringBuilder line = new StringBuilder();
+        return toString(null);
+    }
 
-        line.append(super.toString());
-        line.append(System.lineSeparator());
+    /**
+     * Returns a human-readable debug string summarising structured references associated with this
+     * HEIF-based file. Useful for logging or diagnostics.
+     *
+     * @param prefix
+     *        Optional heading or label to prepend. Can be {@code null}.
+     * 
+     * @return A formatted string suitable for debugging, inspection, or textual analysis
+     */
+    @Override
+    public String toString(String prefix)
+    {
+        StringBuilder sb = new StringBuilder();
+
+        if (prefix != null && !prefix.isEmpty())
+        {
+            sb.append(prefix).append(System.lineSeparator());
+            sb.append(System.lineSeparator());
+        }
+
+        sb.append(String.format("\t%s '%s':%n", this.getClass().getSimpleName(), getTypeAsString()));
+        sb.append(String.format("\t\t%s '%s':%n", ipco.getClass().getSimpleName(), ipco.getTypeAsString()));
 
         for (Box box : ipco.properties)
         {
-            line.append(box);
-            line.append(System.lineSeparator());
+            if (HeifBoxType.getBoxType(box.getTypeAsString()) != HeifBoxType.UNKNOWN)
+            {
+                sb.append(String.format("\t\t\t'%s': %s%n", box.getTypeAsString(), box.toString(null)));
+            }
+
+            else
+            {
+                sb.append(String.format("%s%n", box.toString("")));
+            }
         }
 
-        for (Box box : associations)
+        sb.append(System.lineSeparator());
+
+        for (ItemPropertyAssociationBox ipma : associations)
         {
-            line.append(box);
-            line.append(System.lineSeparator());
+            sb.append(ipma.toString(String.format("\tAssociations (%d entries):", associations.size())));
         }
 
-        return line.toString();
+        return sb.toString();
+    }
+
+    /**
+     * Represents the {@code ipco} (ItemPropertyContainerBox), a nested container holding an
+     * implicitly indexed list of item property boxes.
+     * 
+     * <p>
+     * Each property describes an aspect of an image or media item, such as color information, pixel
+     * layout, or transformation metadata.
+     * </p>
+     * 
+     * <p>
+     * Refer to the Specification document - {@code ISO/IEC 23008-12:2017} on Page 28 for more
+     * information.
+     * </p>
+     */
+    private static final class ItemPropertyContainerBox extends Box
+    {
+        private List<Box> properties;
+
+        /**
+         * Constructs an {@code ItemPropertyContainerBox} resource by reading sequential boxes from
+         * the {@code SequentialByteReader}.
+         * 
+         * <p>
+         * Each property box is read, added to the property list, and skipped over to handle cases
+         * where specific handlers for sub-boxes may not yet be implemented.
+         * </p>
+         * 
+         * @param box
+         *        the parent Box containing size and header information
+         * @param reader
+         *        the sequential byte reader for parsing box data
+         * 
+         * @throws IllegalArgumentException
+         *         if a sub-box reports a negative size (corrupted file)
+         */
+        private ItemPropertyContainerBox(Box box, SequentialByteReader reader)
+        {
+            super(box);
+
+            int startpos = reader.getCurrentPosition();
+            int endpos = startpos + available();
+
+            properties = new ArrayList<>();
+
+            do
+            {
+                String boxType = BoxFactory.peekBoxType(reader);
+
+                /*
+                 * Handle unknown boxes such as hvcC, app1, etc to
+                 * avoid unnecessary object creation.
+                 */
+                if (HeifBoxType.getBoxType(boxType) == HeifBoxType.UNKNOWN)
+                {
+                    Box unknownBox = new Box(reader);
+                    reader.skip(unknownBox.available()); // Skip unknown property safely
+                    properties.add(unknownBox); // Still keep it in list for completeness
+                }
+
+                else
+                {
+                    Box propertyBox = BoxFactory.createBox(reader);
+                    properties.add(propertyBox);
+                }
+
+            } while (reader.getCurrentPosition() < endpos);
+
+            if (reader.getCurrentPosition() != endpos)
+            {
+                throw new IllegalStateException("Mismatch in expected box size for [" + getTypeAsString() + "]");
+            }
+
+            byteUsed += reader.getCurrentPosition() - startpos;
+        }
     }
 }

@@ -1,13 +1,15 @@
 /**
- * Provides shared utilities for byte-level parsing and data conversion.
+ * Shared utilities for byte-level parsing and data conversion, including generic support methods.
  *
  * <p>
  * This package includes helper classes such as:
  * </p>
  * 
  * <ul>
- * <li>{@link common.SequentialByteReader} – Sequential reading of byte arrays with bounds safety.</li>
- * <li>{@link common.ByteValueConverter} – Conversion between byte arrays and primitive types, strings, or structured data.</li>
+ * <li>{@link common.SequentialByteReader} – Sequential reading of byte arrays with bounds
+ * safety.</li>
+ * <li>{@link common.ByteValueConverter} – Conversion between byte arrays and primitive types,
+ * strings, or structured data.</li>
  * </ul>
  *
  * <p>

@@ -1,5 +1,6 @@
 package heif;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -96,10 +97,11 @@ public class BoxHandler implements ImageHandler
             Box box = BoxFactory.createBox(reader);
 
             /*
-             * TODO: We don't know how the data within the Media Data box can be effectively handled
-             * and since we are not really interested in parsing it, it will just be skipped.
-             * However, once a handler is developed, this should take care of that box correctly,
-             * hopefully.
+             * At this stage, no handler for processing data within the Media Data box (mdat) is
+             * available, since we are not interested in parsing it yet. This box will be skipped as
+             * un-handled.
+             * 
+             * TODO: work out how mdat data can be handled.
              */
             if (HeifBoxType.BOX_MEDIA_DATA.matchesBoxName(box.getTypeAsString()))
             {
@@ -124,12 +126,24 @@ public class BoxHandler implements ImageHandler
     }
 
     /**
-     * Extracts the raw Exif data block from the HEIF container.
+     * Extracts the raw Exif TIFF block from the HEIF container.
      *
      * <p>
      * The returned byte array starts at the TIFF header and excludes the Exif identifier prefix.
+     * According to ISO/IEC 23008-12:2017 Annex A (page 37), the first 4 bytes of the Exif item
+     * payload contain {@code exifTiffHeaderOffset}, which specifies the offset from the start of
+     * the payload to the TIFF header.
      * </p>
      *
+     * <p>
+     * The TIFF header typically starts with two magic bytes to indicate byte order:
+     * </p>
+     * 
+     * <ul>
+     * <li>{@code 0x4D 0x4D} for Motorola (big-endian)</li>
+     * <li>{@code 0x49 0x49} for Intel (little-endian)</li>
+     * </ul>
+     * 
      * @return a byte array containing the TIFF-compatible Exif block
      *
      * @throws ImageReadErrorException
@@ -153,44 +167,66 @@ public class BoxHandler implements ImageHandler
             throw new ImageReadErrorException("Item Location Box missing or no entry for Exif ID [" + exifID + "]");
         }
 
-        int totalLength = 0;
-        List<byte[]> parts = new ArrayList<byte[]>();
-
-        for (ExtentData extent : extents)
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream())
         {
-            reader.mark();
-            reader.seek(extent.getExtentOffset());
+            boolean firstExifFound = true;
 
-            if (extent.getExtentLength() < 8)
+            for (ExtentData extent : extents)
             {
-                throw new ImageReadErrorException("Extent too small to contain Exif header in [" + imageFile + "]");
+                reader.mark();
+                reader.seek(extent.getExtentOffset());
+
+                if (firstExifFound)
+                {
+                    firstExifFound = false;
+
+                    if (extent.getExtentLength() < 8)
+                    {
+                        throw new ImageReadErrorException("Extent too small to contain Exif header in [" + imageFile + "]");
+                    }
+
+                    // The first extent contains the 4-byte TIFF header offset
+                    int exifTiffHeaderOffset = reader.readInteger();
+
+                    if (extent.getExtentLength() < exifTiffHeaderOffset + 4)
+                    {
+                        throw new ImageReadErrorException("Invalid TIFF header offset for Exif block in [" + imageFile + "]");
+                    }
+
+                    /*
+                     * Extracts the Exif payload starting at the TIFF header. The Exif segment in
+                     * HEIF typically contains a 4-byte offset (exifTiffHeaderOffset) pointing to
+                     * the TIFF header, skipping over the "Exif\0\0" prefix and any additional
+                     * metadata.
+                     * 
+                     * We subtract 4 bytes to account for the exifTiffHeaderOffset field itself, and
+                     * use the remaining length from that point to extract the actual TIFF payload.
+                     */
+                    reader.skip(exifTiffHeaderOffset);
+
+                    int payloadLength = (extent.getExtentLength() - exifTiffHeaderOffset - 4);
+                    byte[] exifPayload = reader.peek(reader.getCurrentPosition(), payloadLength);
+
+                    baos.write(exifPayload);
+                }
+
+                else
+                {
+                    // Subsequent extents are raw continuation data without Exif header prefix
+                    byte[] additionalData = reader.peek(reader.getCurrentPosition(), (int) extent.getExtentLength());
+                    baos.write(additionalData);
+                }
+
+                reader.reset();
             }
 
-            int exifTiffHeaderOffset = reader.readInteger();
-
-            if (extent.getExtentLength() < exifTiffHeaderOffset + 4)
-            {
-                throw new ImageReadErrorException("Invalid TIFF header offset for Exif block in [" + imageFile + "]");
-            }
-
-            reader.skip(exifTiffHeaderOffset);
-            byte[] exifPart = reader.peek(reader.getCurrentPosition(), extent.getExtentLength() - exifTiffHeaderOffset - 4);
-            reader.reset();
-
-            parts.add(exifPart);
-            totalLength += exifPart.length;
+            return baos.toByteArray();
         }
 
-        int pos = 0;
-        byte[] exifData = new byte[totalLength];
-
-        for (byte[] part : parts)
+        catch (IOException exc)
         {
-            System.arraycopy(part, 0, exifData, pos, part.length);
-            pos += part.length;
+            throw new ImageReadErrorException("Unable to process Exif block: [" + exc.getMessage() + "]", exc);
         }
-
-        return exifData;
     }
 
     /**
@@ -318,9 +354,19 @@ public class BoxHandler implements ImageHandler
     public Metadata<? extends BaseMetadata> processMetadata() throws IOException, ImageReadErrorException
     {
         parse();
-        
+
         byte[] exifData = getExifBlock();
 
         return new TifParser(imageFile, exifData).getMetadata();
+    }
+
+    public void processMetadata2()
+    {
+        parse();
+    }
+
+    public byte[] getExifData() throws ImageReadErrorException
+    {
+        return getExifBlock();
     }
 }

@@ -1,35 +1,38 @@
 package common;
 
 import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
 import java.util.Stack;
 
 /**
- * This class performs reader operations intended for obtaining data sequentially from a byte array
- * containing the raw data.
+ * Performs sequential reading of primitive data types from a byte array.
+ *
+ * <p>
+ * Supports reading of signed and unsigned integers, floating-point numbers, and byte sequences with
+ * configurable byte order (big-endian or little-endian).
+ * </p>
  *
  * <p>
  * Change History:
  * </p>
  * 
  * <ul>
- * <li>Version 1.0 - Initial release by Trevor Maggs on 21 June 2025</li>
+ * <li>Version 1.0 – Initial release by Trevor Maggs on 21 June 2025</li>
  * </ul>
- * 
- * @version 0.1
- * @author Trevor Maggs, trevmaggs@tpg.com.au
+ *
+ * @version 1.0
  * @since 21 June 2025
  */
 public class SequentialByteReader extends AbstractByteReader
 {
     private int bufferIndex;
-    private Stack<Integer> markPositionStack;
+    private final Stack<Integer> markPositionStack;
 
     /**
-     * Constructs an instance to store the specified byte array containing the payload data, which
-     * will be read from the beginning of the array.
+     * Constructs a reader for the given byte array starting from the beginning.
      *
      * @param buf
-     *        an array of bytes acting as the buffer for this instance
+     *        the byte array to read from
      */
     public SequentialByteReader(byte[] buf)
     {
@@ -37,14 +40,12 @@ public class SequentialByteReader extends AbstractByteReader
     }
 
     /**
-     * Constructs an instance to store the specified byte array, containing the payload data,
-     * starting from the initial byte of the array. The specified byte order aids in interpreting
-     * the input bytes correctly.
+     * Constructs a reader for the given byte array with the specified byte order.
      *
      * @param buf
-     *        an array of bytes acting as the buffer for this instance
+     *        the byte array to read from
      * @param order
-     *        the byte order, either {@code ByteOrder.BIG_ENDIAN} or {@code ByteOrder.LITTLE_ENDIAN}
+     *        the byte order to use
      */
     public SequentialByteReader(byte[] buf, ByteOrder order)
     {
@@ -52,13 +53,12 @@ public class SequentialByteReader extends AbstractByteReader
     }
 
     /**
-     * Constructs an instance to store the byte array, which contains the payload data, beginning
-     * from the specified offset in the array to read from.
+     * Constructs a reader for the given byte array starting from the specified offset.
      *
      * @param buf
-     *        an array of bytes acting as the buffer for this instance
+     *        the byte array to read from
      * @param offset
-     *        specifies the starting position within the specified array
+     *        the starting position
      */
     public SequentialByteReader(byte[] buf, long offset)
     {
@@ -66,29 +66,27 @@ public class SequentialByteReader extends AbstractByteReader
     }
 
     /**
-     * Constructs an instance to store the specified byte array containing the payload data and the
-     * byte order aids in interpreting the input bytes correctly. The offset specifies the starting
-     * position within the array to read from.
+     * Constructs a reader for the given byte array starting from the specified offset and using the
+     * specified byte order.
      *
      * @param buf
-     *        an array of bytes acting as the buffer for this instance
+     *        the byte array to read from
      * @param offset
-     *        specifies the starting position in the specified array
+     *        the starting position
      * @param order
-     *        the byte order, either {@code ByteOrder.BIG_ENDIAN} or {@code ByteOrder.LITTLE_ENDIAN}
+     *        the byte order to use
      */
     public SequentialByteReader(byte[] buf, long offset, ByteOrder order)
     {
         super(buf, offset, order);
-
         this.bufferIndex = 0;
         this.markPositionStack = new Stack<>();
     }
 
     /**
-     * Returns the current position in the byte array.
+     * Returns the current read position in the byte array.
      *
-     * @return the position number
+     * @return the current read position
      */
     public int getCurrentPosition()
     {
@@ -96,9 +94,9 @@ public class SequentialByteReader extends AbstractByteReader
     }
 
     /**
-     * Returns a single byte from the current position in the byte array.
-     * 
-     * @return the byte of data at the current position
+     * Reads a single byte from the current position.
+     *
+     * @return the byte value
      */
     public byte readByte()
     {
@@ -106,27 +104,23 @@ public class SequentialByteReader extends AbstractByteReader
     }
 
     /**
-     * Returns a sub-array from the current position in the byte array.
+     * Reads a sequence of bytes from the current position.
      *
      * @param length
-     *        the number of bytes in the sub-array
-     * 
-     * @return a new byte array containing the specified subset of the array
+     *        the number of bytes to read
+     * @return a new byte array containing the read bytes
      */
     public byte[] readBytes(int length)
     {
         byte[] bytes = getBytes(bufferIndex, length);
-
         bufferIndex += length;
-
         return bytes;
     }
 
     /**
-     * Returns an unsigned 8-bit value from the current position in the byte array. The return value
-     * is a short type to allow the unsigned byte to be returned without truncation.
-     * 
-     * @return the byte at the current position, giving the possible value range of 0 to 255
+     * Reads an unsigned 8-bit integer from the current position.
+     *
+     * @return the unsigned byte value (0–255)
      */
     public short readUnsignedByte()
     {
@@ -134,143 +128,129 @@ public class SequentialByteReader extends AbstractByteReader
     }
 
     /**
-     * Reads two bytes from the array and returns the result as a short (16-bit) signed value, based
-     * on the current byte ordering.
-     * 
-     * @return a signed short 2-byte value
+     * Reads a signed 16-bit integer from the current position.
+     *
+     * @return the short value
      */
     public short readShort()
     {
-        byte byte1 = readByte();
-        byte byte2 = readByte();
+        byte b1 = readByte();
+        byte b2 = readByte();
 
         if (getByteOrder() == ByteOrder.BIG_ENDIAN)
         {
-            return (short) ((byte1 << 8) & 0xFF00 | byte2 & 0xFF);
+            return (short) (((b1 & 0xFF) << 8) | (b2 & 0xFF));
         }
-
         else
         {
-            return (short) ((byte2 << 8) & 0xFF00 | byte1 & 0xFF);
+            return (short) (((b2 & 0xFF) << 8) | (b1 & 0xFF));
         }
     }
 
     /**
-     * Returns the result as an unsigned short 16-bit value, based on the current byte ordering. The
-     * return value is an integer type to allow the unsigned short to be returned without loss of
-     * precision.
-     * 
-     * @return an unsigned short (2 bytes) value
+     * Reads an unsigned 16-bit integer from the current position.
+     *
+     * @return the unsigned short value (0–65535)
      */
     public int readUnsignedShort()
     {
-        return ((int) readShort() & 0xFFFF);
+        return readShort() & 0xFFFF;
     }
 
     /**
-     * Reads four bytes from the array and returns the result as a signed integer (32-bit) value,
-     * based on the current byte ordering.
-     * 
-     * @return an signed integer value
+     * Reads a signed 32-bit integer from the current position.
+     *
+     * @return the integer value
      */
     public int readInteger()
     {
-        int byte1 = readByte() & 0xFF;
-        int byte2 = readByte() & 0xFF;
-        int byte3 = readByte() & 0xFF;
-        int byte4 = readByte() & 0xFF;
+        int b1 = readByte() & 0xFF;
+        int b2 = readByte() & 0xFF;
+        int b3 = readByte() & 0xFF;
+        int b4 = readByte() & 0xFF;
 
         if (getByteOrder() == ByteOrder.BIG_ENDIAN)
         {
-            return (byte1 << 24 | byte2 << 16 | byte3 << 8 | byte4);
+            return (b1 << 24) | (b2 << 16) | (b3 << 8) | b4;
         }
-
         else
         {
-            return (byte4 << 24 | byte3 << 16 | byte2 << 8 | byte1);
+            return (b4 << 24) | (b3 << 16) | (b2 << 8) | b1;
         }
     }
 
     /**
-     * Reads four bytes from the array and returns the result as an unsigned integer (32-bit) value,
-     * based on the current byte ordering. The return value is a long type to allow the unsigned
-     * integer to be returned without truncation.
-     * 
-     * @return an unsigned integer value
+     * Reads an unsigned 32-bit integer from the current position.
+     *
+     * @return the unsigned integer value as a long
      */
     public long readUnsignedInteger()
     {
-        return (long) (readInteger() & 0xFFFFFFFFL);
+        return readInteger() & 0xFFFFFFFFL;
     }
 
     /**
-     * Returns an 8-byte value as a signed long, based on the current byte ordering.
-     * 
-     * @return the 8-byte signed long value
+     * Reads a signed 64-bit long from the current position.
+     *
+     * @return the long value
      */
     public long readLong()
     {
-        int byte1 = readByte() & 0xFF;
-        int byte2 = readByte() & 0xFF;
-        int byte3 = readByte() & 0xFF;
-        int byte4 = readByte() & 0xFF;
-        int byte5 = readByte() & 0xFF;
-        int byte6 = readByte() & 0xFF;
-        int byte7 = readByte() & 0xFF;
-        int byte8 = readByte() & 0xFF;
+        long b1 = readByte() & 0xFFL;
+        long b2 = readByte() & 0xFFL;
+        long b3 = readByte() & 0xFFL;
+        long b4 = readByte() & 0xFFL;
+        long b5 = readByte() & 0xFFL;
+        long b6 = readByte() & 0xFFL;
+        long b7 = readByte() & 0xFFL;
+        long b8 = readByte() & 0xFFL;
 
         if (getByteOrder() == ByteOrder.BIG_ENDIAN)
         {
-            // Motorola - MSB first
-            return (long) (byte1 << 56 | byte2 << 48 | byte3 << 40 | byte4 << 32 |
-                    byte5 << 24 | byte6 << 16 | byte7 << 8 | byte8);
+            return (b1 << 56) | (b2 << 48) | (b3 << 40) | (b4 << 32) |
+                    (b5 << 24) | (b6 << 16) | (b7 << 8) | b8;
         }
-
         else
         {
-            // Intel ordering - LSB first
-            return (long) (byte8 << 56 | byte7 << 48 | byte6 << 40 | byte5 << 32 |
-                    byte4 << 24 | byte3 << 16 | byte2 << 8 | byte1);
+            return (b8 << 56) | (b7 << 48) | (b6 << 40) | (b5 << 32) |
+                    (b4 << 24) | (b3 << 16) | (b2 << 8) | b1;
         }
     }
 
     /**
-     * Retrieves 4 bytes from the byte array and returns the result as a float value, based on the
-     * current byte ordering.
-     * 
-     * @return a float value extracted from the byte array
+     * Reads a 32-bit IEEE 754 floating-point value from the current position.
+     *
+     * @return the float value
      */
-    public float getFloat32()
+    public float readFloat()
     {
         return Float.intBitsToFloat(readInteger());
     }
 
     /**
-     * Retrieves 8 bytes from the byte array and returns the result as a double value, based on the
-     * current byte ordering.
-     * 
-     * @return a double value extracted from the byte array
+     * Reads a 64-bit IEEE 754 floating-point value from the current position.
+     *
+     * @return the double value
      */
-    public double getDouble64()
+    public double readDouble()
     {
         return Double.longBitsToDouble(readLong());
     }
 
     /**
-     * Attempts to advance the position in the source byte array by the specified number of bytes.
+     * Skips forward by the specified number of bytes.
      *
      * @param n
      *        the number of bytes to skip
-     *
-     * @return the updated position after skipping
+     * @return the new position after skipping
      * @throws IndexOutOfBoundsException
-     *         if the skipping leads to an out-of-bound position beyond the array limit
+     *         if skipping would exceed the buffer bounds
      */
     public long skip(long n)
     {
         if (bufferIndex + n > length())
         {
-            throw new IndexOutOfBoundsException("Cannot skip beyond end of source byte array [Requested skip position: " + (bufferIndex + n) + ", Max position: " + (length() - 1) + "]");
+            throw new IndexOutOfBoundsException("Cannot skip beyond end of byte array. Requested: " + (bufferIndex + n) + ", Max: " + length());
         }
 
         bufferIndex += n;
@@ -279,27 +259,29 @@ public class SequentialByteReader extends AbstractByteReader
     }
 
     /**
-     * Advances the current byte position.
+     * Moves to the specified position within the byte array.
      *
      * @param pos
-     *        the number of bytes to seek forward
-     *
+     *        the position to move to
+     * 
      * @throws IndexOutOfBoundsException
-     *         if the specified position is out of bound
+     *         if the position is invalid
      */
     public void seek(long pos)
     {
-        if (pos < length())
+        if (pos >= 0 && pos <= length())
         {
             bufferIndex = (int) pos;
-            return;
         }
 
-        throw new IndexOutOfBoundsException("Specified position [" + pos + "] is out of bound. Must be within the range [" + length() + "]");
+        else
+        {
+            throw new IndexOutOfBoundsException("Position [" + pos + "] out of bounds. Valid range must be [0 to " + length() + "]");
+        }
     }
 
     /**
-     * Pushes the current byte position onto a stack of marked positions.
+     * Marks the current position in the buffer.
      */
     public void mark()
     {
@@ -307,32 +289,60 @@ public class SequentialByteReader extends AbstractByteReader
     }
 
     /**
-     * Resets the current byte position from the stack of marked positions.
+     * Resets to the last marked position.
+     * 
+     * @throws IllegalStateException
+     *         if the mark stack is empty
      */
     public void reset()
     {
-        if (markPositionStack.empty())
+        if (!markPositionStack.isEmpty())
         {
-            return;
+            bufferIndex = markPositionStack.pop();
         }
 
-        bufferIndex = markPositionStack.pop();
-        seek(bufferIndex);
+        else
+        {
+            throw new IllegalStateException("Cannot reset position: mark stack is empty");
+        }
     }
 
-    // TEST FIRST
+    /**
+     * Reads a null-terminated Latin-1 (ISO-8859-1) encoded string from the current position.
+     *
+     * <p>
+     * The null terminator is consumed but not included in the returned string.
+     * </p>
+     *
+     * @return the decoded string
+     */
     public String readString()
     {
-        byte b;
-        StringBuilder sb = new StringBuilder(64);
+        int start = bufferIndex;
+        int end = start;
 
-        do
+        while (end < length())
         {
-            b = readByte();
-            sb.append((char) b);
+            // Stops when the null terminator is hit
+            if (getByte(end) == 0x00)
+            {
+                break;
+            }
 
-        } while (b != 0x00);
+            end++;
+        }
 
-        return sb.toString();
+        if (end == length())
+        {
+            throw new IllegalStateException("Null terminator not found for string starting at position [" + start + "]");
+        }
+
+        // Copy bytes (excluding the null terminator)
+        byte[] stringBytes = getBytes(start, end - start);
+
+        // Advance bufferIndex past the null terminator
+        bufferIndex = end + 1;
+
+        return new String(stringBytes, StandardCharsets.ISO_8859_1);
     }
 }

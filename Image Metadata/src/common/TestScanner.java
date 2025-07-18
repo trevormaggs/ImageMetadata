@@ -87,10 +87,10 @@ public final class TestScanner
     {
         try
         {
-            //TestScanner scanner = TestScanner.loadImage("img\\gemmapreg.tif");
-            //TestScanner scanner = TestScanner.loadImage("img\\testPNGimage.png");
+            // TestScanner scanner = TestScanner.loadImage("img\\gemmapreg.tif");
+            TestScanner scanner = TestScanner.loadImage("img\\testPNGimage.png");
             // TestScanner scanner = TestScanner.loadImage("img\\pool19.jpg");
-            TestScanner scanner = TestScanner.loadImage("img\\IMG_0831.HEIC");
+            // TestScanner scanner = TestScanner.loadImage("img\\IMG_0831.HEIC");
 
             Metadata<?> meta = scanner.readMetadata();
 
@@ -101,7 +101,7 @@ public final class TestScanner
                     MetadataTIF tif = (MetadataTIF) meta;
                     DirectoryIFD dir = tif.getDirectory(DirectoryIdentifier.EXIF_DIRECTORY_SUBIFD);
 
-                    //System.out.printf("%s\n", tif.toString("TIFF METADATA SUMMARY LIST"));
+                    // System.out.printf("%s\n", tif.toString("TIFF METADATA SUMMARY LIST"));
 
                     System.out.printf("dir date %s\n", dir.getString(EXIF_TAG_DATE_TIME_ORIGINAL));
                     System.out.printf("EXIF_DIRECTORY_SUBIFD - %s\n", tif.hasExifData());
@@ -111,7 +111,7 @@ public final class TestScanner
                     {
                         System.out.printf("%s\n", dir.getNumericValue(EXIF_TAG_METERING_MODE));
                     }
-                    
+
                     // System.out.printf("%s\n", tif);
                 }
 

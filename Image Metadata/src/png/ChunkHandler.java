@@ -1,11 +1,12 @@
 package png;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Optional;
 import common.BaseMetadata;
 import common.ImageHandler;
 import common.ImageReadErrorException;
@@ -92,7 +93,7 @@ public class ChunkHandler implements ImageHandler
 
             if (length < 0)
             {
-                throw new UnsupportedEncodingException("Invalid PNG chunk length [" + length + "]");
+                throw new ImageReadErrorException("Invalid PNG chunk length [" + length + "]");
             }
 
             chunkType = ChunkType.getChunkType(reader.readBytes(4));
@@ -122,6 +123,60 @@ public class ChunkHandler implements ImageHandler
             if (isDesired && chunkData != null)
             {
                 addChunk(length, chunkType, 0, chunkData);
+                LOGGER.debug("Chunk type [" + chunkType + "] added for file [" + imageFile + "]");
+            }
+
+            position++;
+
+        } while (chunkType != ChunkType.IEND);
+    }
+
+    private void readChunks2() throws ImageReadErrorException, IOException
+    {
+        int position = 0;
+        ChunkType chunkType;
+        Optional<byte[]> optionalData;
+
+        do
+        {
+            int length = (int) reader.readUnsignedInteger();
+
+            if (length < 0)
+            {
+                throw new ImageReadErrorException("Invalid PNG chunk length [" + length + "]");
+            }
+
+            chunkType = ChunkType.getChunkType(reader.readBytes(4));
+
+            if (chunkType == ChunkType.IHDR && position > 0)
+            {
+                throw new ImageReadErrorException("First chunk must be [" + ChunkType.IHDR + "], but found [" + chunkType + "]");
+            }
+
+            if (!chunkType.isMultipleAllowed() && existsChunk(chunkType.getIndexID()))
+            {
+                throw new ImageReadErrorException("Multiple chunks of type [" + chunkType + "] are disallowed. PNG file may be corrupted");
+            }
+
+            if (requiredChunks == null || requiredChunks.contains(chunkType))
+            {
+                optionalData = Optional.of(reader.readBytes(length));
+            }
+
+            else
+            {
+                reader.skip(length);
+                optionalData = Optional.empty();
+            }
+
+            /* We are not interested in CRC at this stage */
+            // int crc = (int) reader.readUnsignedInteger();
+            reader.skip(4);
+
+            if (optionalData.isPresent())
+            {
+                addChunk(length, chunkType, 0, optionalData.get());
+
                 LOGGER.debug("Chunk type [" + chunkType + "] added for file [" + imageFile + "]");
             }
 
@@ -225,6 +280,53 @@ public class ChunkHandler implements ImageHandler
         png.addDirectory(textualDir);
 
         return png;
+    }
+
+    public void processMetadata2() throws ImageReadErrorException, IOException
+    {
+        readChunks();
+    }
+
+    // public Optional<byte[]> getExifData() throws ImageReadErrorException
+    public byte[] getExifData() throws ImageReadErrorException
+    {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream())
+        {
+            for (PngChunk chunk : chunks)
+            {
+                if (chunk.getType() == ChunkType.eXIf)
+                {
+                    baos.write(chunk.getDataArray());
+
+                    // return Optional.of(baos.toByteArray());
+                    return baos.toByteArray();
+                }
+            }
+
+            // return Optional.empty();
+            return new byte[0];
+
+        }
+
+        catch (IOException exc)
+        {
+            throw new ImageReadErrorException("Unable to process Exif block: [" + exc.getMessage() + "]", exc);
+        }
+    }
+
+    public List<PngChunk> getTextualData() throws ImageReadErrorException
+    {
+        List<PngChunk> textualChunks = new ArrayList<>();
+
+        for (PngChunk chunk : chunks)
+        {
+            if (chunk.getType().getCategory() == Category.TEXTUAL)
+            {
+                textualChunks.add(chunk);
+            }
+        }
+
+        return textualChunks;
     }
 
     /**

@@ -78,7 +78,7 @@ public enum HeifBoxType
         CONTAINER,
 
         /**
-         * An unrecognized or unsupported box type.
+         * An unknown or unsupported box type.
          */
         UNDEFINED;
     }
@@ -90,7 +90,7 @@ public enum HeifBoxType
      * Constructs a {@code HeifBoxType} resource with a 4-character identifier and category.
      *
      * @param name
-     *        the 4-character box type (For example, {@code ftyp"}
+     *        the 4-character box type - for example: {@code ftyp}
      * @param category
      *        the box's structural category
      */
@@ -103,7 +103,7 @@ public enum HeifBoxType
     /**
      * Returns the 4-character string identifier for this box type.
      *
-     * @return the box type string (For example, "ftyp", "meta", "idat")
+     * @return the box type string - for example: {@code ftyp}, {@code meta}, {@code idat}
      */
     public String getTypeName()
     {
@@ -150,7 +150,7 @@ public enum HeifBoxType
      * Resolves a {@code HeifBoxType} from a 4-character string.
      *
      * @param name
-     *        the box type name (For example, "meta", "ftyp")
+     *        the box type name - for example: {@code ftyp}, {@code meta}
      * 
      * @return the corresponding {@code HeifBoxType}, or {@link #UNKNOWN} if not recognised
      */

@@ -1,6 +1,7 @@
 package common;
 
 import java.nio.ByteOrder;
+import java.util.Objects;
 
 /**
  * This abstract class provides the functionality to perform reader operations intended for
@@ -39,42 +40,21 @@ public abstract class AbstractByteReader
      */
     public AbstractByteReader(byte[] buf, long offset, ByteOrder order)
     {
-        if (buf == null)
-        {
-            throw new NullPointerException("Input buffer cannot be null");
-        }
-
         if (offset < 0)
         {
             throw new IllegalArgumentException("Base offset cannot be less than zero. Detected offset: [" + offset + "]");
         }
 
-        this.buffer = buf;
+        this.buffer = Objects.requireNonNull(buf, "Input buffer cannot be null");
         this.baseOffset = offset;
         this.byteOrder = order;
-    }
-
-    /**
-     * Verifies the specified position falls within the bounds of the byte array.
-     *
-     * @param index
-     *        the position in the byte array
-     * @param length
-     *        the total length within the byte array to check
-     * 
-     * @return a boolean true value if the position falls within the array range, and false
-     *         otherwise
-     */
-    private boolean validateByteIndex(long index, long length)
-    {
-        return (length >= 0 && index >= 0) && ((index + length - 1) < length());
     }
 
     /**
      * Checks whether the specified position is within the byte array's bounds. If the position is
      * out of range, an {@code IndexOutOfBoundsException} is thrown.
      *
-     * @param index
+     * @param position
      *        the position in the byte array
      * @param length
      *        the total length within the byte array to check
@@ -82,34 +62,72 @@ public abstract class AbstractByteReader
      * @throws IndexOutOfBoundsException
      *         if the position is out of bounds
      */
-    private void checkPositionIndex(long index, int length)
+    private void validateByteIndex(long position, int length)
     {
-        if (!validateByteIndex(index, length))
+        if (position < 0)
         {
-            String msg;
-
-            if (index < 0)
-            {
-                msg = String.format("Cannot read the buffer with a negative index [%d]", index);
-            }
-
-            else if (length < 0)
-            {
-                msg = String.format("Length of requested bytes cannot be negative [%d]", length);
-            }
-
-            else if (index + length - 1 > Integer.MAX_VALUE)
-            {
-                msg = String.format("Index is out of bounds for the signed 32-bit integer range. Must be less than [" + length() + "]. Found [" + (index + length) + "]");
-            }
-
-            else
-            {
-                msg = String.format("Attempt to read beyond the end of underlying data source [Index: %d, requested length: %d, max index: %d]", index, length, buffer.length - 1);
-            }
-
-            throw new IndexOutOfBoundsException(msg);
+            throw new IndexOutOfBoundsException("Cannot read the buffer with a negative index [" + position + "]");
         }
+
+        if (length < 0)
+        {
+            throw new IndexOutOfBoundsException("Length of requested bytes cannot be negative [" + length + "]");
+        }
+
+        if ((baseOffset + position + length - 1) >= buffer.length)
+        {
+            throw new IndexOutOfBoundsException(String.format("Attempt to read beyond end of buffer [baseOffset: %d, index: %d, requestedLength: %d, bufferLength: %d]", baseOffset, position, length, buffer.length));
+        }
+    }
+
+    /**
+     * Returns a single byte from the array at the specified position.
+     *
+     * @param position
+     *        the index in the byte array from where the data should be returned
+     *
+     * @return the byte at the specified position
+     */
+    protected byte getByte(long position)
+    {
+        validateByteIndex(baseOffset + position, 1);
+
+        return buffer[(int) (baseOffset + position)];
+    }
+
+    /**
+     * Copies and returns a sub-array from the byte array, starting from the specified position.
+     * 
+     * @param position
+     *        the index within the byte array from which to start copying
+     * @param length
+     *        the total number of bytes to include in the sub-array
+     * 
+     * @return a new byte array containing the specified subset of the original array
+     */
+    protected byte[] getBytes(long position, int length)
+    {
+        validateByteIndex(position, length);
+
+        byte[] bytes = new byte[length];
+        int sourcePos = (int) (baseOffset + position);
+
+        System.arraycopy(buffer, sourcePos, bytes, 0, length);
+
+        return bytes;
+    }
+
+    /**
+     * Checks if there are more bytes available to read.
+     *
+     * @param position
+     *        the current read index within the byte array
+     * 
+     * @return true if the buffer has remaining unread bytes, false otherwise
+     */
+    public boolean hasRemaining(long position)
+    {
+        return position < length();
     }
 
     /**
@@ -166,8 +184,12 @@ public abstract class AbstractByteReader
 
     /**
      * Retrieves the data at the specified offset within the byte array without advancing the
-     * position. A call to this method is equal to the returned value of
-     * {@code getByte(int position)} defined in the superclass.
+     * position.
+     * 
+     * <p>
+     * A call to this method is equivalent to {@code getByte(position)}, but does not advance any
+     * position counters.
+     * </p>
      * 
      * @param offset
      *        the offset from the beginning of the byte array to fetch the data
@@ -181,8 +203,12 @@ public abstract class AbstractByteReader
 
     /**
      * Retrieves up to the specified length of a sub-array of bytes at the specified offset without
-     * advancing the position of the original array. A call to this method is equal to the next
-     * return of {@code getBytes(int position, int length)}.
+     * advancing the position of the original array.
+     * 
+     * <p>
+     * A call to this method is equivalent to {@code getByte(position, length)}, but does not
+     * advance any position counters.
+     * </p>
      * 
      * @param offset
      *        the offset from the beginning of the byte array to fetch the data
@@ -218,43 +244,7 @@ public abstract class AbstractByteReader
         }
 
         System.out.println();
-        System.out.printf("buffer length: %d\n", buffer.length);
-    }
 
-    /**
-     * Returns a single byte from the array at the specified position.
-     *
-     * @param position
-     *        the index in the byte array from where the data should be returned
-     *
-     * @return the byte at the specified position
-     */
-    protected byte getByte(long position)
-    {
-        checkPositionIndex(baseOffset + position, 1);
-
-        return buffer[(int) (baseOffset + position)];
-    }
-
-    /**
-     * Copies and returns a sub-array from the byte array, starting from the specified position.
-     *
-     * @param position
-     *        the index within the byte array from where the bytes should be returned
-     * @param length
-     *        the total number of bytes to include in the sub-array
-     *
-     * @return a new byte array containing the specified subset of the original array
-     */
-    protected byte[] getBytes(long position, int length)
-    {
-        byte[] bytes;
-        int sourcePos = (int) (baseOffset + position);
-
-        checkPositionIndex(sourcePos, length);
-        bytes = new byte[length];
-        System.arraycopy(buffer, sourcePos, bytes, 0, length);
-
-        return bytes;
+        System.out.printf("buffer length: %d%s", buffer.length, System.lineSeparator());
     }
 }

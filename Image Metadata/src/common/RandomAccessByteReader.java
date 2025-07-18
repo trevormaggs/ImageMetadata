@@ -30,7 +30,7 @@ public class RandomAccessByteReader extends AbstractByteReader
      * @param buf
      *        the byte array to read from
      */
-    public RandomAccessByteReader(final byte[] buf)
+    public RandomAccessByteReader(byte[] buf)
     {
         this(buf, 0);
     }
@@ -44,7 +44,7 @@ public class RandomAccessByteReader extends AbstractByteReader
      * @param order
      *        the byte order to use
      */
-    public RandomAccessByteReader(final byte[] buf, final ByteOrder order)
+    public RandomAccessByteReader(byte[] buf, ByteOrder order)
     {
         this(buf, 0, order);
     }
@@ -57,7 +57,7 @@ public class RandomAccessByteReader extends AbstractByteReader
      * @param offset
      *        the starting index
      */
-    public RandomAccessByteReader(final byte[] buf, final int offset)
+    public RandomAccessByteReader(byte[] buf, int offset)
     {
         this(buf, offset, ByteOrder.BIG_ENDIAN);
     }
@@ -73,7 +73,7 @@ public class RandomAccessByteReader extends AbstractByteReader
      * @param order
      *        the byte order to use
      */
-    public RandomAccessByteReader(final byte[] buf, final int offset, final ByteOrder order)
+    public RandomAccessByteReader(byte[] buf, int offset, ByteOrder order)
     {
         super(buf, offset, order);
     }
@@ -86,7 +86,7 @@ public class RandomAccessByteReader extends AbstractByteReader
      * 
      * @return the byte value
      */
-    public byte readByte(final int index)
+    public byte readByte(int index)
     {
         return getByte(index);
     }
@@ -99,7 +99,7 @@ public class RandomAccessByteReader extends AbstractByteReader
      * 
      * @return the unsigned value in the range [0, 255]
      */
-    public short readUnsignedByte(final int index)
+    public short readUnsignedByte(int index)
     {
         return (short) (readByte(index) & 0xFF);
     }
@@ -114,7 +114,7 @@ public class RandomAccessByteReader extends AbstractByteReader
      * 
      * @return a new byte array containing the data
      */
-    public byte[] readBytes(final int index, final int length)
+    public byte[] readBytes(int index, int length)
     {
         return getBytes(index, length);
     }
@@ -127,7 +127,7 @@ public class RandomAccessByteReader extends AbstractByteReader
      * 
      * @return the signed short value
      */
-    public short readShort(final int index)
+    public short readShort(int index)
     {
         byte b1 = getByte(index);
         byte b2 = getByte(index + 1);
@@ -151,7 +151,7 @@ public class RandomAccessByteReader extends AbstractByteReader
      * 
      * @return the unsigned value in the range [0, 65535]
      */
-    public int readUnsignedShort(final int index)
+    public int readUnsignedShort(int index)
     {
         return readShort(index) & 0xFFFF;
     }
@@ -164,7 +164,7 @@ public class RandomAccessByteReader extends AbstractByteReader
      * 
      * @return the signed integer value
      */
-    public int readInteger(final int index)
+    public int readInteger(int index)
     {
         int b1 = getByte(index) & 0xFF;
         int b2 = getByte(index + 1) & 0xFF;
@@ -190,7 +190,7 @@ public class RandomAccessByteReader extends AbstractByteReader
      * 
      * @return the unsigned value as a long in the range [0, 2^32 - 1]
      */
-    public long readUnsignedInteger(final int index)
+    public long readUnsignedInteger(int index)
     {
         return readInteger(index) & 0xFFFFFFFFL;
     }
@@ -203,7 +203,7 @@ public class RandomAccessByteReader extends AbstractByteReader
      * 
      * @return the signed long value
      */
-    public long readLong(final int index)
+    public long readLong(int index)
     {
         long b1 = getByte(index) & 0xFFL;
         long b2 = getByte(index + 1) & 0xFFL;
@@ -235,7 +235,7 @@ public class RandomAccessByteReader extends AbstractByteReader
      * 
      * @return the float value
      */
-    public float readFloat(final int index)
+    public float readFloat(int index)
     {
         return Float.intBitsToFloat(readInteger(index));
     }
@@ -248,7 +248,7 @@ public class RandomAccessByteReader extends AbstractByteReader
      * 
      * @return the double value
      */
-    public double readDouble(final int index)
+    public double readDouble(int index)
     {
         return Double.longBitsToDouble(readLong(index));
     }

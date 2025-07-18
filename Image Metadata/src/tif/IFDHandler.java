@@ -181,7 +181,7 @@ public class IFDHandler implements ImageHandler
 
         else
         {
-            throw new IllegalStateException("Mismatched byte order bytes: [First byte: " + firstByte + "] and [Second byte: " + secondByte + "]");
+            throw new IllegalStateException("Mismatched byte order bytes: [First byte: 0x" + Integer.toHexString(firstByte).toUpperCase() + "] and [Second byte: 0x" + Integer.toHexString(secondByte).toUpperCase() + "]");
         }
     }
 

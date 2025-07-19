@@ -9,6 +9,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.List;
+import java.util.Optional;
 import common.AbstractImageParser;
 import common.BaseMetadata;
 import common.DigitalSignature;
@@ -16,6 +18,8 @@ import common.ImageReadErrorException;
 import common.Metadata;
 import common.SequentialByteReader;
 import logger.LogFactory;
+import png.ChunkType.Category;
+import tif.TifParser;
 
 /**
  * This program aims to read PNG image files and retrieve data structured in a series of chunks. For
@@ -164,6 +168,7 @@ public class PngParser extends AbstractImageParser
     @Override
     public Metadata<? extends BaseMetadata> readMetadata() throws ImageReadErrorException, IOException
     {
+        ChunkHandler handler;
         EnumSet<ChunkType> chunkSet = EnumSet.of(ChunkType.tEXt, ChunkType.zTXt, ChunkType.iTXt, ChunkType.eXIf);
         // chunkSet = EnumSet.of(ChunkType.IHDR, ChunkType.sRGB, ChunkType.tEXt, ChunkType.iTXt,
         // ChunkType.zTXt, ChunkType.eXIf);
@@ -186,7 +191,38 @@ public class PngParser extends AbstractImageParser
                     throw new ImageReadErrorException("Invalid PNG signature sequence data in file [" + getImageFile() + "]");
                 }
 
-                metadata = new ChunkHandler(getImageFile(), pngReader, chunkSet).processMetadata();
+                // metadata = handler.processMetadata();
+                // metadata = new ChunkHandler(getImageFile(), pngReader,
+                // chunkSet).processMetadata();
+
+                Metadata<BaseMetadata> png = new MetadataPNG<>();
+
+                handler = new ChunkHandler(getImageFile(), pngReader, chunkSet);
+
+                handler.processMetadata2();
+
+                Optional<List<PngChunk>> textual = handler.getTextualData();
+
+                if (textual.isPresent())
+                {
+                    ChunkDirectory textualDir = new ChunkDirectory(Category.TEXTUAL);
+
+                    for (PngChunk chunk : textual.get())
+                    {
+                        textualDir.add(chunk);
+                    }
+
+                    png.addDirectory(textualDir);
+                }
+
+                Optional<byte[]> exif = handler.getExifData();
+
+                if (exif.isPresent())
+                {
+                    png.addDirectory(new TifParser(getImageFile(), exif.get()).getMetadata());
+                }
+
+                metadata = png;
             }
 
             catch (NoSuchFileException exc)

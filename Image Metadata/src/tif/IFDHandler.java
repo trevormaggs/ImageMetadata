@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import common.BaseMetadata;
 import common.ByteValueConverter;
 import common.ImageHandler;
@@ -319,5 +320,20 @@ public class IFDHandler implements ImageHandler
         }
 
         return metadata;
+    }
+
+    public void processMetadata2()
+    {
+        readTifHeader();
+
+        if (tifHeaderOffset >= 0)
+        {
+            navigateImageFileDirectory(DirectoryIdentifier.TIFF_DIRECTORY_IFD0, tifHeaderOffset + firstIFDoffset);
+        }
+    }
+
+    public Optional<List<DirectoryIFD>> getIfdDirectory()
+    {
+        return (directoryList.isEmpty() ? Optional.empty() : Optional.of(new ArrayList<DirectoryIFD>(directoryList)));
     }
 }

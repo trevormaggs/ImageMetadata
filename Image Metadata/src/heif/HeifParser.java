@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import common.AbstractImageParser;
 import common.BaseMetadata;
 import common.ImageReadErrorException;
@@ -14,6 +15,7 @@ import common.Metadata;
 import common.SequentialByteReader;
 import heif.boxes.Box;
 import logger.LogFactory;
+import tif.TifParser;
 
 /**
  * Parses HEIF/HEIC image files and extracts embedded metadata.
@@ -104,8 +106,16 @@ public class HeifParser extends AbstractImageParser
         }
 
         BoxHandler handler = new BoxHandler(getImageFile(), heifReader);
+        // metadata = handler.processMetadata();
 
-        metadata = handler.processMetadata();
+        handler.processMetadata2();
+
+        Optional<byte[]> exif = handler.getExifBlock2();
+
+        if (exif.isPresent())
+        {
+            metadata = new TifParser(getImageFile(), exif.get()).getMetadata();
+        }
 
         Map<HeifBoxType, List<Box>> map = handler.getBoxes();
 
@@ -113,8 +123,8 @@ public class HeifParser extends AbstractImageParser
         {
             for (Box box : list)
             {
-                // System.out.printf("%s\n", box.getBoxName());
-                System.out.printf("%s\n", box.toString(""));
+                System.out.printf("%s\n", box.getTypeAsString());
+//                System.out.printf("%s\n", box.toString(""));
             }
         }
 

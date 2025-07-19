@@ -6,6 +6,8 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
+import java.util.Optional;
 import common.AbstractImageParser;
 import common.BaseMetadata;
 import common.DigitalSignature;
@@ -114,9 +116,24 @@ public class TifParser extends AbstractImageParser
      */
     private void processDirectories(SequentialByteReader reader)
     {
-        IFDHandler handle = new IFDHandler(reader);
+        IFDHandler handler = new IFDHandler(reader);
 
-        metadata = handle.processMetadata();
+        // metadata = handler.processMetadata();
+
+        handler.processMetadata2();
+
+        MetadataTIF tif = new MetadataTIF();
+        Optional<List<DirectoryIFD>> optionalData = handler.getIfdDirectory();
+
+        if (optionalData.isPresent())
+        {
+            for (DirectoryIFD dir : optionalData.get())
+            {
+                tif.addDirectory(dir);
+            }
+        }
+
+        metadata = tif;
     }
 
     /**

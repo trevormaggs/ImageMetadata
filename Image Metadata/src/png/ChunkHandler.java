@@ -84,56 +84,7 @@ public class ChunkHandler implements ImageHandler
      */
     private void readChunks() throws ImageReadErrorException, IOException
     {
-        int position = 0;
-        ChunkType chunkType;
-
-        do
-        {
-            int length = (int) reader.readUnsignedInteger();
-
-            if (length < 0)
-            {
-                throw new ImageReadErrorException("Invalid PNG chunk length [" + length + "]");
-            }
-
-            chunkType = ChunkType.getChunkType(reader.readBytes(4));
-
-            if (!chunkType.isMultipleAllowed() && existsChunk(chunkType.getIndexID()))
-            {
-                throw new ImageReadErrorException("Multiple chunks of type [" + chunkType + "] are disallowed. PNG file may be corrupted.");
-            }
-
-            boolean isDesired = (requiredChunks == null || requiredChunks.contains(chunkType));
-            byte[] chunkData = isDesired ? reader.readBytes(length) : null;
-
-            if (!isDesired)
-            {
-                reader.skip(length);
-            }
-
-            /* We are not interested in CRC at this stage */
-            // int crc = (int) reader.readUnsignedInteger();
-            reader.skip(4);
-
-            if (chunkType == ChunkType.IHDR && position > 0)
-            {
-                throw new ImageReadErrorException(String.format("First chunk must be [%s], but found [%s]", ChunkType.IHDR, chunkType));
-            }
-
-            if (isDesired && chunkData != null)
-            {
-                addChunk(length, chunkType, 0, chunkData);
-                LOGGER.debug("Chunk type [" + chunkType + "] added for file [" + imageFile + "]");
-            }
-
-            position++;
-
-        } while (chunkType != ChunkType.IEND);
-    }
-
-    private void readChunks2() throws ImageReadErrorException, IOException
-    {
-        int position = 0;
+        int chunkIndex = 0;
         ChunkType chunkType;
         Optional<byte[]> optionalData;
 
@@ -148,12 +99,12 @@ public class ChunkHandler implements ImageHandler
 
             chunkType = ChunkType.getChunkType(reader.readBytes(4));
 
-            if (chunkType == ChunkType.IHDR && position > 0)
+            if (chunkType != ChunkType.IHDR && chunkIndex == 0)
             {
                 throw new ImageReadErrorException("First chunk must be [" + ChunkType.IHDR + "], but found [" + chunkType + "]");
             }
 
-            if (!chunkType.isMultipleAllowed() && existsChunk(chunkType.getIndexID()))
+            if (!chunkType.isMultipleAllowed() && existsChunk(chunkType))
             {
                 throw new ImageReadErrorException("Multiple chunks of type [" + chunkType + "] are disallowed. PNG file may be corrupted");
             }
@@ -180,7 +131,7 @@ public class ChunkHandler implements ImageHandler
                 LOGGER.debug("Chunk type [" + chunkType + "] added for file [" + imageFile + "]");
             }
 
-            position++;
+            chunkIndex++;
 
         } while (chunkType != ChunkType.IEND);
     }
@@ -223,15 +174,16 @@ public class ChunkHandler implements ImageHandler
     }
 
     /**
-     * Checks if a chunk with the given ID already exists in the parsed chunk list.
+     * Checks if a chunk with the specified type has already been set.
      *
-     * @param chunkID
-     *        the unique index ID of a chunk
+     * @param type
+     *        the type of the chunk
+     * 
      * @return true if the chunk is already present
      */
-    private boolean existsChunk(int chunkID)
+    private boolean existsChunk(ChunkType type)
     {
-        return chunks.stream().anyMatch(chunk -> chunk.getType().getIndexID() == chunkID);
+        return chunks.stream().anyMatch(chunk -> chunk.getType().getIndexID() == type.getIndexID());
     }
 
     /**
@@ -287,34 +239,18 @@ public class ChunkHandler implements ImageHandler
         readChunks();
     }
 
-    // public Optional<byte[]> getExifData() throws ImageReadErrorException
-    public byte[] getExifData() throws ImageReadErrorException
-    {
-        try (ByteArrayOutputStream baos = new ByteArrayOutputStream())
-        {
-            for (PngChunk chunk : chunks)
-            {
-                if (chunk.getType() == ChunkType.eXIf)
-                {
-                    baos.write(chunk.getDataArray());
-
-                    // return Optional.of(baos.toByteArray());
-                    return baos.toByteArray();
-                }
-            }
-
-            // return Optional.empty();
-            return new byte[0];
-
-        }
-
-        catch (IOException exc)
-        {
-            throw new ImageReadErrorException("Unable to process Exif block: [" + exc.getMessage() + "]", exc);
-        }
-    }
-
-    public List<PngChunk> getTextualData() throws ImageReadErrorException
+    /**
+     * Retrieves all textual metadata chunks from the PNG file.
+     * 
+     * <p>
+     * Textual metadata includes {@code tEXt}, {@code iTXt}, and {@code zTXt} chunks, which store
+     * key-value text pairs or compressed textual information.
+     * </p>
+     *
+     * @return an {@link Optional} containing a list of textual {@link PngChunk} objects if found,
+     *         or {@link Optional#empty()} if no textual chunks are present
+     */
+    public Optional<List<PngChunk>> getTextualData()
     {
         List<PngChunk> textualChunks = new ArrayList<>();
 
@@ -326,7 +262,44 @@ public class ChunkHandler implements ImageHandler
             }
         }
 
-        return textualChunks;
+        return textualChunks.isEmpty() ? Optional.empty() : Optional.of(textualChunks);
+    }
+
+    /**
+     * Retrieves the embedded EXIF data from the PNG file, if present.
+     * 
+     * <p>
+     * The EXIF metadata is stored in the {@code eXIf} chunk as raw TIFF-formatted data. If the PNG
+     * file contains an {@code eXIf} chunk, its byte array is returned wrapped in {@link Optional}.
+     * If no {@code eXIf} chunk exists, {@link Optional#empty()} is returned.
+     * </p>
+     *
+     * @return an {@link Optional} containing the EXIF data as a byte array if found, or
+     *         {@link Optional#empty()} if absent
+     * 
+     * @throws ImageReadErrorException
+     *         if an I/O error occurs while processing the EXIF block
+     */
+    public Optional<byte[]> getExifData() throws ImageReadErrorException
+    {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream())
+        {
+            for (PngChunk chunk : chunks)
+            {
+                if (chunk.getType() == ChunkType.eXIf)
+                {
+                    baos.write(chunk.getDataArray());
+                    return Optional.of(baos.toByteArray());
+                }
+            }
+
+            return Optional.empty();
+        }
+
+        catch (IOException exc)
+        {
+            throw new ImageReadErrorException("Unable to process Exif segment data [" + exc.getMessage() + "]", exc);
+        }
     }
 
     /**

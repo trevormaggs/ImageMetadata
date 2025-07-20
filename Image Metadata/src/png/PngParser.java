@@ -1,13 +1,10 @@
 package png;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteOrder;
-import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
@@ -88,21 +85,20 @@ import tif.TifParser;
  * </p>
  *
  * <ul>
- * <li>Version 1.0 - First release by Trevor Maggs on 21 June 2025</li>
+ * <li>Version 1.0 - First release by Trevor Maggs on 20 July 2025</li>
  * </ul>
  *
  * @see <a href="https://www.w3.org/TR/png">See this link for more technical background
  *      information.</a>
  *
- * @version 0.1
+ * @version 1.0
  * @author Trevor Maggs, trevmaggs@tpg.com.au
- * @since 21 June 2025
+ * @since 20 July 2025
  */
 public class PngParser extends AbstractImageParser
 {
-    // Note: PNG_SIGNATURE_BYTES is mapped to {0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'}
     private static final LogFactory LOGGER = LogFactory.getLogger(PngParser.class);
-    private static final byte[] PNG_SIGNATURE_BYTES = {(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
+    public static final ByteOrder PNG_BYTE_ORDER = ByteOrder.BIG_ENDIAN;
 
     /**
      * This default constructor should not be invoked, or it will throw an exception to prevent
@@ -168,39 +164,27 @@ public class PngParser extends AbstractImageParser
     @Override
     public Metadata<? extends BaseMetadata> readMetadata() throws ImageReadErrorException, IOException
     {
-        ChunkHandler handler;
+        // For full metadata parsing (image properties + text), include IHDR, sRGB, etc.
         EnumSet<ChunkType> chunkSet = EnumSet.of(ChunkType.tEXt, ChunkType.zTXt, ChunkType.iTXt, ChunkType.eXIf);
-        // chunkSet = EnumSet.of(ChunkType.IHDR, ChunkType.sRGB, ChunkType.tEXt, ChunkType.iTXt,
-        // ChunkType.zTXt, ChunkType.eXIf);
 
         if (DigitalSignature.detectFormat(getImageFile()) == DigitalSignature.PNG)
         {
-            try (InputStream fis = Files.newInputStream(getImageFile()))
+            try
             {
-                // Set network byte order by default
-                SequentialByteReader pngReader = new SequentialByteReader(readAllBytes(), ByteOrder.BIG_ENDIAN);
-
-                // Validate PNG signature byte sequence
-                if (Arrays.equals(PNG_SIGNATURE_BYTES, pngReader.readBytes(PNG_SIGNATURE_BYTES.length)))
-                {
-                    LOGGER.info("Valid PNG signature sequence data found in file [" + getImageFile() + "]");
-                }
-
-                else
-                {
-                    throw new ImageReadErrorException("Invalid PNG signature sequence data in file [" + getImageFile() + "]");
-                }
-
-                // metadata = handler.processMetadata();
-                // metadata = new ChunkHandler(getImageFile(), pngReader,
-                // chunkSet).processMetadata();
-
                 Metadata<BaseMetadata> png = new MetadataPNG<>();
 
-                handler = new ChunkHandler(getImageFile(), pngReader, chunkSet);
+                // PNG is specified to use big-endian byte order
+                SequentialByteReader pngReader = new SequentialByteReader(readAllBytes(), PNG_BYTE_ORDER);
 
-                handler.processMetadata2();
+                // Skip the magic signature bytes, ie
+                // PNG_SIGNATURE_BYTES is mapped to {0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'}
+                pngReader.readBytes(DigitalSignature.PNG.getMagicNumbers(0).length);
 
+                ChunkHandler handler = new ChunkHandler(getImageFile(), pngReader, chunkSet);
+
+                handler.parseMetadata();
+
+                // Obtain textual information if present
                 Optional<List<PngChunk>> textual = handler.getTextualData();
 
                 if (textual.isPresent())
@@ -215,6 +199,7 @@ public class PngParser extends AbstractImageParser
                     png.addDirectory(textualDir);
                 }
 
+                // Obtain Exif information if present
                 Optional<byte[]> exif = handler.getExifData();
 
                 if (exif.isPresent())
@@ -245,20 +230,20 @@ public class PngParser extends AbstractImageParser
     }
 
     /**
-     * Returns metadata specific to PNG format.
+     * Retrieves processed metadata from the PNG image file.
      *
-     * @return a populated {@link Metadata} object
-     * @throws ImageReadErrorException
-     *         if unable to find the required information from the PNG file
+     * @return a populated {@link Metadata} object if present, otherwise an empty object
      */
     @Override
-    public Metadata<? extends BaseMetadata> getMetadata() throws ImageReadErrorException
+    public Metadata<? extends BaseMetadata> getMetadata()
     {
         if (metadata != null && metadata.hasMetadata())
         {
             return metadata;
         }
 
-        throw new ImageReadErrorException("Metadata information could not be found in file [" + getImageFile() + "]");
+        LOGGER.warn("Metadata information could not be found in file [" + getImageFile() + "]");
+
+        return new MetadataPNG<>();
     }
 }

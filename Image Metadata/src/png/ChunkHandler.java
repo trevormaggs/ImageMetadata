@@ -1,20 +1,17 @@
 package png;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
-import common.BaseMetadata;
 import common.ImageHandler;
 import common.ImageReadErrorException;
-import common.Metadata;
 import common.SequentialByteReader;
 import logger.LogFactory;
 import png.ChunkType.Category;
-import tif.TifParser;
 
 /**
  * Handles the processing and collection of metadata-related chunks from a PNG image file.
@@ -22,7 +19,7 @@ import tif.TifParser;
  * <p>
  * This handler processes PNG chunks such as:
  * </p>
- * 
+ *
  * <ul>
  * <li>{@code tEXt}, {@code iTXt}, {@code zTXt} – textual metadata chunks</li>
  * <li>{@code eXIf} – embedded EXIF metadata (in TIFF format)</li>
@@ -75,6 +72,101 @@ public class ChunkHandler implements ImageHandler
     }
 
     /**
+     * Retrieves a list of chunks that have been extracted.
+     *
+     * @return an unmodified list of chunks
+     */
+    public List<PngChunk> getChunks()
+    {
+        return Collections.unmodifiableList(chunks);
+    }
+
+    /**
+     * Retrieves all textual metadata chunks from the PNG file as an unmodifiable list.
+     * 
+     * <p>
+     * Textual metadata includes {@code tEXt}, {@code iTXt}, and {@code zTXt} chunks, which store
+     * key-value text pairs or compressed textual information.
+     * </p>
+     *
+     * @return an {@link Optional} containing a list of textual {@link PngChunk} objects if found,
+     *         or {@link Optional#empty()} if no textual chunks are present
+     */
+    public Optional<List<PngChunk>> getTextualData()
+    {
+        List<PngChunk> textualChunks = new ArrayList<>();
+
+        for (PngChunk chunk : chunks)
+        {
+            if (chunk.getType().getCategory() == Category.TEXTUAL)
+            {
+                textualChunks.add(chunk);
+            }
+        }
+
+        return textualChunks.isEmpty() ? Optional.empty() : Optional.of(Collections.unmodifiableList(textualChunks));
+    }
+
+    /**
+     * Retrieves the embedded EXIF data from the PNG file, if present.
+     *
+     * <p>
+     * The EXIF metadata is stored in the {@code eXIf} chunk as raw TIFF-formatted data. If the PNG
+     * file contains an {@code eXIf} chunk, its byte array is returned wrapped in {@link Optional}.
+     * If no {@code eXIf} chunk exists, {@link Optional#empty()} is returned.
+     * </p>
+     *
+     * @return an {@link Optional} containing the EXIF data as a byte array if found, or
+     *         {@link Optional#empty()} if absent
+     */
+    public Optional<byte[]> getExifData()
+    {
+        for (PngChunk chunk : chunks)
+        {
+            if (chunk.getType() == ChunkType.eXIf)
+            {
+                return Optional.of(chunk.getDataArray());
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    /**
+     * Begins metadata processing by parsing the PNG file and extracting chunk data.
+     *
+     * @return true if at least one chunk element was successfully extracted, or false if no
+     *         relevant data was found
+     *
+     * @throws ImageReadErrorException
+     *         if an error occurs while parsing the PNG file
+     */
+    @Override
+    public boolean parseMetadata() throws ImageReadErrorException
+    {
+        readChunks();
+        return (chunks.size() > 0);
+    }
+
+    /**
+     * Returns a textual representation of all parsed PNG chunks in this file.
+     *
+     * @return formatted string of all parsed chunk entries
+     */
+    @Override
+    public String toString()
+    {
+        StringBuilder sb = new StringBuilder();
+
+        for (PngChunk chunk : chunks)
+        {
+            sb.append(chunk).append(System.lineSeparator());
+        }
+
+        return sb.toString();
+    }
+
+    /**
      * Reads the PNG data stream and extracts matching chunk types into memory.
      *
      * @throws ImageReadErrorException
@@ -82,14 +174,20 @@ public class ChunkHandler implements ImageHandler
      * @throws IOException
      *         if I/O issues occur while reading
      */
-    private void readChunks() throws ImageReadErrorException, IOException
+    private void readChunks() throws ImageReadErrorException
     {
-        int chunkIndex = 0;
+        int position = 0;
         ChunkType chunkType;
         Optional<byte[]> optionalData;
 
         do
         {
+            if (reader.getCurrentPosition() + 12 > reader.length())
+            {
+                /* 12 bytes = minimum chunk (length + type + CRC, even if data is zero-length) */
+                throw new ImageReadErrorException("Unexpected end of PNG file before IEND chunk");
+            }
+
             int length = (int) reader.readUnsignedInteger();
 
             if (length < 0)
@@ -99,14 +197,14 @@ public class ChunkHandler implements ImageHandler
 
             chunkType = ChunkType.getChunkType(reader.readBytes(4));
 
-            if (chunkType != ChunkType.IHDR && chunkIndex == 0)
+            if (position == 0 && chunkType != ChunkType.IHDR)
             {
-                throw new ImageReadErrorException("First chunk must be [" + ChunkType.IHDR + "], but found [" + chunkType + "]");
+                throw new ImageReadErrorException("PNG format error: First chunk must be [" + ChunkType.IHDR + "], but found [" + chunkType + "]");
             }
 
             if (!chunkType.isMultipleAllowed() && existsChunk(chunkType))
             {
-                throw new ImageReadErrorException("Multiple chunks of type [" + chunkType + "] are disallowed. PNG file may be corrupted");
+                throw new ImageReadErrorException("PNG format error: Duplicate [" + chunkType + "] found. This is disallowed");
             }
 
             if (requiredChunks == null || requiredChunks.contains(chunkType))
@@ -120,18 +218,16 @@ public class ChunkHandler implements ImageHandler
                 optionalData = Optional.empty();
             }
 
-            /* We are not interested in CRC at this stage */
-            // int crc = (int) reader.readUnsignedInteger();
-            reader.skip(4);
+            int crc = (int) reader.readUnsignedInteger();
 
             if (optionalData.isPresent())
             {
-                addChunk(length, chunkType, 0, optionalData.get());
+                addChunk(length, chunkType, crc, optionalData.get());
 
                 LOGGER.debug("Chunk type [" + chunkType + "] added for file [" + imageFile + "]");
             }
 
-            chunkIndex++;
+            position++;
 
         } while (chunkType != ChunkType.IEND);
     }
@@ -148,11 +244,8 @@ public class ChunkHandler implements ImageHandler
      *        the CRC value (currently not implemented)
      * @param data
      *        raw chunk data
-     * 
-     * @throws IOException
-     *         if processing fails
      */
-    private void addChunk(int length, ChunkType chunkType, int crc, byte[] data) throws IOException
+    private void addChunk(int length, ChunkType chunkType, int crc, byte[] data)
     {
         switch (chunkType)
         {
@@ -178,145 +271,11 @@ public class ChunkHandler implements ImageHandler
      *
      * @param type
      *        the type of the chunk
-     * 
+     *
      * @return true if the chunk is already present
      */
     private boolean existsChunk(ChunkType type)
     {
-        return chunks.stream().anyMatch(chunk -> chunk.getType().getIndexID() == type.getIndexID());
-    }
-
-    /**
-     * Begins metadata processing by scanning the PNG file and extracting chunk data. EXIF data
-     * (from {@code eXIf}) is parsed using {@link TifParser}, and textual chunks are collected into
-     * a {@link ChunkDirectory}.
-     *
-     * @return a {@link Metadata} object representing extracted PNG metadata
-     * 
-     * @throws ImageReadErrorException
-     *         if an error occurs while parsing the PNG file
-     * @throws IOException
-     *         if the file is not in PNG format
-     */
-    @Override
-    public Metadata<? extends BaseMetadata> processMetadata() throws IOException, ImageReadErrorException
-    {
-        readChunks();
-
-        boolean exifFound = false;
-        MetadataPNG<BaseMetadata> png = new MetadataPNG<>();
-        ChunkDirectory textualDir = new ChunkDirectory(Category.TEXTUAL);
-
-        for (PngChunk chunk : chunks)
-        {
-            ChunkType type = chunk.getType();
-
-            if (type.getCategory() == Category.TEXTUAL)
-            {
-                textualDir.add(chunk);
-            }
-
-            else if (type == ChunkType.eXIf)
-            {
-                if (exifFound)
-                {
-                    LOGGER.error("Duplicate eXIf chunk detected in file [" + imageFile + "]");
-                    throw new ImageReadErrorException("File [" + imageFile + "] contains duplicate eXIf chunks");
-                }
-
-                exifFound = true;
-                png.addDirectory(new TifParser(imageFile, chunk.getDataArray()).getMetadata());
-            }
-        }
-
-        png.addDirectory(textualDir);
-
-        return png;
-    }
-
-    public void processMetadata2() throws ImageReadErrorException, IOException
-    {
-        readChunks();
-    }
-
-    /**
-     * Retrieves all textual metadata chunks from the PNG file.
-     * 
-     * <p>
-     * Textual metadata includes {@code tEXt}, {@code iTXt}, and {@code zTXt} chunks, which store
-     * key-value text pairs or compressed textual information.
-     * </p>
-     *
-     * @return an {@link Optional} containing a list of textual {@link PngChunk} objects if found,
-     *         or {@link Optional#empty()} if no textual chunks are present
-     */
-    public Optional<List<PngChunk>> getTextualData()
-    {
-        List<PngChunk> textualChunks = new ArrayList<>();
-
-        for (PngChunk chunk : chunks)
-        {
-            if (chunk.getType().getCategory() == Category.TEXTUAL)
-            {
-                textualChunks.add(chunk);
-            }
-        }
-
-        return textualChunks.isEmpty() ? Optional.empty() : Optional.of(textualChunks);
-    }
-
-    /**
-     * Retrieves the embedded EXIF data from the PNG file, if present.
-     * 
-     * <p>
-     * The EXIF metadata is stored in the {@code eXIf} chunk as raw TIFF-formatted data. If the PNG
-     * file contains an {@code eXIf} chunk, its byte array is returned wrapped in {@link Optional}.
-     * If no {@code eXIf} chunk exists, {@link Optional#empty()} is returned.
-     * </p>
-     *
-     * @return an {@link Optional} containing the EXIF data as a byte array if found, or
-     *         {@link Optional#empty()} if absent
-     * 
-     * @throws ImageReadErrorException
-     *         if an I/O error occurs while processing the EXIF block
-     */
-    public Optional<byte[]> getExifData() throws ImageReadErrorException
-    {
-        try (ByteArrayOutputStream baos = new ByteArrayOutputStream())
-        {
-            for (PngChunk chunk : chunks)
-            {
-                if (chunk.getType() == ChunkType.eXIf)
-                {
-                    baos.write(chunk.getDataArray());
-                    return Optional.of(baos.toByteArray());
-                }
-            }
-
-            return Optional.empty();
-        }
-
-        catch (IOException exc)
-        {
-            throw new ImageReadErrorException("Unable to process Exif segment data [" + exc.getMessage() + "]", exc);
-        }
-    }
-
-    /**
-     * Returns a textual representation of all parsed PNG chunks in this file.
-     *
-     * @return formatted string of all parsed chunk entries
-     */
-    @Override
-    public String toString()
-    {
-        StringBuilder sb = new StringBuilder();
-
-        for (PngChunk chunk : chunks)
-        {
-            sb.append(chunk).append(System.lineSeparator());
-        }
-
-        return sb.toString();
+        return chunks.stream().anyMatch(chunk -> chunk.getType() == type);
     }
 }

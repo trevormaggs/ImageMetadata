@@ -107,36 +107,6 @@ public class TifParser extends AbstractImageParser
     }
 
     /**
-     * Starts the processing of the IFD structures, handling the required information until all
-     * directories have been read. It also ensures the TIFF segment data is checked beforehand for
-     * integrity.
-     *
-     * @param reader
-     *        a SequentialByteReader object providing access to the payload data
-     */
-    private void processDirectories(SequentialByteReader reader)
-    {
-        IFDHandler handler = new IFDHandler(reader);
-
-        // metadata = handler.processMetadata();
-
-        handler.processMetadata2();
-
-        MetadataTIF tif = new MetadataTIF();
-        Optional<List<DirectoryIFD>> optionalData = handler.getIfdDirectory();
-
-        if (optionalData.isPresent())
-        {
-            for (DirectoryIFD dir : optionalData.get())
-            {
-                tif.addDirectory(dir);
-            }
-        }
-
-        metadata = tif;
-    }
-
-    /**
      * Reads and processes a TIFF image file, returning a new Metadata object. Throws exceptions for
      * any processing issues or non-TIFF formats are detected.
      *
@@ -149,13 +119,14 @@ public class TifParser extends AbstractImageParser
     @Override
     public Metadata<? extends BaseMetadata> readMetadata() throws ImageReadErrorException, IOException
     {
-        SequentialByteReader tifReader;
-
         if (DigitalSignature.detectFormat(getImageFile()) == DigitalSignature.TIF)
         {
             try (InputStream fis = Files.newInputStream(getImageFile()))
             {
-                tifReader = new SequentialByteReader(readAllBytes());
+                SequentialByteReader tifReader = new SequentialByteReader(readAllBytes());
+                processDirectories(tifReader);
+
+                // tifReader.printRawBytes();
             }
 
             catch (NoSuchFileException exc)
@@ -174,27 +145,52 @@ public class TifParser extends AbstractImageParser
             throw new ImageReadErrorException("Image file [" + getImageFile() + "] is not a TIFF type");
         }
 
-        processDirectories(tifReader);
-        // tifReader.printRawBytes();
-
         return getMetadata();
     }
 
     /**
      * Retrieves processed metadata from the TIFF image file.
      *
-     * @return a populated {@link Metadata} object
-     * @throws ImageReadErrorException
-     *         if unable to process the Exif segment block
+     * @return a populated {@link Metadata} object if present, otherwise an empty object
      */
     @Override
-    public Metadata<? extends BaseMetadata> getMetadata() throws ImageReadErrorException
+    public Metadata<? extends BaseMetadata> getMetadata()
     {
         if (metadata != null && metadata.hasMetadata())
         {
             return metadata;
         }
 
-        throw new ImageReadErrorException("Metadata information could not be found in file [" + getImageFile() + "]");
+        LOGGER.warn("Metadata information could not be found in file [" + getImageFile() + "]");
+
+        return new MetadataTIF();
+    }
+
+    /**
+     * Starts the processing of the IFD structures, handling the required information until all
+     * directories have been read. It also ensures the TIFF segment data is checked beforehand for
+     * integrity.
+     *
+     * @param reader
+     *        a SequentialByteReader object providing access to the payload data
+     */
+    private void processDirectories(SequentialByteReader reader)
+    {
+        MetadataTIF tif = new MetadataTIF();
+        IFDHandler handler = new IFDHandler(reader);
+
+        handler.parseMetadata();
+
+        Optional<List<DirectoryIFD>> optionalData = handler.getDirectories();
+
+        if (optionalData.isPresent())
+        {
+            for (DirectoryIFD dir : optionalData.get())
+            {
+                tif.addDirectory(dir);
+            }
+
+            metadata = tif;
+        }
     }
 }

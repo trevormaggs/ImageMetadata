@@ -2,7 +2,6 @@ package heif;
 
 import java.io.IOException;
 import java.nio.ByteOrder;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -15,6 +14,7 @@ import common.Metadata;
 import common.SequentialByteReader;
 import heif.boxes.Box;
 import logger.LogFactory;
+import tif.MetadataTIF;
 import tif.TifParser;
 
 /**
@@ -75,78 +75,76 @@ public class HeifParser extends AbstractImageParser
     /**
      * Reads and processes Exif metadata from the HEIC/HEIF file.
      *
-     * @return the extracted metadata
-     * 
+     * <p>
+     * Only the Exif block is extracted. Other HEIF boxes are parsed but not returned. If no Exif
+     * block is present, an exception is thrown.
+     * </p>
+     *
+     * @return the extracted Exif metadata wrapped in a {@link Metadata} object
+     *
      * @throws IOException
-     *         if the file is not a HEIC/HEIF format
+     *         if an I/O error occurs
      * @throws ImageReadErrorException
-     *         if parsing fails
+     *         if no Exif block is found or parsing fails
      */
     @Override
     public Metadata<? extends BaseMetadata> readMetadata() throws ImageReadErrorException, IOException
     {
-        SequentialByteReader heifReader;
-
         try
         {
             byte[] rawBytes = readAllBytes();
 
             // Use big-endian byte order as per ISO/IEC 14496-12
-            heifReader = new SequentialByteReader(rawBytes, ByteOrder.BIG_ENDIAN);
-        }
+            SequentialByteReader heifReader = new SequentialByteReader(rawBytes, ByteOrder.BIG_ENDIAN);
 
-        catch (NoSuchFileException exc)
-        {
-            throw new ImageReadErrorException("File [" + getImageFile() + "] does not exist", exc);
+            BoxHandler handler = new BoxHandler(getImageFile(), heifReader);
+
+            handler.parseMetadata();
+
+            Optional<byte[]> exif = handler.getExifBlock();
+
+            if (!exif.isPresent())
+            {
+                throw new ImageReadErrorException("No Exif block found in file [" + getImageFile() + "]");
+            }
+
+            metadata = new TifParser(getImageFile(), exif.get()).getMetadata();
+
+            Map<HeifBoxType, List<Box>> map = handler.getBoxes();
+
+            for (List<Box> list : map.values())
+            {
+                for (Box box : list)
+                {
+                    //System.out.printf("%s\n", box.getTypeAsString());
+                    // System.out.printf("%s\n", box.toString(""));
+                }
+            }
+
+            return metadata;
         }
 
         catch (IOException exc)
         {
-            throw new ImageReadErrorException(exc);
+            throw new ImageReadErrorException("Failed to read HEIF file [" + getImageFile() + "]: " + exc.getMessage(), exc);
         }
-
-        BoxHandler handler = new BoxHandler(getImageFile(), heifReader);
-        // metadata = handler.processMetadata();
-
-        handler.processMetadata2();
-
-        Optional<byte[]> exif = handler.getExifBlock2();
-
-        if (exif.isPresent())
-        {
-            metadata = new TifParser(getImageFile(), exif.get()).getMetadata();
-        }
-
-        Map<HeifBoxType, List<Box>> map = handler.getBoxes();
-
-        for (List<Box> list : map.values())
-        {
-            for (Box box : list)
-            {
-                System.out.printf("%s\n", box.getTypeAsString());
-//                System.out.printf("%s\n", box.toString(""));
-            }
-        }
-
-        return metadata;
     }
 
     /**
-     * Returns the previously extracted metadata.
+     * Retrieves processed metadata from the HEIF image file.
      *
-     * @return the populated metadata
-     * 
-     * @throws ImageReadErrorException
-     *         if metadata was not extracted
+     * @return a populated {@link Metadata} object if present, otherwise an empty object
      */
     @Override
-    public Metadata<? extends BaseMetadata> getMetadata() throws ImageReadErrorException
+    public Metadata<? extends BaseMetadata> getMetadata()
     {
         if (metadata != null && metadata.hasMetadata())
         {
             return metadata;
         }
 
-        throw new ImageReadErrorException("Metadata could not be found in file [" + getImageFile() + "]");
+        LOGGER.warn("Metadata information could not be found in file [" + getImageFile() + "]");
+
+        return new MetadataTIF();
     }
 }

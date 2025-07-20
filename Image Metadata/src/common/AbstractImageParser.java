@@ -105,12 +105,9 @@ public abstract class AbstractImageParser
     public abstract Metadata<? extends BaseMetadata> readMetadata() throws ImageReadErrorException, IOException;
 
     /**
-     * Returns parsed metadata, or throws if {@link #readMetadata()} has not been called.
+     * Returns processed metadata.
      *
-     * @return parsed {@link Metadata}
-     * 
-     * @throws ImageReadErrorException
-     *         if a parsing error occurs
+     * @return a populated {@link Metadata} object if present, otherwise an empty object
      */
-    public abstract Metadata<? extends BaseMetadata> getMetadata() throws ImageReadErrorException;
+    public abstract Metadata<? extends BaseMetadata> getMetadata();
 }

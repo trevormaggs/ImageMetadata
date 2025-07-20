@@ -1,35 +1,38 @@
 package tif;
 
+import static tif.DirectoryIdentifier.EXIF_DIRECTORY_GPS;
+import static tif.DirectoryIdentifier.EXIF_DIRECTORY_INTEROP;
+import static tif.DirectoryIdentifier.EXIF_DIRECTORY_SUBIFD;
+import static tif.TagEntries.TagEXIF.EXIF_TAG_INTEROP_POINTER;
+import static tif.TagEntries.TagIFD.IFD_TAG_EXIF_POINTER;
+import static tif.TagEntries.TagIFD.IFD_TAG_GPS_INFO_POINTER;
+import static tif.TagEntries.TagIFD.IFD_TAG_IFD_POINTER;
+import java.nio.ByteOrder;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import common.ByteValueConverter;
+import common.ImageHandler;
+import common.SequentialByteReader;
+import logger.LogFactory;
 import tif.TagEntries.TagEXIF;
 import tif.TagEntries.TagGPS;
 import tif.TagEntries.TagIFD;
 import tif.TagEntries.TagINTEROP;
 import tif.TagEntries.TagSUBIFD;
 import tif.TagEntries.Taggable;
-import static tif.DirectoryIdentifier.*;
-import static tif.TagEntries.TagEXIF.*;
-import static tif.TagEntries.TagIFD.*;
-import java.nio.ByteOrder;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import common.BaseMetadata;
-import common.ByteValueConverter;
-import common.ImageHandler;
-import common.Metadata;
-import common.SequentialByteReader;
-import logger.LogFactory;
 
 /**
  * This {@code IFDHandler} class is responsible for parsing TIFF-based files by reading and
  * interpreting Image File Directories (IFDs) within the file's binary structure. It supports
  * standard TIFF parsing.
- * 
+ *
  * This handler processes multiple TIFF directory types such as IFD0, EXIF, GPS, and INTEROP through
  * a recursive traversal of linked IFD structures identified by tag-defined pointers.
- * 
+ *
  * <p>
  * <strong>Note:</strong> BigTIFF (version 43) is detected but not yet supported.
  * </p>
@@ -81,11 +84,80 @@ public class IFDHandler implements ImageHandler
     }
 
     /**
+     * Default constructor is unsupported and will always throw an exception.
+     *
+     * @throws UnsupportedOperationException
+     *         to indicate that instantiation is not supported
+     */
+    public IFDHandler()
+    {
+        throw new UnsupportedOperationException("Not intended for instantiation");
+    }
+
+    /**
+     * Constructs an IFD handler for reading TIFF metadata using the specified byte reader.
+     *
+     * @param reader
+     *        the byte reader providing access to the TIFF file content
+     */
+    public IFDHandler(SequentialByteReader reader)
+    {
+        this.reader = reader;
+        this.tifHeaderOffset = 0;
+        this.directoryList = new ArrayList<>();
+    }
+
+    /**
+     * Indicates whether the parsed file is a BigTIFF variant (version 43).
+     *
+     * @return boolean true if the TIFF version is BigTIFF, otherwise false
+     */
+    public boolean isBigTiffVersion()
+    {
+        return isTiffBig;
+    }
+
+    /**
+     * Parses the image data stream and attempts to extract metadata.
+     *
+     * <p>
+     * After calling this method, use {@link #getDirectories()} to retrieve the list of IFD
+     * directories that were successfully parsed.
+     * </p>
+     *
+     * @return true if at least one metadata directory was extracted, otherwise false
+     */
+    @Override
+    public boolean parseMetadata()
+    {
+        readTifHeader();
+        navigateImageFileDirectory(DirectoryIdentifier.TIFF_DIRECTORY_IFD0, tifHeaderOffset + firstIFDoffset);
+
+        return (directoryList.size() > 0);
+    }
+
+    /**
+     * Returns the list of IFD directories that were successfully parsed.
+     *
+     * <p>
+     * If no directories were found, this method returns {@link Optional#empty()}. Otherwise, it
+     * returns an {@link Optional} containing a copy of the parsed IFD directory list.
+     * </p>
+     *
+     * @return an {@link Optional} containing at least one {@link DirectoryIFD}, or
+     *         {@link Optional#empty()} if no directories were parsed
+     */
+    public Optional<List<DirectoryIFD>> getDirectories()
+    {
+        return (directoryList.isEmpty() ? Optional.empty() : Optional.of(Collections.unmodifiableList(directoryList)));              
+    }
+
+    /**
      * Retrieves the corresponding {@link Taggable} enumeration for the specified TIFF tag ID.
      *
      * @param tagid
      *        the tag ID to identify the field
-     * 
+     *
      * @return the resolved tag enum or {@code null} if unknown
      */
     private static Taggable getTagName(int tagid)
@@ -107,29 +179,6 @@ public class IFDHandler implements ImageHandler
     }
 
     /**
-     * Default constructor is unsupported and will always throw an exception.
-     *
-     * @throws UnsupportedOperationException
-     *         to indicate that instantiation is not supported
-     */
-    public IFDHandler()
-    {
-        throw new UnsupportedOperationException("Not intended for instantiation");
-    }
-
-    /**
-     * Constructs an IFD handler for reading TIFF metadata using the specified byte reader.
-     *
-     * @param reader
-     *        the byte reader providing access to the TIFF file content
-     */
-    public IFDHandler(SequentialByteReader reader)
-    {
-        this.reader = reader;
-        this.directoryList = new ArrayList<>();
-    }
-
-    /**
      * Reads the TIFF header to determine byte order, version (Standard or BigTIFF), and the offset
      * to the first Image File Directory (IFD0).
      *
@@ -140,7 +189,6 @@ public class IFDHandler implements ImageHandler
     {
         byte firstByte = reader.readByte();
         byte secondByte = reader.readByte();
-        tifHeaderOffset = 0;
 
         if (firstByte == secondByte)
         {
@@ -189,7 +237,7 @@ public class IFDHandler implements ImageHandler
     /**
      * Recursively traverses the specified Image File Directory and its linked sub-directories based
      * on the tag-defined pointers, either EXIF, GPS or Interop).
-     * 
+     *
      * For comprehensive technical context, refer to the TIFF Specification Revision 6.0 document on
      * Page 13 to 16.
      *
@@ -209,8 +257,6 @@ public class IFDHandler implements ImageHandler
         reader.seek(startOffset);
         DirectoryIFD ifd = new DirectoryIFD(dirType, reader.getByteOrder());
         int entryCount = reader.readUnsignedShort();
-
-        directoryList.add(ifd);
 
         for (int i = 0; i < entryCount; i++)
         {
@@ -277,63 +323,13 @@ public class IFDHandler implements ImageHandler
             }
         }
 
+        directoryList.add(ifd);
+
         long nextOffset = reader.readUnsignedInteger();
 
         if (nextOffset != 0x0000L)
         {
             navigateImageFileDirectory(DirectoryIdentifier.getNextDirectoryType(dirType), tifHeaderOffset + nextOffset);
         }
-    }
-
-    /**
-     * Indicates whether the parsed file is a BigTIFF variant (version 43).
-     *
-     * @return {@code true} if the TIFF version is BigTIFF; {@code false} otherwise
-     */
-    public boolean isBigTiffVersion()
-    {
-        return isTiffBig;
-    }
-
-    /**
-     * Begins the parsing of a TIFF image by reading the header and navigating to the first Image
-     * File Directory (IFD0). Extracted directories are added to a {@link MetadataTIF} structure and
-     * returned as a metadata component.
-     *
-     * @return a {@link Metadata} instance containing all parsed directories
-     */
-    @Override
-    public Metadata<? extends BaseMetadata> processMetadata()
-    {
-        MetadataTIF metadata = new MetadataTIF();
-
-        readTifHeader();
-
-        if (tifHeaderOffset >= 0)
-        {
-            navigateImageFileDirectory(DirectoryIdentifier.TIFF_DIRECTORY_IFD0, tifHeaderOffset + firstIFDoffset);
-        }
-
-        for (DirectoryIFD dir : directoryList)
-        {
-            metadata.addDirectory(dir);
-        }
-
-        return metadata;
-    }
-
-    public void processMetadata2()
-    {
-        readTifHeader();
-
-        if (tifHeaderOffset >= 0)
-        {
-            navigateImageFileDirectory(DirectoryIdentifier.TIFF_DIRECTORY_IFD0, tifHeaderOffset + firstIFDoffset);
-        }
-    }
-
-    public Optional<List<DirectoryIFD>> getIfdDirectory()
-    {
-        return (directoryList.isEmpty() ? Optional.empty() : Optional.of(new ArrayList<DirectoryIFD>(directoryList)));
     }
 }

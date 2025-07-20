@@ -87,10 +87,10 @@ public final class TestScanner
     {
         try
         {
-            TestScanner scanner = TestScanner.loadImage("img\\gemmapreg.tif");
+            // TestScanner scanner = TestScanner.loadImage("img\\gemmapreg.tif");
             // TestScanner scanner = TestScanner.loadImage("img\\testPNGimage.png");
             // TestScanner scanner = TestScanner.loadImage("img\\pool19.jpg");
-            // TestScanner scanner = TestScanner.loadImage("img\\IMG_0831.HEIC");
+            TestScanner scanner = TestScanner.loadImage("img\\IMG_0831.HEIC");
 
             Metadata<?> meta = scanner.readMetadata();
 
@@ -112,7 +112,7 @@ public final class TestScanner
                         System.out.printf("%s\n", dir.getNumericValue(EXIF_TAG_METERING_MODE));
                     }
 
-                    // System.out.printf("%s\n", tif);
+                    //System.out.printf("%s\n", tif.toString(null));
                 }
 
                 else if (meta instanceof MetadataPNG)

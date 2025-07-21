@@ -13,8 +13,8 @@ import tif.TagEntries.Taggable;
 
 /**
  * A concrete metadata container for PNG files, supporting both embedded Exif data (from eXIf
- * chunks) and textual data (from tEXt, zTXt, iTXt chunks). This class serves as a composite in the
- * composite design pattern for metadata components.
+ * chunks) and textual data (from tEXt, zTXt, iTXt chunks). This class serves as a composite
+ * component in the composite design pattern for metadata leaves.
  *
  * @param <T>
  *        the type of metadata unit stored in the PNG structure

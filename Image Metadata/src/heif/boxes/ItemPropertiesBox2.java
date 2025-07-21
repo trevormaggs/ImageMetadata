@@ -46,7 +46,7 @@ import heif.HeifBoxType;
  * @implNote This implementation assumes a flat box hierarchy. Additional testing is recommended
  *           for nested or complex structures.
  */
-public class ItemPropertiesBox extends Box
+public class ItemPropertiesBox2 extends Box
 {
     private ItemPropertyContainerBox ipco;
     private List<ItemPropertyAssociationBox> associations;
@@ -67,7 +67,7 @@ public class ItemPropertiesBox extends Box
      * @throws IllegalArgumentException
      *         if malformed data is encountered, such as a negative box size
      */
-    public ItemPropertiesBox(Box box, SequentialByteReader reader)
+    public ItemPropertiesBox2(Box box, SequentialByteReader reader)
     {
         super(box);
 
@@ -85,8 +85,7 @@ public class ItemPropertiesBox extends Box
 
         do
         {
-            ItemPropertyAssociationBox bx = new ItemPropertyAssociationBox(new Box(reader), reader);
-            associations.add(bx);
+            associations.add(new ItemPropertyAssociationBox(new Box(reader), reader));
 
         } while (reader.getCurrentPosition() < endpos);
 
@@ -172,22 +171,20 @@ public class ItemPropertiesBox extends Box
         {
             if (HeifBoxType.getBoxType(box.getTypeAsString()) != HeifBoxType.UNKNOWN)
             {
-                // sb.append(String.format("\t\t\t'%s': %s%n", box.getTypeAsString(),
-                // box.toString(null)));
+            //    sb.append(String.format("\t\t\t'%s': %s%n", box.getTypeAsString(), box.toString(null)));
             }
 
             else
             {
-                // sb.append(String.format("%s%n", box.toString("")));
+          //      sb.append(String.format("%s%n", box.toString("")));
             }
         }
 
-        // sb.append(System.lineSeparator());
+        //sb.append(System.lineSeparator());
 
         for (ItemPropertyAssociationBox ipma : associations)
         {
-            // sb.append(ipma.toString(String.format("\tAssociations (%d entries):",
-            // associations.size())));
+            //sb.append(ipma.toString(String.format("\tAssociations (%d entries):", associations.size())));
         }
 
         return sb.toString();

@@ -141,7 +141,7 @@ public enum HeifBoxType
      * 
      * @return true if the names match
      */
-    public boolean matchesBoxName(String name)
+    public boolean equalsBoxName(String name)
     {
         return boxname.equalsIgnoreCase(name);
     }
@@ -158,7 +158,7 @@ public enum HeifBoxType
     {
         for (HeifBoxType type : values())
         {
-            if (type.matchesBoxName(name))
+            if (type.equalsBoxName(name))
             {
                 return type;
             }

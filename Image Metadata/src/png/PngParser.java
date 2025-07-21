@@ -244,6 +244,7 @@ public class PngParser extends AbstractImageParser
 
         LOGGER.warn("Metadata information could not be found in file [" + getImageFile() + "]");
 
+        /* Fallback to empty metadata */
         return new MetadataPNG<>();
     }
 }

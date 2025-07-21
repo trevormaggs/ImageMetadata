@@ -68,12 +68,13 @@ public class ItemPropertyAssociationBox extends FullBox
 
             for (int j = 0; j < associationCount; j++)
             {
+                int value;
                 boolean essential;
                 int propertyIndex;
 
                 if (getBitFlags().get(0))
                 {
-                    int value = (int) reader.readUnsignedShort();
+                    value = (int) reader.readUnsignedShort();
 
                     essential = ((value & 0x8000) != 0);
                     propertyIndex = (value & 0x7FFF);
@@ -81,7 +82,7 @@ public class ItemPropertyAssociationBox extends FullBox
 
                 else
                 {
-                    int value = reader.readUnsignedByte();
+                    value = reader.readUnsignedByte();
 
                     essential = ((value & 0x80) != 0);
                     propertyIndex = (value & 0x7F);
@@ -238,13 +239,21 @@ public class ItemPropertyAssociationBox extends FullBox
             this.propertyIndex = propertyIndex;
         }
 
-        /** @return {@code true} if the property is essential, otherwise {@code false} */
+        /**
+         * Returns the Essential value as a boolean value.
+         * 
+         * @return {@code true} if the property is essential, otherwise {@code false}
+         */
         public boolean isEssential()
         {
             return essential;
         }
 
-        /** @return the 1-based property index in the {@code ipco} box */
+        /**
+         * Returns the Property Index.
+         * 
+         * @return the 1-based property index in the {@code ipco} box
+         */
         public int getPropertyIndex()
         {
             return propertyIndex;

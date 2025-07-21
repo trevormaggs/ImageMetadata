@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,14 +43,13 @@ import logger.LogFactory;
  * @author Trevor Maggs
  * @since 17 June 2025
  */
-public class BoxHandler implements ImageHandler
+public class BoxHandler implements ImageHandler, Iterable<Box>
 {
     private static final LogFactory LOGGER = LogFactory.getLogger(BoxHandler.class);
 
     private final Map<HeifBoxType, List<Box>> heifBoxMap;
     private final SequentialByteReader reader;
     private final Path imageFile;
-    private final List<Box> topLevelBoxes = new ArrayList<>();
 
     /**
      * This default constructor should not be invoked, or it will throw an exception to prevent
@@ -282,14 +282,6 @@ public class BoxHandler implements ImageHandler
     {
         parse();
 
-        for (List<Box> list : heifBoxMap.values())
-        {
-            for (Box box : list)
-            {
-                System.out.printf("%s\n", box.getTypeAsString());
-            }
-        }
-
         return (heifBoxMap.size() > 0);
     }
 
@@ -341,10 +333,12 @@ public class BoxHandler implements ImageHandler
              *
              * TODO: work out how mdat data can be handled.
              */
-            if (HeifBoxType.BOX_MEDIA_DATA.matchesBoxName(box.getTypeAsString()))
+            if (HeifBoxType.BOX_MEDIA_DATA.equalsBoxName(box.getTypeAsString()))
             {
+                reader.skip(box.available());
+
                 LOGGER.warn("Skipping unhandled Media Data box [" + box.getTypeAsString() + "] at offset [" + startPos + "]");
-                break;
+                // break;
             }
 
             heifBoxMap.putIfAbsent(box.getHeifType(), new ArrayList<>());
@@ -352,49 +346,78 @@ public class BoxHandler implements ImageHandler
 
             List<Box> children = box.getBoxList();
 
+            // System.out.printf("box %s\n", box.getTypeAsString());
+
             if (children != null)
             {
                 for (Box child : children)
                 {
+                    // System.out.printf("\tchild %s\n", child.getTypeAsString());
+
                     heifBoxMap.putIfAbsent(child.getHeifType(), new ArrayList<>());
                     heifBoxMap.get(child.getHeifType()).add(child);
                 }
             }
-
-            // topLevelBoxes.add(box);
-            // flattenBox(box);
         }
-    }
 
-    private void flattenBox(Box box)
-    {
-        heifBoxMap.putIfAbsent(box.getHeifType(), new ArrayList<>());
-        heifBoxMap.get(box.getHeifType()).add(box);
-
-        List<Box> children = box.getBoxList();
-
-        if (children != null)
+        for (Map.Entry<HeifBoxType, List<Box>> entry : heifBoxMap.entrySet())
         {
-            for (Box child : children)
+            // System.out.printf("box %s\n", HeifBoxType.getBoxType(entry.getKey().toString()));
+
+            String name = entry.getKey().getTypeName();
+
+            System.out.printf("box %s\n", name);
+
+            List<Box> children = entry.getValue();// .getBoxList();
+
+            if (children != null)
             {
-                flattenBox(child);
+                for (Box child : children)
+                {
+                    if (child.getTypeAsString().equals(name))
+                    {
+                        System.out.printf("%s\n", child.getTypeAsString());
+                    }
+
+                    else
+                    {
+                        System.out.printf("\tchild %s\n", child.getTypeAsString());
+                    }
+                }
             }
         }
     }
 
+    /**
+     * Retrieves the list of {@link ExtentData} corresponding to the Exif block, if present.
+     *
+     * @return an {@link Optional} containing the list of extents for Exif data, or
+     *         {@link Optional#empty()} if it does not exist
+     */
     private Optional<List<ExtentData>> getExifExtents()
     {
+        List<ExtentData> extents = null;
         ItemLocationBox iloc = getILOC();
         ItemInformationBox iinf = getIINF();
 
-        if (iinf == null || !iinf.containsExif())
+        if (iinf == null)
         {
-            LOGGER.warn("Exif block not found in Item Information Box for [" + imageFile + "]");
+            LOGGER.warn("Item Information Box is missing in file [" + imageFile + "]");
+            return Optional.empty();
+        }
+
+        else if (!iinf.containsExif())
+        {
+            LOGGER.warn("Item Information Box in [" + imageFile + "] does not contain Exif data");
             return Optional.empty();
         }
 
         int exifID = iinf.findExifItemID();
-        List<ExtentData> extents = (iloc != null ? iloc.findExtentsForItem(exifID) : null);
+
+        if (iloc != null)
+        {
+            extents = iloc.findExtentsForItem(exifID);
+        }
 
         if (extents == null || extents.isEmpty())
         {
@@ -403,5 +426,21 @@ public class BoxHandler implements ImageHandler
         }
 
         return Optional.of(extents);
+    }
+
+    @Override
+    public Iterator<Box> iterator()
+    {
+        List<Box> newBox = new ArrayList<>();
+
+        for (List<Box> list : heifBoxMap.values())
+        {
+            for (Box box : list)
+            {
+                newBox.add(box);
+            }
+        }
+
+        return newBox.iterator();
     }
 }

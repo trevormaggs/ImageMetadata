@@ -100,7 +100,7 @@ public class ItemInformationBox extends FullBox
     {
         for (ItemInfoEntry infe : entries)
         {
-            if (infe.getItemType().isPresent() && infe.isExif())
+            if (infe.getItemType() != null && infe.isExif())
             {
                 return infe.getItemID();
             }
@@ -167,7 +167,7 @@ public class ItemInformationBox extends FullBox
 
         for (ItemInfoEntry infe : entries)
         {
-            sb.append(String.format("\t\t%d)\t'%s': item_ID=%d,\titem_type='%s'%n", j++, infe.getTypeAsString(), infe.getItemID(), infe.getItemType().orElse("")));
+            sb.append(String.format("\t\t%d)\t'%s': item_ID=%d,\titem_type='%s'%n", j++, infe.getTypeAsString(), infe.getItemID(), infe.getItemType()));
         }
 
         return sb.toString();
@@ -300,61 +300,61 @@ public class ItemInformationBox extends FullBox
         /**
          * Returns the item type as a 4-character code.
          *
-         * @return an Optional containing the item type if present
+         * @return the item type if present
          */
-        public Optional<String> getItemType()
+        public String getItemType()
         {
-            return Optional.ofNullable(itemType);
+            return (itemType == null ? "" : itemType);
         }
 
         /**
          * Returns the item name.
          *
-         * @return an Optional containing the item name if present
+         * @return the item name if present
          */
-        public Optional<String> getItemName()
+        public String getItemName()
         {
-            return Optional.ofNullable(itemName);
+            return (itemName == null ? "" : itemName);
         }
 
         /**
          * Returns the content type for MIME entries.
          *
-         * @return an Optional containing the content type if present
+         * @return the content type if present
          */
-        public Optional<String> getContentType()
+        public String getContentType()
         {
-            return Optional.ofNullable(contentType);
+            return (contentType == null ? "" : contentType);
         }
 
         /**
          * Returns the URI type for URI entries.
          *
-         * @return an Optional containing the URI type if present
+         * @return the URI type if present
          */
-        public Optional<String> getItemUriType()
+        public String getItemUriType()
         {
-            return Optional.ofNullable(itemUriType);
+            return (itemUriType == null ? "" : itemUriType);
         }
 
         /**
          * Returns the content encoding for MIME entries.
          *
-         * @return an Optional containing the encoding if present
+         * @return the encoding if present
          */
-        public Optional<String> getContentEncoding()
+        public String getContentEncoding()
         {
-            return Optional.ofNullable(contentEncoding);
+            return (contentEncoding == null ? "" : contentEncoding);
         }
 
         /**
          * Returns the extension type for version 1 entries.
          *
-         * @return an Optional containing the extension type if present
+         * @return the extension type if present
          */
-        public Optional<String> getExtensionType()
+        public String getExtensionType()
         {
-            return Optional.ofNullable(extensionType);
+            return (extensionType == null ? "" : extensionType);
         }
     }
 }

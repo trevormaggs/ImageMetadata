@@ -183,9 +183,6 @@ public class JpgParser extends AbstractImageParser
                 {
                     LOGGER.warn(String.format("Empty metadata detected in file [%s]%n", getImageFile()));
                 }
-
-                /* Fallback to empty metadata */
-                metadata = new MetadataTIF();
             }
 
             catch (NoSuchFileException exc)
@@ -210,6 +207,14 @@ public class JpgParser extends AbstractImageParser
     @Override
     public Metadata<? extends BaseMetadata> getMetadata()
     {
-        return metadata;
+        if (metadata != null && metadata.hasMetadata())
+        {
+            return metadata;
+        }
+
+        LOGGER.warn("Metadata information could not be found in file [" + getImageFile() + "]");
+
+        /* Fallback to empty metadata */
+        return new MetadataTIF();
     }
 }

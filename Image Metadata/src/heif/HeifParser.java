@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import common.AbstractImageParser;
 import common.BaseMetadata;
@@ -31,6 +29,7 @@ import tif.TifParser;
 public class HeifParser extends AbstractImageParser
 {
     private static final LogFactory LOGGER = LogFactory.getLogger(HeifParser.class);
+    private BoxHandler handler;
 
     /**
      * This default constructor should not be invoked.
@@ -97,8 +96,7 @@ public class HeifParser extends AbstractImageParser
             // Use big-endian byte order as per ISO/IEC 14496-12
             SequentialByteReader heifReader = new SequentialByteReader(rawBytes, ByteOrder.BIG_ENDIAN);
 
-            BoxHandler handler = new BoxHandler(getImageFile(), heifReader);
-
+            handler = new BoxHandler(getImageFile(), heifReader);
             handler.parseMetadata();
 
             Optional<byte[]> exif = handler.getExifBlock();
@@ -110,15 +108,10 @@ public class HeifParser extends AbstractImageParser
 
             metadata = new TifParser(getImageFile(), exif.get()).getMetadata();
 
-            Map<HeifBoxType, List<Box>> map = handler.getBoxes();
-
-            for (List<Box> list : map.values())
+            for (Box box : handler)
             {
-                for (Box box : list)
-                {
-                    //System.out.printf("%s\n", box.getTypeAsString());
-                    // System.out.printf("%s\n", box.toString(""));
-                }
+                // System.out.printf("%s\n", box.getTypeAsString());
+                //System.out.printf("%s\n", box.toString(""));
             }
 
             return metadata;

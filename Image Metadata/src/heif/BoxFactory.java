@@ -10,39 +10,37 @@ public final class BoxFactory
     {
         Box box = new Box(reader);
 
-        switch (HeifBoxType.getBoxType(box.getTypeAsString()))
+        switch (HeifBoxType.fromTypeName(box.getTypeAsString()))
         {
-            case BOX_FILE_TYPE:
+            case FILE_TYPE:
                 return new FileTypeBox(box, reader);
-            case BOX_METADATA:
-                return new FullBox(box, reader);
-            case BOX_HANDLER:
+            case METADATA:
+                return new MetaBox(box, reader);
+            case HANDLER:
                 return new HandlerBox(box, reader);
-            case BOX_DATA_INFORMATION:
+            case DATA_INFORMATION:
                 return new DataInformationBox(box, reader);
-            // Use this if you wish to skip Data Information Box
-            // return box;
-            case BOX_PRIMARY_ITEM:
+            case PRIMARY_ITEM:
                 return new PrimaryItemBox(box, reader);
-            case BOX_ITEM_INFO:
+            case ITEM_INFO:
                 return new ItemInformationBox(box, reader);
-            case BOX_ITEM_REFERENCE:
+            case ITEM_REFERENCE:
                 return new ItemReferenceBox(box, reader);
-            case BOX_IMAGE_PROPERTY:
+            case ITEM_PROPERTIES:
                 return new ItemPropertiesBox(box, reader);
-            case BOX_COLOUR_INFO:
+            case COLOUR_INFO:
                 return new ColourInformationBox(box, reader);
-            case BOX_IMAGE_SPATIAL_EXTENTS:
+            case IMAGE_SPATIAL_EXTENTS:
                 return new ImageSpatialExtentsProperty(box, reader);
-            case BOX_IMAGE_ROTATION:
+            case IMAGE_ROTATION:
                 return new ImageRotationBox(box, reader);
-            case BOX_PIXEL_INFORMATION:
+            case PIXEL_INFO:
                 return new PixelInformationBox(box, reader);
-            case BOX_AUXILIARY_TYPE_PROPERTY:
+            case AUXILIARY_TYPE_PROPERTY:
                 return new AuxiliaryTypePropertyBox(box, reader);
-            case BOX_ITEM_DATA:
+            case ITEM_DATA:
                 return new ItemDataBox(box, reader);
-            case BOX_ITEM_LOCATION:
+            case ITEM_LOCATION:
                 return new ItemLocationBox(box, reader);
 
             /*

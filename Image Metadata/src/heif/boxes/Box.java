@@ -41,7 +41,7 @@ public class Box
         this.order = reader.getByteOrder();
         long sizeField = reader.readUnsignedInteger();
         this.boxTypeBytes = reader.readBytes(4);
-        this.type = HeifBoxType.getBoxType(boxTypeBytes);
+        this.type = HeifBoxType.fromTypeBytes(boxTypeBytes);
 
         if (sizeField == 1)
         {

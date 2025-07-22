@@ -46,7 +46,7 @@ public class HandlerBox extends FullBox
     public HandlerBox(Box box, SequentialByteReader reader)
     {
         super(box, reader);
-
+        
         int pos = reader.getCurrentPosition();
 
         /* Pre-defined = 0 */

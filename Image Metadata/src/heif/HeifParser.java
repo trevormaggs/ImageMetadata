@@ -108,12 +108,6 @@ public class HeifParser extends AbstractImageParser
 
             metadata = new TifParser(getImageFile(), exif.get()).getMetadata();
 
-            for (Box box : handler)
-            {
-                // System.out.printf("%s\n", box.getTypeAsString());
-                //System.out.printf("%s\n", box.toString(""));
-            }
-
             return metadata;
         }
 

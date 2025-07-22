@@ -48,17 +48,17 @@ public class ItemInformationBox extends FullBox
     {
         super(box, reader);
 
-        List<ItemInfoEntry> tempEntries = new ArrayList<>();
+        List<ItemInfoEntry> tmpEntries = new ArrayList<>();
         int pos = reader.getCurrentPosition();
 
         this.entryCount = (getVersion() == 0) ? reader.readUnsignedShort() : reader.readUnsignedInteger();
 
         for (int i = 0; i < entryCount; i++)
         {
-            tempEntries.add(new ItemInfoEntry(new Box(reader), reader));
+            tmpEntries.add(new ItemInfoEntry(new Box(reader), reader));
         }
 
-        this.entries = Collections.unmodifiableList(tempEntries);
+        this.entries = Collections.unmodifiableList(tmpEntries);
 
         byteUsed += reader.getCurrentPosition() - pos;
     }
@@ -129,6 +129,21 @@ public class ItemInformationBox extends FullBox
         }
 
         return Optional.empty();
+    }
+
+    /**
+     * Returns a combined list of all boxes contained in this {@code ItemInformationBox}, including
+     * the ItemInfoEntry boxes ({@code infe}).
+     * 
+     * @return a combined list of Box objects in reading order
+     */
+    @Override
+    public List<Box> getBoxList()
+    {
+        List<Box> combinedList = new ArrayList<>();
+        combinedList.addAll(entries);
+
+        return combinedList;
     }
 
     /**

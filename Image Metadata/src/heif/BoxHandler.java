@@ -99,7 +99,7 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
      */
     public HandlerBox getHDLR()
     {
-        return getBox(HeifBoxType.BOX_HANDLER, HandlerBox.class);
+        return getBox(HeifBoxType.HANDLER, HandlerBox.class);
     }
 
     /**
@@ -109,7 +109,7 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
      */
     public PrimaryItemBox getPITM()
     {
-        return getBox(HeifBoxType.BOX_PRIMARY_ITEM, PrimaryItemBox.class);
+        return getBox(HeifBoxType.PRIMARY_ITEM, PrimaryItemBox.class);
     }
 
     /**
@@ -119,7 +119,7 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
      */
     public ItemInformationBox getIINF()
     {
-        return getBox(HeifBoxType.BOX_ITEM_INFO, ItemInformationBox.class);
+        return getBox(HeifBoxType.ITEM_INFO, ItemInformationBox.class);
     }
 
     /**
@@ -129,7 +129,7 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
      */
     public ItemLocationBox getILOC()
     {
-        return getBox(HeifBoxType.BOX_ITEM_LOCATION, ItemLocationBox.class);
+        return getBox(HeifBoxType.ITEM_LOCATION, ItemLocationBox.class);
     }
 
     /**
@@ -139,7 +139,7 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
      */
     public ItemPropertiesBox getIPRP()
     {
-        return getBox(HeifBoxType.BOX_IMAGE_PROPERTY, ItemPropertiesBox.class);
+        return getBox(HeifBoxType.ITEM_PROPERTIES, ItemPropertiesBox.class);
     }
 
     /**
@@ -149,7 +149,7 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
      */
     public ItemReferenceBox getIREF()
     {
-        return getBox(HeifBoxType.BOX_ITEM_REFERENCE, ItemReferenceBox.class);
+        return getBox(HeifBoxType.ITEM_REFERENCE, ItemReferenceBox.class);
     }
 
     /**
@@ -159,7 +159,7 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
      */
     public ItemDataBox getIDAT()
     {
-        return getBox(HeifBoxType.BOX_ITEM_DATA, ItemDataBox.class);
+        return getBox(HeifBoxType.ITEM_DATA, ItemDataBox.class);
     }
 
     /**
@@ -285,6 +285,22 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
         return (heifBoxMap.size() > 0);
     }
 
+    @Override
+    public Iterator<Box> iterator()
+    {
+        List<Box> newBox = new ArrayList<>();
+
+        for (List<Box> list : heifBoxMap.values())
+        {
+            for (Box box : list)
+            {
+                newBox.add(box);
+            }
+        }
+
+        return newBox.iterator();
+    }
+
     /**
      * Retrieves the first matching box of a specific type and class.
      *
@@ -314,78 +330,6 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
         }
 
         return null;
-    }
-
-    /**
-     * Parses all HEIF boxes from the file stream and populates the internal box map.
-     */
-    private void parse()
-    {
-        while (reader.getCurrentPosition() < reader.length())
-        {
-            long startPos = reader.getCurrentPosition();
-            Box box = BoxFactory.createBox(reader);
-
-            /*
-             * At this stage, no handler for processing data within the Media Data box (mdat) is
-             * available, since we are not interested in parsing it yet. This box will be skipped as
-             * un-handled.
-             *
-             * TODO: work out how mdat data can be handled.
-             */
-            if (HeifBoxType.BOX_MEDIA_DATA.equalsBoxName(box.getTypeAsString()))
-            {
-                reader.skip(box.available());
-
-                LOGGER.warn("Skipping unhandled Media Data box [" + box.getTypeAsString() + "] at offset [" + startPos + "]");
-                // break;
-            }
-
-            heifBoxMap.putIfAbsent(box.getHeifType(), new ArrayList<>());
-            heifBoxMap.get(box.getHeifType()).add(box);
-
-            List<Box> children = box.getBoxList();
-
-            // System.out.printf("box %s\n", box.getTypeAsString());
-
-            if (children != null)
-            {
-                for (Box child : children)
-                {
-                    // System.out.printf("\tchild %s\n", child.getTypeAsString());
-
-                    heifBoxMap.putIfAbsent(child.getHeifType(), new ArrayList<>());
-                    heifBoxMap.get(child.getHeifType()).add(child);
-                }
-            }
-        }
-
-        for (Map.Entry<HeifBoxType, List<Box>> entry : heifBoxMap.entrySet())
-        {
-            // System.out.printf("box %s\n", HeifBoxType.getBoxType(entry.getKey().toString()));
-
-            String name = entry.getKey().getTypeName();
-
-            System.out.printf("box %s\n", name);
-
-            List<Box> children = entry.getValue();// .getBoxList();
-
-            if (children != null)
-            {
-                for (Box child : children)
-                {
-                    if (child.getTypeAsString().equals(name))
-                    {
-                        System.out.printf("%s\n", child.getTypeAsString());
-                    }
-
-                    else
-                    {
-                        System.out.printf("\tchild %s\n", child.getTypeAsString());
-                    }
-                }
-            }
-        }
     }
 
     /**
@@ -428,19 +372,61 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
         return Optional.of(extents);
     }
 
-    @Override
-    public Iterator<Box> iterator()
+    /**
+     * Parses all HEIF boxes from the file stream and populates the internal box map.
+     */
+    private void parse()
     {
-        List<Box> newBox = new ArrayList<>();
-
-        for (List<Box> list : heifBoxMap.values())
+        while (reader.getCurrentPosition() < reader.length())
         {
-            for (Box box : list)
+            long startPos = reader.getCurrentPosition();
+            Box box = BoxFactory.createBox(reader);
+
+            /*
+             * At this stage, no handler for processing data within the Media Data box (mdat) is
+             * available, since we are not interested in parsing it yet. This box will be skipped as
+             * un-handled.
+             *
+             * TODO: work out how mdat data can be handled.
+             */
+            if (HeifBoxType.MEDIA_DATA.equalsTypeName(box.getTypeAsString()))
             {
-                newBox.add(box);
+                reader.skip(box.available());
+                LOGGER.warn("Skipping unhandled Media Data box [" + box.getTypeAsString() + "] at offset [" + startPos + "]");
             }
+
+            walkBoxes(box, 0);
+        }
+        
+        for (Box box : this)
+        {
+            // System.out.printf("%s\n", box.getTypeAsString());
+            System.out.printf("%s\n", box.toString(""));
+        }
+    }
+
+    private void walkBoxes(Box box, int depth)
+    {
+        // Indent based on depth
+        for (int i = 0; i < depth; i++)
+        {
+            // System.out.print("\t");
         }
 
-        return newBox.iterator();
+        // System.out.printf("%s\n", box.getTypeAsString());
+
+        heifBoxMap.putIfAbsent(box.getHeifType(), new ArrayList<>());
+        heifBoxMap.get(box.getHeifType()).add(box);
+
+        // Recurse into children
+        List<Box> children = box.getBoxList();
+
+        if (children != null)
+        {
+            for (Box child : children)
+            {
+                walkBoxes(child, depth + 1);
+            }
+        }
     }
 }

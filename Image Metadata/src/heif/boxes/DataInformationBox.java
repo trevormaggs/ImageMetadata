@@ -1,6 +1,8 @@
 package heif.boxes;
 
 import heif.HeifBoxType;
+import java.util.ArrayList;
+import java.util.List;
 import common.ByteValueConverter;
 import common.SequentialByteReader;
 
@@ -49,6 +51,21 @@ public class DataInformationBox extends Box
     }
 
     /**
+     * Returns a combined list of all boxes contained in this {@code DataInformationBox},
+     * particularly the DataReferenceBox ({@code dref}).
+     * 
+     * @return a combined list of Box objects in reading order
+     */
+    @Override
+    public List<Box> getBoxList()
+    {
+        List<Box> combinedList = new ArrayList<>();
+        combinedList.add(dref);
+
+        return combinedList;
+    }
+
+    /**
      * Returns a string representation of this {@code DataInformationBox}.
      *
      * @return a formatted string describing the box contents.
@@ -79,7 +96,7 @@ public class DataInformationBox extends Box
             sb.append(System.lineSeparator());
         }
 
-        HeifBoxType box = HeifBoxType.getBoxType(getTypeAsString());
+        HeifBoxType box = HeifBoxType.fromTypeName(getTypeAsString());
 
         sb.append(String.format("\t%s '%s':\t(%s)", this.getClass().getSimpleName(), getTypeAsString(), box.getBoxCategory()));
         sb.append(dref.toString(prefix));
@@ -99,12 +116,8 @@ public class DataInformationBox extends Box
         {
             super(box, reader);
 
-            int pos = reader.getCurrentPosition();
-
             entryCount = (int) reader.readUnsignedInteger();
             dataEntry = new DataEntryBox[entryCount];
-
-            byteUsed += reader.getCurrentPosition() - pos;
 
             for (int i = 0; i < entryCount; i++)
             {
@@ -169,8 +182,6 @@ public class DataInformationBox extends Box
         {
             super(box, reader);
 
-            int pos = reader.getCurrentPosition();
-
             if (available() > 0)
             {
                 String[] parts = ByteValueConverter.splitNullDelimitedStrings(reader.readBytes((int) getBoxSize()));
@@ -189,8 +200,6 @@ public class DataInformationBox extends Box
                     }
                 }
             }
-
-            byteUsed += reader.getCurrentPosition() - pos;
         }
     }
 }

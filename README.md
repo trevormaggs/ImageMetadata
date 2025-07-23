@@ -1,4 +1,4 @@
-# Image Metadata Parsing Toolkit
+# Image Metadata Parsing Toolkit - Development in Progress
 
 Welcome to the **Image Metadata Parsing Toolkit** — a Java library dedicated to extracting and analysing **Exif metadata** from certain image formats, specifically TIFF, JPEG, PNG, HEIF/HEIC and possibly WEBP.
 

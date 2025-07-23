@@ -2,6 +2,7 @@ package heif;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -95,7 +96,7 @@ public enum HeifBoxType
     {
         for (HeifBoxType type : values())
         {
-            NAME_LOOKUP.put(type.typeName.toLowerCase(), type);
+            NAME_LOOKUP.put(type.typeName.toLowerCase(Locale.ROOT), type);
             BYTES_LOOKUP.put(new String(type.typeBytes, StandardCharsets.US_ASCII), type);
         }
     }
@@ -168,7 +169,7 @@ public enum HeifBoxType
             return UNKNOWN;
         }
 
-        return NAME_LOOKUP.getOrDefault(name.toLowerCase(), UNKNOWN);
+        return NAME_LOOKUP.getOrDefault(name.toLowerCase(Locale.ROOT), UNKNOWN);
     }
 
     /**

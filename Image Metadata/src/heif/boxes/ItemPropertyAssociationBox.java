@@ -139,7 +139,7 @@ public class ItemPropertyAssociationBox extends FullBox
 
         if (prefix != null && !prefix.isEmpty())
         {
-            sb.append(prefix).append(System.lineSeparator()).append(System.lineSeparator());
+            sb.append(prefix);
         }
 
         sb.append(String.format("\t%s '%s': entry_count=%d%n", this.getClass().getSimpleName(), getTypeAsString(), entryCount));
@@ -151,8 +151,10 @@ public class ItemPropertyAssociationBox extends FullBox
 
             for (ItemPropertyEntryAssociation assoc : entry.getAssociations())
             {
-                sb.append(String.format("\t\t\t\tessential=%s, property_index=%d%n", assoc.isEssential(), assoc.getPropertyIndex()));
+                sb.append(String.format("\t\t\tessential=%s, property_index=%d%n", assoc.isEssential(), assoc.getPropertyIndex()));
             }
+            
+            sb.append(System.lineSeparator());
         }
 
         return sb.toString();

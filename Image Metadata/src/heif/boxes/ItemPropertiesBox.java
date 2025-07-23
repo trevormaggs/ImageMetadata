@@ -161,12 +161,31 @@ public class ItemPropertiesBox extends Box
 
         if (prefix != null && !prefix.isEmpty())
         {
-            sb.append(prefix).append(System.lineSeparator());
-            sb.append(System.lineSeparator());
+            sb.append(prefix);
         }
 
-        sb.append(String.format("\t%s '%s':%n", this.getClass().getSimpleName(), getTypeAsString()));
+        sb.append(String.format("%s '%s':%n", this.getClass().getSimpleName(), getTypeAsString()));
         sb.append(String.format("\t\t%s '%s':%n", ipco.getClass().getSimpleName(), ipco.getTypeAsString()));
+
+        for (Box box : ipco.properties)
+        {
+            if (HeifBoxType.fromTypeName(box.getTypeAsString()) != HeifBoxType.UNKNOWN)
+            {
+                sb.append(String.format("\t\t\t%s%n", box.toString("")));
+            }
+
+            else
+            {
+                sb.append(String.format("%s%n", box.toString("\t\t\t")));
+            }
+        }
+
+        //sb.append(System.lineSeparator());
+
+        for (ItemPropertyAssociationBox ipma : associations)
+        {
+            sb.append(ipma.toString(String.format("\tAssociations (%d entries):%n", associations.size())));
+        }
 
         return sb.toString();
     }
@@ -245,42 +264,5 @@ public class ItemPropertiesBox extends Box
 
             byteUsed += reader.getCurrentPosition() - startpos;
         }
-    }
-
-    // Only temporary until fixed
-    public String toString_TEMP(String prefix)
-    {
-        StringBuilder sb = new StringBuilder();
-
-        if (prefix != null && !prefix.isEmpty())
-        {
-            sb.append(prefix).append(System.lineSeparator());
-            sb.append(System.lineSeparator());
-        }
-
-        sb.append(String.format("\t%s '%s':%n", this.getClass().getSimpleName(), getTypeAsString()));
-        sb.append(String.format("\t\t%s '%s':%n", ipco.getClass().getSimpleName(), ipco.getTypeAsString()));
-
-        for (Box box : ipco.properties)
-        {
-            if (HeifBoxType.fromTypeName(box.getTypeAsString()) != HeifBoxType.UNKNOWN)
-            {
-                sb.append(String.format("\t\t\t'%s': %s%n", box.getTypeAsString(), box.toString(null)));
-            }
-
-            else
-            {
-                sb.append(String.format("%s%n", box.toString("")));
-            }
-        }
-
-        sb.append(System.lineSeparator());
-
-        for (ItemPropertyAssociationBox ipma : associations)
-        {
-            sb.append(ipma.toString(String.format("\tAssociations (%d entries):", associations.size())));
-        }
-
-        return sb.toString();
     }
 }

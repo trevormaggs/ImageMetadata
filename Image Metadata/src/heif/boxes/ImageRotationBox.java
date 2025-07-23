@@ -83,7 +83,7 @@ public class ImageRotationBox extends Box
             sb.append(System.lineSeparator());
         }
 
-        sb.append(String.format("\t\t%s '%s': angle=%d", this.getClass().getSimpleName(), getTypeAsString(), angle));
+        sb.append(String.format("%s '%s': angle=%d", this.getClass().getSimpleName(), getTypeAsString(), angle));
 
         return sb.toString();
     }

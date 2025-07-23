@@ -193,21 +193,19 @@ public class ItemLocationBox extends FullBox
 
         if (prefix != null && !prefix.isEmpty())
         {
-            sb.append(prefix).append(System.lineSeparator()).append(System.lineSeparator());
+            sb.append(prefix);
         }
 
-        sb.append(String.format("\t%s '%s':\titemCount=%d%n", this.getClass().getSimpleName(), getTypeAsString(), itemCount));
+        sb.append(String.format("%s '%s':\titemCount=%d%n", this.getClass().getSimpleName(), getTypeAsString(), itemCount));
 
         for (ItemLocationEntry item : items)
         {
-            sb.append(String.format("\t\tItemID=%-4d constructionMethod=%-3d dataRefIdx=%-12d baseOffset=0x%X%n", item.getItemID(), item.getConstructionMethod(), item.getDataReferenceIndex(), item.getBaseOffset()));
+            sb.append(String.format("\t\tItemID=%-10d constructionMethod=%-5d dataRefIdx=%-8d baseOffset=0x%X%n", item.getItemID(), item.getConstructionMethod(), item.getDataReferenceIndex(), item.getBaseOffset()));
 
             for (ExtentData extent : item.getExtents())
             {
-                sb.append(String.format("\t\t\t\t\textentIndex=%-10d extentOffset=0x%08X extentLength=%d%n", extent.getExtentIndex(), extent.getExtentOffset(), extent.getExtentLength()));
+                sb.append(String.format("\t\textentIndex=%-5d extentOffset=0x%08X  extentLength=%d%n%n", extent.getExtentIndex(), extent.getExtentOffset(), extent.getExtentLength()));
             }
-
-            // sb.append(System.lineSeparator());
         }
 
         return sb.toString();

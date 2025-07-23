@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -13,6 +14,7 @@ import common.ImageHandler;
 import common.ImageReadErrorException;
 import common.SequentialByteReader;
 import heif.boxes.Box;
+import heif.boxes.DataInformationBox;
 import heif.boxes.HandlerBox;
 import heif.boxes.ItemDataBox;
 import heif.boxes.ItemInformationBox;
@@ -36,9 +38,11 @@ import logger.LogFactory;
  * <li>{@code ISO/IEC 14496-12:2015}</li>
  * <li>{@code ISO/IEC 23008-12:2017}</li>
  * </ul>
- *
- * @apiNote According to HEIF/HEIC standards, some box types are optional and may appear zero or one
- *          time per file.
+ * 
+ * <p>
+ * <strong>API Note:</strong> According to HEIF/HEIC standards, some box types are
+ * optional and may appear zero or one time per file.
+ * </p>
  *
  * @author Trevor Maggs
  * @since 17 June 2025
@@ -46,10 +50,11 @@ import logger.LogFactory;
 public class BoxHandler implements ImageHandler, Iterable<Box>
 {
     private static final LogFactory LOGGER = LogFactory.getLogger(BoxHandler.class);
-
     private final Map<HeifBoxType, List<Box>> heifBoxMap;
     private final SequentialByteReader reader;
     private final Path imageFile;
+
+    private final List<Box> topLevelBoxList;
 
     /**
      * This default constructor should not be invoked, or it will throw an exception to prevent
@@ -74,9 +79,10 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
      */
     public BoxHandler(Path fpath, SequentialByteReader reader)
     {
-        this.imageFile = fpath;
         this.reader = reader;
+        this.imageFile = fpath;
         this.heifBoxMap = new LinkedHashMap<>();
+        this.topLevelBoxList = new ArrayList<>();
     }
 
     /**
@@ -163,13 +169,23 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
     }
 
     /**
+     * Gets the {@link DataInformationBox}, if present.
+     *
+     * @return the {@code DataInformationBox}, or {@code null} if not found
+     */
+    public DataInformationBox getDINF()
+    {
+        return getBox(HeifBoxType.DATA_INFORMATION, DataInformationBox.class);
+    }
+
+    /**
      * Returns the parsed box map.
      *
      * @return the map of box lists, keyed by HeifBoxType
      */
     public Map<HeifBoxType, List<Box>> getBoxes()
     {
-        return heifBoxMap;
+        return Collections.unmodifiableMap(heifBoxMap);
     }
 
     /**
@@ -197,10 +213,10 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
      * </ul>
      *
      * @return an {@link Optional} containing the TIFF-compatible Exif block as a byte array if
-     *         present, otherwise, {@link Optional#empty()}.
+     *         present, otherwise, {@link Optional#empty()}
      *
      * @throws ImageReadErrorException
-     *         if the Exif block is missing, malformed, or cannot be located.
+     *         if the Exif block is missing, malformed, or cannot be located
      */
     public Optional<byte[]> getExifBlock() throws ImageReadErrorException
     {
@@ -377,55 +393,88 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
      */
     private void parse()
     {
-        while (reader.getCurrentPosition() < reader.length())
+        do
         {
-            long startPos = reader.getCurrentPosition();
-            Box box = BoxFactory.createBox(reader);
-
-            /*
-             * At this stage, no handler for processing data within the Media Data box (mdat) is
-             * available, since we are not interested in parsing it yet. This box will be skipped as
-             * un-handled.
-             *
-             * TODO: work out how mdat data can be handled.
-             */
-            if (HeifBoxType.MEDIA_DATA.equalsTypeName(box.getTypeAsString()))
+            try
             {
-                reader.skip(box.available());
-                LOGGER.warn("Skipping unhandled Media Data box [" + box.getTypeAsString() + "] at offset [" + startPos + "]");
+                Box box = BoxFactory.createBox(reader);
+
+                /*
+                 * At this stage, no handler for processing data within the Media Data box (mdat) is
+                 * available, since we are not interested in parsing it yet. This box will be
+                 * skipped as not handled. Often, mdat is the last top-level box.
+                 *
+                 * TODO: work out how mdat data can be handled.
+                 */
+                if (HeifBoxType.MEDIA_DATA.equalsTypeName(box.getTypeAsString()))
+                {
+                    reader.skip(box.available());
+                    LOGGER.warn("Skipping unhandled Media Data box [" + box.getTypeAsString() + "]");
+                }
+
+                topLevelBoxList.add(box);
             }
 
-            walkBoxes(box, 0);
-        }
-        
-        for (Box box : this)
+            /*
+             * Just in case, it is better to catch a general Exception for
+             * robustness during parsing and exit, ie corrupted files
+             */
+            catch (Exception exc)
+            {
+                LOGGER.error("Failed to parse box: [" + exc.getMessage() + "]");
+                break;
+            }
+
+        } while (reader.getCurrentPosition() < reader.length());
+
+        for (Box box : topLevelBoxList)
         {
-            // System.out.printf("%s\n", box.getTypeAsString());
-            System.out.printf("%s\n", box.toString(""));
+            // System.out.printf("%s%n", box.toString(""));
+            walkBoxes(box, 0, false);
         }
     }
 
-    private void walkBoxes(Box box, int depth)
+    /**
+     * Recursively traverses the HEIF box hierarchy, adding each encountered box to the internal
+     * {@code heifBoxMap}.
+     *
+     * <p>
+     * This method is used internally by the {@link #parse()} method to build a comprehensive map of
+     * all boxes and their relationships within the HEIF file.
+     * </p>
+     *
+     * @param box
+     *        the current {@link Box} object to process. This box and its children will be added to
+     *        the internal map
+     * @param depth
+     *        the current depth in the box hierarchy, primarily used for debugging/visualisation
+     *        purposes
+     * @param show
+     *        true if you wish to display the hierarchical relationship between HEIF boxes
+     */
+    private void walkBoxes(Box box, int depth, boolean show)
     {
         // Indent based on depth
-        for (int i = 0; i < depth; i++)
+        if (show)
         {
-            // System.out.print("\t");
-        }
+            for (int i = 0; i < depth; i++)
+            {
+                System.out.print("\t");
+            }
 
-        // System.out.printf("%s\n", box.getTypeAsString());
+            System.out.printf("%s\n", box.getTypeAsString());
+        }
 
         heifBoxMap.putIfAbsent(box.getHeifType(), new ArrayList<>());
         heifBoxMap.get(box.getHeifType()).add(box);
 
-        // Recurse into children
         List<Box> children = box.getBoxList();
 
         if (children != null)
         {
             for (Box child : children)
             {
-                walkBoxes(child, depth + 1);
+                walkBoxes(child, depth + 1, show);
             }
         }
     }

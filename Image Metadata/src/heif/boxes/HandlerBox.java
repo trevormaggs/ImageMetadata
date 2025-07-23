@@ -46,7 +46,7 @@ public class HandlerBox extends FullBox
     public HandlerBox(Box box, SequentialByteReader reader)
     {
         super(box, reader);
-        
+
         int pos = reader.getCurrentPosition();
 
         /* Pre-defined = 0 */
@@ -135,12 +135,12 @@ public class HandlerBox extends FullBox
 
         if (prefix != null && !prefix.isEmpty())
         {
-            sb.append(prefix).append(System.lineSeparator());
-            sb.append(System.lineSeparator());
+            sb.append(prefix);
         }
 
-        sb.append(String.format("\t%s '%s':\t\t\t'%s'", this.getClass().getSimpleName(), getTypeAsString(), getHandlerType()));
-
+        sb.append(String.format("%s '%s':\t\t\t'%s'", this.getClass().getSimpleName(), getTypeAsString(), getHandlerType()));
+        sb.append(System.lineSeparator());
+        
         return sb.toString();
     }
 }

@@ -2,7 +2,6 @@ package heif.boxes;
 
 import java.util.BitSet;
 import common.SequentialByteReader;
-import heif.HeifBoxType;
 
 /**
  * This code creates a complete class that stores ubiquitous high-level data applicable for the
@@ -165,7 +164,6 @@ public class FullBox extends Box
     @Override
     public String toString(String prefix)
     {
-        HeifBoxType box = getHeifType();
         StringBuilder sb = new StringBuilder();
 
         if (prefix != null && !prefix.isEmpty())
@@ -174,7 +172,7 @@ public class FullBox extends Box
             sb.append(System.lineSeparator());
         }
 
-        sb.append(String.format("%s '%s':\t\t\t\t\t(%s)", this.getClass().getSimpleName(), getTypeAsString(), box.getBoxCategory()));
+        sb.append(String.format("%s '%s':\t\t\t\t\t(%s)", this.getClass().getSimpleName(), getTypeAsString(), getHeifType().getBoxCategory()));
 
         return sb.toString();
     }

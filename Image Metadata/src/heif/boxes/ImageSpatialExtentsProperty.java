@@ -81,7 +81,7 @@ public class ImageSpatialExtentsProperty extends FullBox
             sb.append(System.lineSeparator());
         }
 
-        sb.append(String.format("\t\t%s '%s': imageWidth=%d, imageHeight=%d", this.getClass().getSimpleName(), getTypeAsString(), imageWidth, imageHeight));
+        sb.append(String.format("%s '%s': imageWidth=%d, imageHeight=%d", this.getClass().getSimpleName(), getTypeAsString(), imageWidth, imageHeight));
 
         return sb.toString();
     }

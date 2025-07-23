@@ -114,21 +114,17 @@ public class ItemReferenceBox extends FullBox
 
         if (prefix != null && !prefix.isEmpty())
         {
-            sb.append(prefix).append(System.lineSeparator()).append(System.lineSeparator());
+            sb.append(prefix);
         }
 
-        sb.append(String.format("\t%s '%s':", this.getClass().getSimpleName(), getTypeAsString()));
+        sb.append(String.format("%s '%s':%n", this.getClass().getSimpleName(), getTypeAsString()));
 
-        /*
-         * sb.append(System.lineSeparator());
-         * 
-         * for (Box ref : references)
-         * {
-         * SingleItemTypeReferenceBox box = (SingleItemTypeReferenceBox) ref;
-         * sb.append(box.toString("\t"));
-         * sb.append(System.lineSeparator());
-         * }
-         */
+        for (Box ref : references)
+        {
+            SingleItemTypeReferenceBox box = (SingleItemTypeReferenceBox) ref;
+            sb.append(box.toString("\t"));
+            sb.append(System.lineSeparator());
+        }
 
         return sb.toString();
     }
@@ -188,10 +184,10 @@ public class ItemReferenceBox extends FullBox
 
             if (prefix != null && !prefix.isEmpty())
             {
-                sb.append(prefix).append(System.lineSeparator()).append(System.lineSeparator());
+                sb.append(prefix);
             }
 
-            sb.append(String.format("\t\treferenceType='%s': from_item_ID=%d, ref_count=%d, to_item_ID=", getTypeAsString(), fromItemID, referenceCount));
+            sb.append(String.format("\treferenceType='%s': from_item_ID=%d, ref_count=%d, to_item_ID=", getTypeAsString(), fromItemID, referenceCount));
 
             for (int j = 0; j < referenceCount; j++)
             {

@@ -5,11 +5,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-
 import common.ByteValueConverter;
 import common.SequentialByteReader;
 import heif.HeifBoxType;
-import heif.HeifBoxType.BoxCategory;
 
 /**
  * Represents a generic HEIF Box, according to ISO/IEC 14496-12:2015. Handles both standard boxes
@@ -124,7 +122,7 @@ public class Box
      * Returns the number of remaining bytes in the box.
      *
      * @return remaining bytes
-     * 
+     *
      * @throws UnsupportedOperationException
      *         if the box size is unknown (extends to EOF)
      */
@@ -156,16 +154,6 @@ public class Box
     public Optional<String> getUserType()
     {
         return Optional.ofNullable(userType);
-    }
-
-    /**
-     * Returns whether this box is a container box.
-     *
-     * @return true if this box is a container
-     */
-    public boolean isContainerType()
-    {
-        return type.getBoxCategory() == BoxCategory.CONTAINER;
     }
 
     /**
@@ -204,7 +192,7 @@ public class Box
      *
      * @param prefix
      *        optional prefix to prepend
-     *        
+     *
      * @return formatted string
      */
     public String toString(String prefix)
@@ -213,11 +201,10 @@ public class Box
 
         if (prefix != null && !prefix.isEmpty())
         {
-            sb.append(prefix).append(System.lineSeparator());
-            sb.append(System.lineSeparator());
+            sb.append(prefix);
         }
 
-        sb.append(String.format("\t\t\t'%s':\t\t\t%s", getTypeAsString(), type.getTypeName()));
+        sb.append(String.format("'%s':\t\t\t%s", getTypeAsString(), type.getTypeName()));
 
         return sb.toString();
     }

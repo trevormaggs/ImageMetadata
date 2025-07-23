@@ -83,7 +83,7 @@ public final class TestScanner
         return loadImage(Paths.get(file));
     }
 
-    public static void main(String[] args) throws ImageReadErrorException
+    public static void main(String[] args)
     {
         try
         {
@@ -144,13 +144,19 @@ public final class TestScanner
                     }
                 }
             }
+
+            else
+            {
+                System.out.printf("Metadata cannot be found [%s]%n", scanner.getFile());
+            }
         }
 
-        catch (RuntimeException | IOException exc)
+        catch (ImageReadErrorException | IOException exc)
         {
             LOGGER.error(exc.getMessage());
+
             System.err.printf("%s\n", exc.getMessage());
-            exc.printStackTrace();
+            // exc.printStackTrace();
         }
     }
 }

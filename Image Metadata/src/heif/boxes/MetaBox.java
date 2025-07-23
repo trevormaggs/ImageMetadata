@@ -111,7 +111,7 @@ public class MetaBox extends FullBox
      * HEIF-based file. Useful for logging or diagnostics.
      *
      * @param prefix
-     *        Optional heading or label to prepend. Can be {@code null}
+     *        Optional heading or label to prepend. Can be {@code null}.
      * 
      * @return A formatted string suitable for debugging, inspection, or textual analysis
      */
@@ -122,8 +122,14 @@ public class MetaBox extends FullBox
 
         if (prefix != null && !prefix.isEmpty())
         {
-            sb.append(prefix).append(System.lineSeparator());
-            sb.append(System.lineSeparator());
+            sb.append(prefix);
+        }
+        
+        sb.append(String.format("%s '%s':\t(%s)%n", this.getClass().getSimpleName(), getTypeAsString(), getHeifType().getBoxCategory()));
+
+        for (Box box : containedBoxes.values())
+        {
+            sb.append(box.toString("\t"));
         }
 
         return sb.toString();

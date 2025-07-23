@@ -103,7 +103,7 @@ public class AuxiliaryTypePropertyBox extends FullBox
             sb.append(System.lineSeparator());
         }
 
-        sb.append(String.format("\t\t%s '%s': auxType=%s", this.getClass().getSimpleName(), getTypeAsString(), auxType));
+        sb.append(String.format("%s '%s': auxType=%s", this.getClass().getSimpleName(), getTypeAsString(), auxType));
 
         return sb.toString();
     }

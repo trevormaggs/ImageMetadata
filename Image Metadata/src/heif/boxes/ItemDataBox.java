@@ -24,7 +24,7 @@ import common.SequentialByteReader;
  */
 public class ItemDataBox extends Box
 {
-    private byte[] data;
+    private final byte[] data;
 
     /**
      * This constructor creates a derived Box object, providing additional data of metadata items.
@@ -38,16 +38,10 @@ public class ItemDataBox extends Box
     {
         super(box);
 
-        int count = available();
+        int count = available(); // Number of bytes remaining for this box payload
         int pos = reader.getCurrentPosition();
 
-        data = new byte[count];
-
-        for (int i = 0; i < count; i++)
-        {
-            data[i] = (byte) reader.readUnsignedByte();
-        }
-
+        data = reader.readBytes(count);
         byteUsed += reader.getCurrentPosition() - pos;
     }
 
@@ -89,11 +83,10 @@ public class ItemDataBox extends Box
 
         if (prefix != null && !prefix.isEmpty())
         {
-            sb.append(prefix).append(System.lineSeparator());
-            sb.append(System.lineSeparator());
+            sb.append(prefix);
         }
 
-        sb.append(String.format("\t%s '%s':", this.getClass().getSimpleName(), getTypeAsString()));
+        sb.append(String.format("%s '%s':", this.getClass().getSimpleName(), getTypeAsString()));
         sb.append(System.lineSeparator());
 
         if (data.length < 65)
@@ -108,7 +101,7 @@ public class ItemDataBox extends Box
 
         else
         {
-            sb.append(String.format("\t\tData size: %d bytes (hex dump omitted)%n", data.length));
+            sb.append(String.format("Data size: %d bytes (hex dump omitted)", data.length));
         }
 
         sb.append(System.lineSeparator());

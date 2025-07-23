@@ -1,6 +1,5 @@
 package heif.boxes;
 
-import heif.HeifBoxType;
 import java.util.ArrayList;
 import java.util.List;
 import common.ByteValueConverter;
@@ -10,10 +9,10 @@ import common.SequentialByteReader;
  * This derived Box class handles the Box identified as {@code dinf} - Data Information Box. For
  * technical details, refer to the Specification document - {@code ISO/IEC 14496-12:2015} on Page 45
  * to 46.
- * 
+ *
  * The data information box contains objects that declare the location of the media information in a
  * track.
- * 
+ *
  * <p>
  * Version History:
  * </p>
@@ -35,7 +34,7 @@ public class DataInformationBox extends Box
      * This constructor creates a derived Box object, providing additional information from other
      * contained boxes, specifically {@code dref} - Data Reference Box and its nested contained
      * boxes, where further additional information on URL location and name is provided.
-     * 
+     *
      * @param box
      *        the super Box object
      * @param reader
@@ -53,7 +52,7 @@ public class DataInformationBox extends Box
     /**
      * Returns a combined list of all boxes contained in this {@code DataInformationBox},
      * particularly the DataReferenceBox ({@code dref}).
-     * 
+     *
      * @return a combined list of Box objects in reading order
      */
     @Override
@@ -82,7 +81,7 @@ public class DataInformationBox extends Box
      *
      * @param prefix
      *        Optional heading or label to prepend. Can be {@code null}.
-     * 
+     *
      * @return A formatted string suitable for debugging, inspection, or textual analysis
      */
     @Override
@@ -92,15 +91,13 @@ public class DataInformationBox extends Box
 
         if (prefix != null && !prefix.isEmpty())
         {
-            sb.append(prefix).append(System.lineSeparator());
-            sb.append(System.lineSeparator());
+            sb.append(prefix);
         }
 
-        HeifBoxType box = HeifBoxType.fromTypeName(getTypeAsString());
-
-        sb.append(String.format("\t%s '%s':\t(%s)", this.getClass().getSimpleName(), getTypeAsString(), box.getBoxCategory()));
+        sb.append(String.format("%s '%s':\t(%s)%n", this.getClass().getSimpleName(), getTypeAsString(), getHeifType().getBoxCategory()));
         sb.append(dref.toString(prefix));
-
+        sb.append(System.lineSeparator());
+        
         return sb.toString();
     }
 
@@ -142,7 +139,7 @@ public class DataInformationBox extends Box
          *
          * @param prefix
          *        Optional heading or label to prepend. Can be {@code null}.
-         * 
+         *
          * @return A formatted string suitable for debugging, inspection, or textual analysis
          */
         @Override
@@ -152,13 +149,10 @@ public class DataInformationBox extends Box
 
             if (prefix != null && !prefix.isEmpty())
             {
-                sb.append(prefix).append(System.lineSeparator());
-                sb.append(System.lineSeparator());
+                sb.append(prefix);
             }
 
-            sb.append(System.lineSeparator());
-            sb.append(String.format("\t\t%s '%s':\tentryCount=%d", this.getClass().getSimpleName(), getTypeAsString(), entryCount));
-            sb.append(System.lineSeparator());
+            sb.append(String.format("\t%s '%s':\tentryCount=%d%n", this.getClass().getSimpleName(), getTypeAsString(), entryCount));
 
             for (int i = 0; i < entryCount; i++)
             {

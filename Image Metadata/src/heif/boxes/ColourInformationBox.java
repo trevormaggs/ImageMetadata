@@ -91,7 +91,7 @@ public class ColourInformationBox extends Box
             sb.append(System.lineSeparator());
         }
 
-        sb.append(String.format("\t\t%s '%s': colourType=%s'", this.getClass().getSimpleName(), getTypeAsString(), colourType));
+        sb.append(String.format("%s '%s': colourType=%s'", this.getClass().getSimpleName(), getTypeAsString(), colourType));
 
         return sb.toString();
     }

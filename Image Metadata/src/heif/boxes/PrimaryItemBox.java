@@ -90,10 +90,11 @@ public class PrimaryItemBox extends FullBox
 
         if (prefix != null && !prefix.isEmpty())
         {
-            sb.append(prefix).append(System.lineSeparator()).append(System.lineSeparator());
+            sb.append(prefix);
         }
 
-        sb.append(String.format("\t%s '%s':\t\tPrimaryItemID=%d", this.getClass().getSimpleName(), getTypeAsString(), getItemID()));
+        sb.append(String.format("%s '%s':\t\tPrimaryItemID=%d", this.getClass().getSimpleName(), getTypeAsString(), getItemID()));
+        sb.append(System.lineSeparator());
 
         return sb.toString();
     }

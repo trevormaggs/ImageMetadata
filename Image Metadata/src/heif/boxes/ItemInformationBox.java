@@ -141,6 +141,7 @@ public class ItemInformationBox extends FullBox
     public List<Box> getBoxList()
     {
         List<Box> combinedList = new ArrayList<>();
+
         combinedList.addAll(entries);
 
         return combinedList;
@@ -174,11 +175,10 @@ public class ItemInformationBox extends FullBox
 
         if (prefix != null && !prefix.isEmpty())
         {
-            sb.append(prefix).append(System.lineSeparator());
-            sb.append(System.lineSeparator());
+            sb.append(prefix);
         }
-
-        sb.append(String.format("\t%s '%s':\tItem_count=%d%n", this.getClass().getSimpleName(), getTypeAsString(), entryCount));
+ 
+        sb.append(String.format("%s '%s':\tItem_count=%d%n", this.getClass().getSimpleName(), getTypeAsString(), entryCount));
 
         for (ItemInfoEntry infe : entries)
         {

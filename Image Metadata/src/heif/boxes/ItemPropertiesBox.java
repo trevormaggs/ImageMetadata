@@ -130,8 +130,10 @@ public class ItemPropertiesBox extends Box
     @Override
     public List<Box> getBoxList()
     {
-        List<Box> combinedList = new ArrayList<>(ipco.properties);
+        List<Box> combinedList = new ArrayList<>();
 
+        combinedList.add(ipco);
+        combinedList.addAll(ipco.properties);
         combinedList.addAll(associations);
 
         return combinedList;
@@ -169,24 +171,6 @@ public class ItemPropertiesBox extends Box
 
         sb.append(String.format("%s '%s':%n", this.getClass().getSimpleName(), getTypeAsString()));
         sb.append(String.format("\t\t%s '%s':%n", ipco.getClass().getSimpleName(), ipco.getTypeAsString()));
-
-        for (Box box : ipco.properties)
-        {
-            if (HeifBoxType.fromTypeName(box.getTypeAsString()) != HeifBoxType.UNKNOWN)
-            {
-                sb.append(String.format("\t\t\t%s%n", box.toString("")));
-            }
-
-            else
-            {
-                sb.append(String.format("%s%n", box.toString("\t\t\t")));
-            }
-        }
-
-        for (ItemPropertyAssociationBox ipma : associations)
-        {
-            sb.append(ipma.toString(String.format("\tAssociations (%d entries):%n", associations.size())));
-        }
 
         return sb.toString();
     }

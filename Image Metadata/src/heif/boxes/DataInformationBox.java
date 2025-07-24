@@ -94,8 +94,7 @@ public class DataInformationBox extends Box
             sb.append(prefix);
         }
 
-        sb.append(String.format("%s '%s':\t(%s)%n", this.getClass().getSimpleName(), getTypeAsString(), getHeifType().getBoxCategory()));
-        sb.append(dref.toString(prefix));
+        sb.append(String.format("%s '%s':\t(%s)", this.getClass().getSimpleName(), getTypeAsString(), getHeifType().getBoxCategory()));
         sb.append(System.lineSeparator());
 
         return sb.toString();
@@ -156,7 +155,7 @@ public class DataInformationBox extends Box
 
             for (int i = 0; i < entryCount; i++)
             {
-                sb.append(String.format("\t\t\tName: '%s'\tLocation: '%s'", dataEntry[i].name, dataEntry[i].location));
+                sb.append(String.format("\t\t\tName: '%s'\tLocation: '%s'%n", dataEntry[i].name, dataEntry[i].location));
             }
 
             return sb.toString();

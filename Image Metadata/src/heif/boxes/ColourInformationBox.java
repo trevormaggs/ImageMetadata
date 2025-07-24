@@ -24,7 +24,8 @@ import logger.LogFactory;
  * <p>
  * <strong>API Note:</strong>This implementation handles {@code nclx} colour types fully. For
  * {@code rICC} and {@code prof} types, the ICC profile data is ignored as its parsing is beyond the
- * current scope of this box. Further testing is needed for edge cases and compatibility if required.
+ * current scope of this box. Further testing is needed for edge cases and compatibility if
+ * required.
  * </p>
  * 
  * @author Trevor Maggs
@@ -224,6 +225,8 @@ public class ColourInformationBox extends Box
         {
             sb.append(" (Unknown colour type)");
         }
+
+        sb.append(System.lineSeparator());
 
         return sb.toString();
     }

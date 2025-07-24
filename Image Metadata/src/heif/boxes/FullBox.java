@@ -168,8 +168,7 @@ public class FullBox extends Box
 
         if (prefix != null && !prefix.isEmpty())
         {
-            sb.append(prefix).append(System.lineSeparator());
-            sb.append(System.lineSeparator());
+            sb.append(prefix);
         }
 
         sb.append(String.format("%s '%s':\t\t\t\t\t(%s)", this.getClass().getSimpleName(), getTypeAsString(), getHeifType().getBoxCategory()));

@@ -144,14 +144,13 @@ public class FileTypeBox extends Box
 
         if (prefix != null && !prefix.isEmpty())
         {
-            sb.append(prefix).append(System.lineSeparator());
-            sb.append(System.lineSeparator());
+            sb.append(prefix);
         }
 
         sb.append(String.format("%s '%s':\t\t\t\t", this.getClass().getSimpleName(), getTypeAsString()));
         sb.append(String.format("'major-brand=%s', ", getMajorBrand()));
         sb.append(String.format("compatible-brands='%s'", Arrays.toString(getCompatibleBrands())));
-        // sb.append(System.lineSeparator());
+        sb.append(System.lineSeparator());
 
         return sb.toString();
     }

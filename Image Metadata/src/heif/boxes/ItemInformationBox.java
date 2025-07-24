@@ -35,6 +35,8 @@ public class ItemInformationBox extends FullBox
     private final long entryCount;
     private final List<ItemInfoEntry> entries;
 
+    private static int j;
+
     /**
      * Parses the {@code ItemInformationBox} from the specified reader.
      *
@@ -49,6 +51,8 @@ public class ItemInformationBox extends FullBox
 
         List<ItemInfoEntry> tmpEntries = new ArrayList<>();
         int pos = reader.getCurrentPosition();
+
+        j = 1;
 
         this.entryCount = (getVersion() == 0) ? reader.readUnsignedShort() : reader.readUnsignedInteger();
 
@@ -169,7 +173,6 @@ public class ItemInformationBox extends FullBox
     @Override
     public String toString(String prefix)
     {
-        int j = 1;
         StringBuilder sb = new StringBuilder();
 
         if (prefix != null && !prefix.isEmpty())
@@ -177,12 +180,8 @@ public class ItemInformationBox extends FullBox
             sb.append(prefix);
         }
 
-        sb.append(String.format("%s '%s':\tItem_count=%d%n", this.getClass().getSimpleName(), getTypeAsString(), entryCount));
-
-        for (ItemInfoEntry infe : entries)
-        {
-            sb.append(String.format("\t\t%d)\t'%s': item_ID=%d,\titem_type='%s'%n", j++, infe.getTypeAsString(), infe.getItemID(), infe.getItemType()));
-        }
+        sb.append(String.format("%s '%s':\tItem_count=%d", this.getClass().getSimpleName(), getTypeAsString(), entryCount));
+        sb.append(System.lineSeparator());
 
         return sb.toString();
     }
@@ -369,6 +368,22 @@ public class ItemInformationBox extends FullBox
         public String getExtensionType()
         {
             return (extensionType == null ? "" : extensionType);
+        }
+
+        @Override
+        public String toString(String prefix)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            if (prefix != null && !prefix.isEmpty())
+            {
+                sb.append(prefix);
+            }
+
+            sb.append(String.format("\t\t%d)\t'%s': item_ID=%d,\titem_type='%s'", j++, getTypeAsString(), getItemID(), getItemType()));
+            sb.append(System.lineSeparator());
+
+            return sb.toString();
         }
     }
 }

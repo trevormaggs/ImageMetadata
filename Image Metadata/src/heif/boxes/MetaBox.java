@@ -128,13 +128,9 @@ public class MetaBox extends FullBox
             sb.append(prefix);
         }
 
-        sb.append(String.format("%s '%s':\t(%s)%n", this.getClass().getSimpleName(), getTypeAsString(), getHeifType().getBoxCategory()));
-
-        for (Box box : containedBoxes.values())
-        {
-            sb.append(box.toString("\t"));
-        }
-
+        sb.append(String.format("%s '%s':\t(%s)", this.getClass().getSimpleName(), getTypeAsString(), getHeifType().getBoxCategory()));
+        sb.append(System.lineSeparator());
+        
         return sb.toString();
     }
 }

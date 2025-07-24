@@ -116,6 +116,7 @@ public class PixelInformationBox extends FullBox
         }
 
         sb.append(String.format("%s '%s': numChannels=%s, bitsPerChannel=%s", this.getClass().getSimpleName(), getTypeAsString(), numChannels, Arrays.toString(bitsPerChannel)));
+        sb.append(System.lineSeparator());
 
         return sb.toString();
     }

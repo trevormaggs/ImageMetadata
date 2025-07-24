@@ -304,6 +304,18 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
     @Override
     public Iterator<Box> iterator()
     {
+        List<Box> allBoxes = new ArrayList<>();
+
+        for (Box top : topLevelBoxList)
+        {
+            collectBoxes(top, allBoxes);
+        }
+
+        return allBoxes.iterator();
+    }
+
+    public Iterator<Box> iterator2()
+    {
         List<Box> newBox = new ArrayList<>();
 
         for (List<Box> list : heifBoxMap.values())
@@ -315,6 +327,21 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
         }
 
         return newBox.iterator();
+    }
+
+    private void collectBoxes(Box box, List<Box> result)
+    {
+        result.add(box); // Pre-order traversal: add current box first
+
+        List<Box> children = box.getBoxList();
+
+        if (children != null)
+        {
+            for (Box child : children)
+            {
+                collectBoxes(child, result);
+            }
+        }
     }
 
     /**
@@ -413,6 +440,7 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
                 }
 
                 topLevelBoxList.add(box);
+                walkBoxes(box, 0, false);
             }
 
             /*
@@ -424,13 +452,20 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
                 LOGGER.error("Failed to parse box: [" + exc.getMessage() + "]");
                 break;
             }
-
+            
         } while (reader.getCurrentPosition() < reader.length());
 
         for (Box box : topLevelBoxList)
         {
+            // System.out.printf("%s\n", box.getTypeAsString());
             // System.out.printf("%s%n", box.toString(""));
-            walkBoxes(box, 0, false);
+            // walkBoxes(box, 0, true);
+        }
+
+        for (Box box : this)
+        {
+            // System.out.printf("%s\n", box.getTypeAsString());
+            System.out.printf("%s", box.toString(null));
         }
     }
 

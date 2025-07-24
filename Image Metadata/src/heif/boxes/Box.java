@@ -203,6 +203,7 @@ public class Box
         }
 
         sb.append(String.format("'%s':\t\t\t%s", getTypeAsString(), type.getTypeName()));
+        sb.append(System.lineSeparator());
 
         return sb.toString();
     }

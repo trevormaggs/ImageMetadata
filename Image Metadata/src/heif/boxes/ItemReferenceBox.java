@@ -120,14 +120,8 @@ public class ItemReferenceBox extends FullBox
             sb.append(prefix);
         }
 
-        sb.append(String.format("%s '%s':%n", this.getClass().getSimpleName(), getTypeAsString()));
-
-        for (Box ref : references)
-        {
-            SingleItemTypeReferenceBox box = (SingleItemTypeReferenceBox) ref;
-            sb.append(box.toString("\t"));
-            sb.append(System.lineSeparator());
-        }
+        sb.append(String.format("%s '%s':", this.getClass().getSimpleName(), getTypeAsString()));
+        sb.append(System.lineSeparator());
 
         return sb.toString();
     }
@@ -201,6 +195,8 @@ public class ItemReferenceBox extends FullBox
                     sb.append(", ");
                 }
             }
+
+            sb.append(System.lineSeparator());
 
             return sb.toString();
         }

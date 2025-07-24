@@ -33,11 +33,11 @@ import common.SequentialByteReader;
  */
 public class ItemLocationBox extends FullBox
 {
-    private int offsetSize;
-    private int lengthSize;
-    private int baseOffsetSize;
-    private int indexSize;
-    private int itemCount;
+    private final int offsetSize;
+    private final int lengthSize;
+    private final int baseOffsetSize;
+    private final int indexSize;
+    private final int itemCount;
     private final List<ItemLocationEntry> items;
 
     /**
@@ -182,9 +182,9 @@ public class ItemLocationBox extends FullBox
      * HEIF-based file. Useful for logging or diagnostics.
      *
      * @param prefix
-     *        Optional heading or label to prepend. Can be {@code null}.
+     *        Optional heading or label to prepend. Can be null
      * 
-     * @return A formatted string suitable for debugging, inspection, or textual analysis
+     * @return a formatted string suitable for debugging, inspection, or textual analysis
      */
     @Override
     public String toString(String prefix)

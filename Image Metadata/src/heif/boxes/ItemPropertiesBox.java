@@ -37,19 +37,23 @@ import heif.HeifBoxType;
  * <p>
  * <b>Version History:</b>
  * </p>
+ * 
  * <ul>
  * <li>1.0 – Initial release by Trevor Maggs on 2 June 2025</li>
  * </ul>
  * 
+ * <p>
+ * <strong>API Note:</strong>This implementation assumes a flat box hierarchy. Additional testing is
+ * recommended for nested or complex structures.
+ * </p>
+ * 
  * @author Trevor Maggs
  * @since 2 June 2025
- * @implNote This implementation assumes a flat box hierarchy. Additional testing is recommended
- *           for nested or complex structures.
  */
 public class ItemPropertiesBox extends Box
 {
-    private ItemPropertyContainerBox ipco;
-    private List<ItemPropertyAssociationBox> associations;
+    private final ItemPropertyContainerBox ipco;
+    private final List<ItemPropertyAssociationBox> associations;
 
     /**
      * Constructs an {@code ItemPropertiesBox} by reading the {@code ipco} (property container) and
@@ -64,8 +68,8 @@ public class ItemPropertiesBox extends Box
      * @param reader
      *        a {@code SequentialByteReader} to read the box content
      * 
-     * @throws IllegalArgumentException
-     *         if malformed data is encountered, such as a negative box size
+     * @throws IllegalStateException
+     *         if malformed data is encountered, such as a negative box size and corrupted data
      */
     public ItemPropertiesBox(Box box, SequentialByteReader reader)
     {
@@ -80,13 +84,12 @@ public class ItemPropertiesBox extends Box
 
         if (!ipco.getTypeAsString().equals("ipco"))
         {
-            throw new IllegalArgumentException("Expected [ipco] box, but found [" + ipco.getTypeAsString() + "]");
+            throw new IllegalStateException("Expected [ipco] box, but found [" + ipco.getTypeAsString() + "]");
         }
 
         do
         {
-            ItemPropertyAssociationBox bx = new ItemPropertyAssociationBox(new Box(reader), reader);
-            associations.add(bx);
+            associations.add(new ItemPropertyAssociationBox(new Box(reader), reader));
 
         } while (reader.getCurrentPosition() < endpos);
 
@@ -150,9 +153,9 @@ public class ItemPropertiesBox extends Box
      * HEIF-based file. Useful for logging or diagnostics.
      *
      * @param prefix
-     *        Optional heading or label to prepend. Can be {@code null}.
+     *        Optional heading or label to prepend. Can be null
      * 
-     * @return A formatted string suitable for debugging, inspection, or textual analysis
+     * @return a formatted string suitable for debugging, inspection, or textual analysis
      */
     @Override
     public String toString(String prefix)
@@ -180,8 +183,6 @@ public class ItemPropertiesBox extends Box
             }
         }
 
-        //sb.append(System.lineSeparator());
-
         for (ItemPropertyAssociationBox ipma : associations)
         {
             sb.append(ipma.toString(String.format("\tAssociations (%d entries):%n", associations.size())));
@@ -200,7 +201,7 @@ public class ItemPropertiesBox extends Box
      * </p>
      * 
      * <p>
-     * Refer to the Specification document - {@code ISO/IEC 23008-12:2017} on Page 28 for more
+     * Refer to the specification document - {@code ISO/IEC 23008-12:2017} on Page 28 for more
      * information.
      * </p>
      */
@@ -209,8 +210,7 @@ public class ItemPropertiesBox extends Box
         private List<Box> properties;
 
         /**
-         * Constructs an {@code ItemPropertyContainerBox} resource by reading sequential boxes from
-         * the {@code SequentialByteReader}.
+         * Constructs an {@code ItemPropertyContainerBox} resource by reading sequential boxes.
          * 
          * <p>
          * Each property box is read, added to the property list, and skipped over to handle cases
@@ -222,8 +222,8 @@ public class ItemPropertiesBox extends Box
          * @param reader
          *        the sequential byte reader for parsing box data
          * 
-         * @throws IllegalArgumentException
-         *         if a sub-box reports a negative size (corrupted file)
+         * @throws IllegalStateException
+         *         if any form of data corruption is detected
          */
         private ItemPropertyContainerBox(Box box, SequentialByteReader reader)
         {

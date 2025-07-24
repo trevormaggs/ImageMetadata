@@ -233,7 +233,7 @@ public class MetadataPNG<T extends BaseMetadata> implements Metadata<T>
      * metadata entries. Useful for logging or diagnostic output.
      *
      * @param prefix
-     *        an optional string to prepend as a heading or label. It may be {@code null}
+     *        an optional string to prepend as a heading or label. It can be null
      * 
      * @return a formatted string suitable for debugging, inspection, or textual analysis
      */

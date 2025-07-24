@@ -26,8 +26,8 @@ import common.SequentialByteReader;
  */
 public class ImageRotationBox extends Box
 {
-    int angle;
-    int reserved;
+    private final int angle;
+    private final int reserved;
 
     /**
      * This constructor creates a derived Box object whose aim is to retrieve the angle (in
@@ -68,9 +68,9 @@ public class ImageRotationBox extends Box
      * HEIF-based file. Useful for logging or diagnostics.
      *
      * @param prefix
-     *        Optional heading or label to prepend. Can be {@code null}.
+     *        Optional heading or label to prepend. Can be null
      * 
-     * @return A formatted string suitable for debugging, inspection, or textual analysis
+     * @return a formatted string suitable for debugging, inspection, or textual analysis
      */
     @Override
     public String toString(String prefix)
@@ -83,7 +83,7 @@ public class ImageRotationBox extends Box
             sb.append(System.lineSeparator());
         }
 
-        sb.append(String.format("%s '%s': angle=%d", this.getClass().getSimpleName(), getTypeAsString(), angle));
+        sb.append(String.format("%s '%s': angle=%d, reserved=%d", this.getClass().getSimpleName(), getTypeAsString(), angle, reserved));
 
         return sb.toString();
     }

@@ -38,7 +38,8 @@ public class ItemDataBox extends Box
     {
         super(box);
 
-        int count = available(); // Number of bytes remaining for this box payload
+        // Number of bytes remaining for this box payload
+        int count = available();
         int pos = reader.getCurrentPosition();
 
         data = reader.readBytes(count);
@@ -71,9 +72,9 @@ public class ItemDataBox extends Box
      * {@code ItemDataBox}. Useful for logging or diagnostics.
      *
      * @param prefix
-     *        optional heading or label to prepend. Can be {@code null}.
+     *        Optional heading or label to prepend. Can be null
      * 
-     * @return a formatted string suitable for debugging, inspection, or textual analysis.
+     * @return a formatted string suitable for debugging, inspection, or textual analysis
      */
 
     @Override

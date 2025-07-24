@@ -32,7 +32,6 @@ public class ItemInformationBox extends FullBox
     private static final String TYPE_URI = "uri ";
     private static final String TYPE_MIME = "mime";
     private static final String TYPE_EXIF = "Exif";
-
     private final long entryCount;
     private final List<ItemInfoEntry> entries;
 
@@ -161,9 +160,9 @@ public class ItemInformationBox extends FullBox
     /**
      * Returns a human-readable debug string, summarising structured references associated with this
      * HEIF-based file. Useful for logging or diagnostics.
-     *
+     * 
      * @param prefix
-     *        Optional heading or label to prepend. Can be {@code null}.
+     *        Optional heading or label to prepend. Can be null
      * 
      * @return a formatted string suitable for debugging, inspection, or textual analysis
      */
@@ -177,7 +176,7 @@ public class ItemInformationBox extends FullBox
         {
             sb.append(prefix);
         }
- 
+
         sb.append(String.format("%s '%s':\tItem_count=%d%n", this.getClass().getSimpleName(), getTypeAsString(), entryCount));
 
         for (ItemInfoEntry infe : entries)

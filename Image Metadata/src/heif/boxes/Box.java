@@ -16,13 +16,11 @@ import heif.HeifBoxType;
 public class Box
 {
     private static final long BOX_SIZE_TO_EOF = Long.MAX_VALUE;
-
     private final ByteOrder order;
     private final long boxSize;
     private final byte[] boxTypeBytes;
     private final String userType;
     private final HeifBoxType type;
-
     protected int byteUsed;
 
     /**
@@ -122,15 +120,15 @@ public class Box
      * Returns the number of remaining bytes in the box.
      *
      * @return remaining bytes
-     *
-     * @throws UnsupportedOperationException
-     *         if the box size is unknown (extends to EOF)
+     * 
+     * @throws IllegalStateException
+     *         if malformed data is encountered. The box size is unknown (extends to EOF)
      */
     public int available()
     {
         if (boxSize == BOX_SIZE_TO_EOF)
         {
-            throw new UnsupportedOperationException("Box size is unknown (extends to EOF). Remaining size cannot be calculated");
+            throw new IllegalStateException("Box size is unknown (extends to EOF). Remaining size cannot be calculated");
         }
 
         return (int) (boxSize - byteUsed);
@@ -191,9 +189,9 @@ public class Box
      * Returns a detailed debug string for this box.
      *
      * @param prefix
-     *        optional prefix to prepend
-     *
-     * @return formatted string
+     *        Optional heading or label to prepend. Can be null
+     * 
+     * @return a formatted string suitable for debugging, inspection, or textual analysis
      */
     public String toString(String prefix)
     {

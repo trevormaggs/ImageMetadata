@@ -454,11 +454,11 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
      */
     private void walkBoxes(Box box, int depth, boolean show)
     {
-        // Indent based on depth
         if (show)
         {
             for (int i = 0; i < depth; i++)
             {
+                // Indent based on depth
                 System.out.print("\t");
             }
 

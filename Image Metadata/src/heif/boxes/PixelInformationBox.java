@@ -37,6 +37,9 @@ public class PixelInformationBox extends FullBox
      *        the parent {@link Box} containing size and type information
      * @param reader
      *        the reader for parsing box content
+     * 
+     * @throws IllegalStateException
+     *         if malformed data is encountered
      */
     public PixelInformationBox(Box box, SequentialByteReader reader)
     {
@@ -48,7 +51,7 @@ public class PixelInformationBox extends FullBox
 
         if (numChannels <= 0 || numChannels > 255)
         {
-            throw new IllegalArgumentException("Channel count must be between 0 and 255. Found [" + numChannels + "]");
+            throw new IllegalStateException("Channel count must be between 0 and 255. Found [" + numChannels + "]");
         }
 
         bitsPerChannel = new int[numChannels];

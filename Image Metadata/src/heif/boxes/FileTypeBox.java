@@ -28,9 +28,9 @@ import common.SequentialByteReader;
  */
 public class FileTypeBox extends Box
 {
-    private byte[] majorBrand;
-    private long minorVersion;
-    private List<String> compatibleBrands;
+    private final byte[] majorBrand;
+    private final long minorVersion;
+    private final List<String> compatibleBrands;
 
     /**
      * Constructs a {@code FileTypeBox}, parsing its fields from the specified
@@ -133,9 +133,9 @@ public class FileTypeBox extends Box
      * HEIF-based file. Useful for logging or diagnostics.
      *
      * @param prefix
-     *        Optional heading or label to prepend. Can be {@code null}.
+     *        Optional heading or label to prepend. Can be null
      * 
-     * @return A formatted string suitable for debugging, inspection, or textual analysis
+     * @return a formatted string suitable for debugging, inspection, or textual analysis
      */
     @Override
     public String toString(String prefix)
@@ -151,8 +151,8 @@ public class FileTypeBox extends Box
         sb.append(String.format("%s '%s':\t\t\t\t", this.getClass().getSimpleName(), getTypeAsString()));
         sb.append(String.format("'major-brand=%s', ", getMajorBrand()));
         sb.append(String.format("compatible-brands='%s'", Arrays.toString(getCompatibleBrands())));
-        //sb.append(System.lineSeparator());
-        
+        // sb.append(System.lineSeparator());
+
         return sb.toString();
     }
 }

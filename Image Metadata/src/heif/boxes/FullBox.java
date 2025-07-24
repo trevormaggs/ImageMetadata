@@ -25,8 +25,8 @@ import common.SequentialByteReader;
  */
 public class FullBox extends Box
 {
-    private int version;
-    private BitSet flagBit;
+    private final int version;
+    private final BitSet flagBit;
 
     /**
      * This constructor creates a derived Box object, extending the parent class {@code Box} to
@@ -157,9 +157,9 @@ public class FullBox extends Box
      * HEIF-based file. Useful for logging or diagnostics.
      *
      * @param prefix
-     *        Optional heading or label to prepend. Can be {@code null}.
+     *        Optional heading or label to prepend. Can be null
      * 
-     * @return A formatted string suitable for debugging, inspection, or textual analysis
+     * @return a formatted string suitable for debugging, inspection, or textual analysis
      */
     @Override
     public String toString(String prefix)

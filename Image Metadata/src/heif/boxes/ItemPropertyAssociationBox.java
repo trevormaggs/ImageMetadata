@@ -13,16 +13,8 @@ import common.SequentialByteReader;
  *
  * <p>
  * This class supports both version 0 and version 1 of the {@code ipma} box format. The structure is
- * specified in ISO/IEC 23008-12:2017 (HEIF) documents.
+ * specified in the ISO/IEC 23008-12:2017 (HEIF) on Page 28 document.
  * </p>
- *
- * <p>
- * <b>Specification References:</b>
- * </p>
- * 
- * <ul>
- * <li>ISO/IEC 23008-12:2017, Page 28</li>
- * </ul>
  *
  * <h3>Version History:</h3>
  * <ul>
@@ -63,7 +55,6 @@ public class ItemPropertyAssociationBox extends FullBox
         {
             int itemID = (getVersion() < 1) ? reader.readUnsignedShort() : (int) reader.readUnsignedInteger();
             int associationCount = reader.readUnsignedByte();
-
             ItemPropertyEntry entry = new ItemPropertyEntry(itemID, associationCount);
 
             for (int j = 0; j < associationCount; j++)
@@ -153,7 +144,7 @@ public class ItemPropertyAssociationBox extends FullBox
             {
                 sb.append(String.format("\t\t\tessential=%s, property_index=%d%n", assoc.isEssential(), assoc.getPropertyIndex()));
             }
-            
+
             sb.append(System.lineSeparator());
         }
 

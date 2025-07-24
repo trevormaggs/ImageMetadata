@@ -120,8 +120,8 @@ public class HeifParser extends AbstractImageParser
 
             for (Box box : handler)
             {
-                System.out.printf("%s\n", box.getTypeAsString());
-                //System.out.printf("%s\n", box.toString(""));
+                //System.out.printf("%s\n", box.getTypeAsString());
+                System.out.printf("%s\n", box.toString(""));
             }
         }
 

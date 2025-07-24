@@ -31,8 +31,8 @@ import common.SequentialByteReader;
  */
 public class HandlerBox extends FullBox
 {
-    private String name;
-    private byte[] handlerType;
+    private final String name;
+    private final byte[] handlerType;
 
     /**
      * This constructor creates a derived Box object, extending the super class {@code FullBox} to
@@ -124,9 +124,9 @@ public class HandlerBox extends FullBox
      * HEIF-based file. Useful for logging or diagnostics.
      *
      * @param prefix
-     *        Optional heading or label to prepend. Can be {@code null}.
+     *        Optional heading or label to prepend. Can be null
      * 
-     * @return A formatted string suitable for debugging, inspection, or textual analysis
+     * @return a formatted string suitable for debugging, inspection, or textual analysis
      */
     @Override
     public String toString(String prefix)
@@ -140,7 +140,7 @@ public class HandlerBox extends FullBox
 
         sb.append(String.format("%s '%s':\t\t\t'%s'", this.getClass().getSimpleName(), getTypeAsString(), getHandlerType()));
         sb.append(System.lineSeparator());
-        
+
         return sb.toString();
     }
 }

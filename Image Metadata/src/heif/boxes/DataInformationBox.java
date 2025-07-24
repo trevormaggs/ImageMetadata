@@ -28,7 +28,7 @@ import common.SequentialByteReader;
  */
 public class DataInformationBox extends Box
 {
-    private DataReferenceBox dref;
+    private final DataReferenceBox dref;
 
     /**
      * This constructor creates a derived Box object, providing additional information from other
@@ -80,9 +80,9 @@ public class DataInformationBox extends Box
      * HEIF-based file. Useful for logging or diagnostics.
      *
      * @param prefix
-     *        Optional heading or label to prepend. Can be {@code null}.
-     *
-     * @return A formatted string suitable for debugging, inspection, or textual analysis
+     *        Optional heading or label to prepend. Can be null
+     * 
+     * @return a formatted string suitable for debugging, inspection, or textual analysis
      */
     @Override
     public String toString(String prefix)
@@ -97,7 +97,7 @@ public class DataInformationBox extends Box
         sb.append(String.format("%s '%s':\t(%s)%n", this.getClass().getSimpleName(), getTypeAsString(), getHeifType().getBoxCategory()));
         sb.append(dref.toString(prefix));
         sb.append(System.lineSeparator());
-        
+
         return sb.toString();
     }
 
@@ -138,9 +138,9 @@ public class DataInformationBox extends Box
          * this HEIF-based file. Useful for logging or diagnostics.
          *
          * @param prefix
-         *        Optional heading or label to prepend. Can be {@code null}.
-         *
-         * @return A formatted string suitable for debugging, inspection, or textual analysis
+         *        Optional heading or label to prepend. Can be null
+         * 
+         * @return a formatted string suitable for debugging, inspection, or textual analysis
          */
         @Override
         public String toString(String prefix)

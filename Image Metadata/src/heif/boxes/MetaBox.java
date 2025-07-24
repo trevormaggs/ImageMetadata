@@ -32,7 +32,7 @@ import heif.HeifBoxType;
  */
 public class MetaBox extends FullBox
 {
-    private Map<HeifBoxType, Box> containedBoxes;
+    private final Map<HeifBoxType, Box> containedBoxes;
 
     /**
      * Constructs a {@code MetaBox}, parsing its fields from the specified
@@ -42,6 +42,9 @@ public class MetaBox extends FullBox
      *        the parent {@link Box} object containing size and type information
      * @param reader
      *        the byte reader for parsing box data
+     * 
+     * @throws IllegalStateException
+     *         if malformed data is encountered, such as a negative box size and corrupted data
      */
     public MetaBox(Box box, SequentialByteReader reader)
     {
@@ -111,9 +114,9 @@ public class MetaBox extends FullBox
      * HEIF-based file. Useful for logging or diagnostics.
      *
      * @param prefix
-     *        Optional heading or label to prepend. Can be {@code null}.
+     *        Optional heading or label to prepend. Can be null
      * 
-     * @return A formatted string suitable for debugging, inspection, or textual analysis
+     * @return a formatted string suitable for debugging, inspection, or textual analysis
      */
     @Override
     public String toString(String prefix)
@@ -124,7 +127,7 @@ public class MetaBox extends FullBox
         {
             sb.append(prefix);
         }
-        
+
         sb.append(String.format("%s '%s':\t(%s)%n", this.getClass().getSimpleName(), getTypeAsString(), getHeifType().getBoxCategory()));
 
         for (Box box : containedBoxes.values())

@@ -31,7 +31,7 @@ import common.SequentialByteReader;
  */
 public class ItemReferenceBox extends FullBox
 {
-    private List<Box> references;
+    private final List<Box> references;
 
     /**
      * Constructs an {@code ItemReferenceBox}, reading its references from the specified
@@ -41,6 +41,9 @@ public class ItemReferenceBox extends FullBox
      *        the parent {@link Box} containing size and type information
      * @param reader
      *        the reader for sequential byte parsing
+     * 
+     * @throws IllegalStateException
+     *         if malformed data is encountered, such as a negative box size and corrupted data
      */
     public ItemReferenceBox(Box box, SequentialByteReader reader)
     {
@@ -173,9 +176,9 @@ public class ItemReferenceBox extends FullBox
          * Returns a debug-friendly string representation of this reference.
          *
          * @param prefix
-         *        optional prefix or label. Can be {@code null}
+         *        Optional heading or label to prepend. Can be null
          * 
-         * @return a formatted string listing the reference details
+         * @return a formatted string suitable for debugging, inspection, or textual analysis
          */
         @Override
         public String toString(String prefix)

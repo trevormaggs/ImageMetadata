@@ -32,7 +32,7 @@ import common.SequentialByteReader;
  */
 public class PrimaryItemBox extends FullBox
 {
-    private long itemID;
+    private final long itemID;
 
     /**
      * Constructs a {@code PrimaryItemBox}, reading its fields from the specified
@@ -50,7 +50,6 @@ public class PrimaryItemBox extends FullBox
         int pos = reader.getCurrentPosition();
 
         itemID = (getVersion() == 0) ? reader.readUnsignedShort() : reader.readUnsignedInteger();
-
         byteUsed += reader.getCurrentPosition() - pos;
     }
 

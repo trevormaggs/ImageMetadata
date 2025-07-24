@@ -26,8 +26,8 @@ import common.SequentialByteReader;
  */
 public class ImageSpatialExtentsProperty extends FullBox
 {
-    public long imageWidth;
-    public long imageHeight;
+    public final long imageWidth;
+    public final long imageHeight;
 
     /**
      * This constructor creates a derived Box object whose aim is to gather information both on
@@ -66,9 +66,9 @@ public class ImageSpatialExtentsProperty extends FullBox
      * HEIF-based file. Useful for logging or diagnostics.
      *
      * @param prefix
-     *        Optional heading or label to prepend. Can be {@code null}.
+     *        Optional heading or label to prepend. Can be null
      * 
-     * @return A formatted string suitable for debugging, inspection, or textual analysis
+     * @return a formatted string suitable for debugging, inspection, or textual analysis
      */
     @Override
     public String toString(String prefix)

@@ -123,7 +123,7 @@ public class ItemPropertiesBox extends Box
 
     /**
      * Returns a combined list of all boxes contained in this {@code ItemPropertiesBox}, including
-     * both properties and associations.
+     * both property container and associations.
      * 
      * @return a list of Box objects in reading order
      */
@@ -133,7 +133,6 @@ public class ItemPropertiesBox extends Box
         List<Box> combinedList = new ArrayList<>();
 
         combinedList.add(ipco);
-        combinedList.addAll(ipco.properties);
         combinedList.addAll(associations);
 
         return combinedList;
@@ -169,8 +168,12 @@ public class ItemPropertiesBox extends Box
             sb.append(prefix);
         }
 
+        for (int i = 0; i < getHierarchyDepth(); i++)
+        {
+            sb.append("\t");
+        }
+
         sb.append(String.format("%s '%s':%n", this.getClass().getSimpleName(), getTypeAsString()));
-        sb.append(String.format("\t\t%s '%s':%n", ipco.getClass().getSimpleName(), ipco.getTypeAsString()));
 
         return sb.toString();
     }
@@ -247,6 +250,51 @@ public class ItemPropertiesBox extends Box
             }
 
             byteUsed += reader.getCurrentPosition() - startpos;
+        }
+
+        /**
+         * Returns a list of all boxes contained in this {@code ItemPropertyContainerBox},
+         * specifically all properties.
+         * 
+         * @return a list of Box objects in reading order
+         */
+        @Override
+        public List<Box> getBoxList()
+        {
+            List<Box> list = new ArrayList<>();
+
+            list.addAll(properties);
+
+            return list;
+        }
+
+        /**
+         * Returns a human-readable debug string summarising structured references associated with
+         * this HEIF-based file. Useful for logging or diagnostics.
+         *
+         * @param prefix
+         *        Optional heading or label to prepend. Can be null
+         * 
+         * @return a formatted string suitable for debugging, inspection, or textual analysis
+         */
+        @Override
+        public String toString(String prefix)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            if (prefix != null && !prefix.isEmpty())
+            {
+                sb.append(prefix);
+            }
+
+            for (int i = 0; i < getHierarchyDepth(); i++)
+            {
+                sb.append("\t");
+            }
+
+            sb.append(String.format("%s '%s':%n", getClass().getSimpleName(), getTypeAsString()));
+
+            return sb.toString();
         }
     }
 }

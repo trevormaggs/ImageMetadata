@@ -196,6 +196,11 @@ public class ItemLocationBox extends FullBox
             sb.append(prefix);
         }
 
+        for (int i = 0; i < getHierarchyDepth(); i++)
+        {
+            sb.append("\t");
+        }
+
         sb.append(String.format("%s '%s':\titemCount=%d%n", this.getClass().getSimpleName(), getTypeAsString(), itemCount));
 
         for (ItemLocationEntry item : items)
@@ -207,7 +212,6 @@ public class ItemLocationBox extends FullBox
                 sb.append(String.format("\t\textentIndex=%-5d extentOffset=0x%08X  extentLength=%d%n%n", extent.getExtentIndex(), extent.getExtentOffset(), extent.getExtentLength()));
             }
         }
-
 
         return sb.toString();
     }

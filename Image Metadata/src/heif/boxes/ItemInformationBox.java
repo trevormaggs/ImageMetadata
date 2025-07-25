@@ -180,6 +180,11 @@ public class ItemInformationBox extends FullBox
             sb.append(prefix);
         }
 
+        for (int i = 0; i < getHierarchyDepth(); i++)
+        {
+            sb.append("\t");
+        }
+
         sb.append(String.format("%s '%s':\tItem_count=%d", this.getClass().getSimpleName(), getTypeAsString(), entryCount));
         sb.append(System.lineSeparator());
 
@@ -380,7 +385,12 @@ public class ItemInformationBox extends FullBox
                 sb.append(prefix);
             }
 
-            sb.append(String.format("\t\t%d)\t'%s': item_ID=%d,\titem_type='%s'", j++, getTypeAsString(), getItemID(), getItemType()));
+            for (int i = 0; i < getHierarchyDepth(); i++)
+            {
+                sb.append("\t");
+            }
+
+            sb.append(String.format("%d)\t'%s': item_ID=%d,\titem_type='%s'", j++, getTypeAsString(), getItemID(), getItemType()));
             sb.append(System.lineSeparator());
 
             return sb.toString();

@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Optional;
 import common.AbstractImageParser;
 import common.BaseMetadata;
-import common.DigitalSignature;
 import common.ImageReadErrorException;
 import common.Metadata;
 import common.SequentialByteReader;
@@ -167,72 +166,69 @@ public class PngParser extends AbstractImageParser
         // For full metadata parsing (image properties + text), include IHDR, sRGB, etc.
         EnumSet<ChunkType> chunkSet = EnumSet.of(ChunkType.tEXt, ChunkType.zTXt, ChunkType.iTXt, ChunkType.eXIf);
 
-        if (DigitalSignature.detectFormat(getImageFile()) == DigitalSignature.PNG)
+        try
         {
-            try
+            Metadata<BaseMetadata> png = new MetadataPNG<>();
+
+            // Use big-endian byte order as per Specifications
+            SequentialByteReader pngReader = new SequentialByteReader(readAllBytes(), PNG_BYTE_ORDER);
+            ChunkHandler handler = new ChunkHandler(getImageFile(), pngReader, chunkSet);
+
+            handler.parseMetadata();
+
+            // Obtain textual information if present
+            Optional<List<PngChunk>> textual = handler.getTextualData();
+
+            if (textual.isPresent())
             {
-                Metadata<BaseMetadata> png = new MetadataPNG<>();
+                ChunkDirectory textualDir = new ChunkDirectory(Category.TEXTUAL);
 
-                // PNG is specified to use big-endian byte order
-                SequentialByteReader pngReader = new SequentialByteReader(readAllBytes(), PNG_BYTE_ORDER);
-
-                // Skip the magic signature bytes, ie
-                // PNG_SIGNATURE_BYTES is mapped to {0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'}
-                pngReader.readBytes(DigitalSignature.PNG.getMagicNumbers(0).length);
-
-                ChunkHandler handler = new ChunkHandler(getImageFile(), pngReader, chunkSet);
-
-                handler.parseMetadata();
-
-                // Obtain textual information if present
-                Optional<List<PngChunk>> textual = handler.getTextualData();
-
-                if (textual.isPresent())
+                for (PngChunk chunk : textual.get())
                 {
-                    ChunkDirectory textualDir = new ChunkDirectory(Category.TEXTUAL);
-
-                    for (PngChunk chunk : textual.get())
-                    {
-                        textualDir.add(chunk);
-                    }
-
-                    png.addDirectory(textualDir);
+                    textualDir.add(chunk);
                 }
 
-                // Obtain Exif information if present
-                Optional<byte[]> exif = handler.getExifData();
-
-                if (exif.isPresent())
-                {
-                    png.addDirectory(new TifParser(getImageFile(), exif.get()).getMetadata());
-                }
-
-                metadata = png;
+                png.addDirectory(textualDir);
             }
 
-            catch (NoSuchFileException exc)
+            else
             {
-                throw new ImageReadErrorException("File [" + getImageFile() + "] does not exist", exc);
+                LOGGER.info("No textual information found in file [" + getImageFile() + "]");
             }
 
-            catch (IOException exc)
+            // Obtain Exif information if present
+            Optional<byte[]> exif = handler.getExifData();
+
+            if (exif.isPresent())
             {
-                throw new ImageReadErrorException("Problem while reading the stream in file [" + getImageFile() + "]", exc);
+                png.addDirectory(new TifParser(getImageFile(), exif.get()).getMetadata());
             }
+
+            else
+            {
+                LOGGER.warn("No Exif block found in file [" + getImageFile() + "]");
+            }
+
+            metadata = png;
         }
 
-        else
+        catch (NoSuchFileException exc)
         {
-            throw new ImageReadErrorException("Image file [" + getImageFile() + "] is not in PNG format");
+            throw new ImageReadErrorException("File [" + getImageFile() + "] does not exist", exc);
         }
 
-        return getMetadata();
+        catch (IOException exc)
+        {
+            throw new ImageReadErrorException("Problem while reading the stream in file [" + getImageFile() + "]", exc);
+        }
+
+        return metadata;
     }
 
     /**
-     * Retrieves processed metadata from the PNG image file.
+     * Retrieves previously parsed metadata from the PNG file.
      *
-     * @return a populated {@link Metadata} object if present, otherwise an empty object
+     * @return a populated {@link Metadata} object, or an empty one if no metadata was found
      */
     @Override
     public Metadata<? extends BaseMetadata> getMetadata()

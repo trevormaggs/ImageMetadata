@@ -133,16 +133,21 @@ public class ItemPropertyAssociationBox extends FullBox
             sb.append(prefix);
         }
 
-        sb.append(String.format("\t%s '%s': entry_count=%d%n", this.getClass().getSimpleName(), getTypeAsString(), entryCount));
+        for (int i = 0; i < getHierarchyDepth(); i++)
+        {
+            sb.append("\t");
+        }
+
+        sb.append(String.format("%s '%s': entry_count=%d%n", this.getClass().getSimpleName(), getTypeAsString(), entryCount));
 
         for (int i = 0; i < entries.length; i++)
         {
             ItemPropertyEntry entry = entries[i];
-            sb.append(String.format("\t\t%d)\titem_ID=%d, association_count=%d%n", i + 1, entry.getItemID(), entry.getAssociationCount()));
+            sb.append(String.format("\t\t\t%d)\titem_ID=%d, association_count=%d%n", i + 1, entry.getItemID(), entry.getAssociationCount()));
 
             for (ItemPropertyEntryAssociation assoc : entry.getAssociations())
             {
-                sb.append(String.format("\t\t\tessential=%s, property_index=%d%n", assoc.isEssential(), assoc.getPropertyIndex()));
+                sb.append(String.format("\t\t\t\tessential=%s, property_index=%d%n", assoc.isEssential(), assoc.getPropertyIndex()));
             }
 
             sb.append(System.lineSeparator());

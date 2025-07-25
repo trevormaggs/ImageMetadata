@@ -87,6 +87,11 @@ public class ItemDataBox extends Box
             sb.append(prefix);
         }
 
+        for (int i = 0; i < getHierarchyDepth(); i++)
+        {
+            sb.append("\t");
+        }
+
         sb.append(String.format("%s '%s':", this.getClass().getSimpleName(), getTypeAsString()));
         sb.append(System.lineSeparator());
 
@@ -102,7 +107,7 @@ public class ItemDataBox extends Box
 
         else
         {
-            sb.append(String.format("Data size: %d bytes (hex dump omitted)", data.length));
+            sb.append(String.format("\t\tData size: %d bytes (hex dump omitted)", data.length));
         }
 
         sb.append(System.lineSeparator());

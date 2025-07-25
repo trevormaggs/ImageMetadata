@@ -79,8 +79,12 @@ public class ImageRotationBox extends Box
 
         if (prefix != null && !prefix.isEmpty())
         {
-            sb.append(prefix).append(System.lineSeparator());
-            sb.append(System.lineSeparator());
+            sb.append(prefix);
+        }
+
+        for (int i = 0; i < getHierarchyDepth(); i++)
+        {
+            sb.append("\t");
         }
 
         sb.append(String.format("%s '%s': angle=%d, reserved=%d", this.getClass().getSimpleName(), getTypeAsString(), angle, reserved));

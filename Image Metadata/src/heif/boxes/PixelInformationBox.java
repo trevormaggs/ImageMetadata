@@ -111,8 +111,12 @@ public class PixelInformationBox extends FullBox
 
         if (prefix != null && !prefix.isEmpty())
         {
-            sb.append(prefix).append(System.lineSeparator());
-            sb.append(System.lineSeparator());
+            sb.append(prefix);
+        }
+
+        for (int i = 0; i < getHierarchyDepth(); i++)
+        {
+            sb.append("\t");
         }
 
         sb.append(String.format("%s '%s': numChannels=%s, bitsPerChannel=%s", this.getClass().getSimpleName(), getTypeAsString(), numChannels, Arrays.toString(bitsPerChannel)));

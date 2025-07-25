@@ -22,6 +22,7 @@ public class Box
     private final String userType;
     private final HeifBoxType type;
     protected int byteUsed;
+    private Box parent;
 
     /**
      * Constructs a {@code Box} by reading its header from the specified
@@ -83,6 +84,46 @@ public class Box
         this.userType = box.userType;
         this.type = box.type;
         this.byteUsed = box.byteUsed;
+        this.parent = box.parent;
+    }
+
+    /**
+     * Sets the parent of this child box.
+     *
+     * @param parent
+     *        the Box referencing to the parent box
+     */
+    public void setParent(Box parent)
+    {
+        this.parent = parent;
+    }
+
+    /**
+     * Returns the parent box of this child box for referencing purposes
+     *
+     * @return the Box reference
+     */
+    public Box getParent()
+    {
+        return parent;
+    }
+
+    /**
+     * Returns the depth of this box within the box hierarchy.
+     * The root box has a depth of 0; each level below increases the depth by 1.
+     *
+     * @return the depth of this box in the hierarchy
+     */
+    public int getHierarchyDepth()
+    {
+        int depth = 0;
+
+        for (Box p = getParent(); p != null; p = p.getParent())
+        {
+            depth++;
+        }
+
+        return depth;
     }
 
     /**
@@ -200,6 +241,11 @@ public class Box
         if (prefix != null && !prefix.isEmpty())
         {
             sb.append(prefix);
+        }
+
+        for (int i = 0; i < getHierarchyDepth(); i++)
+        {
+            sb.append("\t");
         }
 
         sb.append(String.format("'%s':\t\t\t%s", getTypeAsString(), type.getTypeName()));

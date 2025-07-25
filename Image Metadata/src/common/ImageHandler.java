@@ -1,5 +1,7 @@
 package common;
 
+import java.io.IOException;
+
 /**
  * Defines the contract for a handler that is responsible for processing image files and extracting
  * metadata structures. Implementations of this interface are expected to parse binary image data
@@ -37,6 +39,8 @@ public interface ImageHandler
      * 
      * @throws ImageReadErrorException
      *         if an error occurs while parsing the file
+     * @throws IOException
+     *         if there is a problem reading the image file
      */
-    public boolean parseMetadata() throws ImageReadErrorException;
+    public boolean parseMetadata() throws ImageReadErrorException, IOException;
 }

@@ -3,8 +3,10 @@ package heif;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -45,7 +47,7 @@ import logger.LogFactory;
  * </p>
  *
  * @author Trevor Maggs
- * @since 17 June 2025
+ * @since 25 June 2025
  */
 public class BoxHandler implements ImageHandler, Iterable<Box>
 {
@@ -53,8 +55,6 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
     private final Map<HeifBoxType, List<Box>> heifBoxMap;
     private final SequentialByteReader reader;
     private final Path imageFile;
-
-    private final List<Box> topLevelBoxList;
 
     /**
      * This default constructor should not be invoked, or it will throw an exception to prevent
@@ -76,13 +76,15 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
      *        the path to the HEIF file
      * @param reader
      *        the {@code SequentialByteReader} for reading file content
+     *
+     * @throws NullPointerException
+     *         if any argument is null
      */
     public BoxHandler(Path fpath, SequentialByteReader reader)
     {
         this.reader = reader;
         this.imageFile = fpath;
         this.heifBoxMap = new LinkedHashMap<>();
-        this.topLevelBoxList = new ArrayList<>();
     }
 
     /**
@@ -301,47 +303,56 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
         return (heifBoxMap.size() > 0);
     }
 
+    /**
+     * Returns a depth-first iterator over all parsed boxes, starting from root boxes.
+     *
+     * <p>
+     * The iteration respects the hierarchy of boxes, processing children before siblings
+     * (depth-first traversal).
+     * </p>
+     *
+     * @return an {@link Iterator} for recursively visiting all boxes
+     */
     @Override
     public Iterator<Box> iterator()
     {
-        List<Box> allBoxes = new ArrayList<>();
-
-        for (Box top : topLevelBoxList)
+        return new Iterator<Box>()
         {
-            collectBoxes(top, allBoxes);
-        }
+            private final Deque<Box> stack = new ArrayDeque<>();
 
-        return allBoxes.iterator();
-    }
-
-    public Iterator<Box> iterator2()
-    {
-        List<Box> newBox = new ArrayList<>();
-
-        for (List<Box> list : heifBoxMap.values())
-        {
-            for (Box box : list)
             {
-                newBox.add(box);
+                List<Box> roots = getRootBoxes();
+
+                // Add roots in reverse order to maintain original sequence
+                for (int i = roots.size() - 1; i >= 0; i--)
+                {
+                    stack.push(roots.get(i));
+                }
             }
-        }
 
-        return newBox.iterator();
-    }
-
-    private void collectBoxes(Box box, List<Box> result)
-    {
-        result.add(box); // Pre-order traversal: add current box first
-
-        List<Box> children = box.getBoxList();
-
-        if (children != null)
-        {
-            for (Box child : children)
+            @Override
+            public boolean hasNext()
             {
-                collectBoxes(child, result);
+                return !stack.isEmpty();
             }
-        }
+
+            @Override
+            public Box next()
+            {
+                Box current = stack.pop();
+                List<Box> children = current.getBoxList();
+
+                if (children != null)
+                {
+                    for (int i = children.size() - 1; i >= 0; i--)
+                    {
+                        stack.push(children.get(i));
+                    }
+                }
+
+                return current;
+            }
+        };
     }
 
     /**
@@ -416,7 +427,39 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
     }
 
     /**
-     * Parses all HEIF boxes from the file stream and populates the internal box map.
+     * Displays all box types in a hierarchical fashion, useful for debugging, visualisation or
+     * diagnostics.
+     */
+    public void displayHierarchy()
+    {
+        for (Box box : this)
+        {
+            int depth = 0;
+            Box parent = box.getParent();
+
+            while (parent != null)
+            {
+                depth++;
+                parent = parent.getParent();
+            }
+
+            for (int i = 0; i < depth; i++)
+            {
+                System.out.print("\t");
+            }
+
+            System.out.println(box.getTypeAsString());
+        }
+    }
+
+    /**
+     * Parses all HEIF boxes from the file stream using {@link BoxFactory#createBox} and builds the
+     * internal box tree structure.
+     *
+     * <p>
+     * This method skips un-handled types such as {@code mdat} and gracefully recovers from
+     * malformed boxes using a fail-fast approach.
+     * </p>
      */
     private void parse()
     {
@@ -439,8 +482,7 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
                     LOGGER.warn("Skipping unhandled Media Data box [" + box.getTypeAsString() + "]");
                 }
 
-                topLevelBoxList.add(box);
-                walkBoxes(box, 0, false);
+                walkBoxes(box, 0);
             }
 
             /*
@@ -452,21 +494,8 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
                 LOGGER.error("Failed to parse box: [" + exc.getMessage() + "]");
                 break;
             }
-            
+
         } while (reader.getCurrentPosition() < reader.length());
-
-        for (Box box : topLevelBoxList)
-        {
-            // System.out.printf("%s\n", box.getTypeAsString());
-            // System.out.printf("%s%n", box.toString(""));
-            // walkBoxes(box, 0, true);
-        }
-
-        for (Box box : this)
-        {
-            // System.out.printf("%s\n", box.getTypeAsString());
-            System.out.printf("%s", box.toString(null));
-        }
     }
 
     /**
@@ -484,22 +513,9 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
      * @param depth
      *        the current depth in the box hierarchy, primarily used for debugging/visualisation
      *        purposes
-     * @param show
-     *        true if you wish to display the hierarchical relationship between HEIF boxes
      */
-    private void walkBoxes(Box box, int depth, boolean show)
+    private void walkBoxes(Box box, int depth)
     {
-        if (show)
-        {
-            for (int i = 0; i < depth; i++)
-            {
-                // Indent based on depth
-                System.out.print("\t");
-            }
-
-            System.out.printf("%s\n", box.getTypeAsString());
-        }
-
         heifBoxMap.putIfAbsent(box.getHeifType(), new ArrayList<>());
         heifBoxMap.get(box.getHeifType()).add(box);
 
@@ -509,8 +525,37 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
         {
             for (Box child : children)
             {
-                walkBoxes(child, depth + 1, show);
+                child.setParent(box);
+                walkBoxes(child, depth + 1);
             }
         }
+    }
+
+    /**
+     * Returns all top-level (root) boxes that do not have a parent.
+     *
+     * <p>
+     * This method dynamically reconstructs the top-level box list from the parsed box map,
+     * eliminating the need for a separate root tracking structure.
+     * </p>
+     *
+     * @return a list of root {@link Box} instances in parsing order
+     */
+    private List<Box> getRootBoxes()
+    {
+        List<Box> roots = new ArrayList<>();
+
+        for (List<Box> list : heifBoxMap.values())
+        {
+            for (Box box : list)
+            {
+                if (box.getParent() == null)
+                {
+                    roots.add(box);
+                }
+            }
+        }
+
+        return roots;
     }
 }

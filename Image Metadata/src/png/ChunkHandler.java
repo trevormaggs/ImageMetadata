@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
+import common.DigitalSignature;
 import common.ImageHandler;
 import common.ImageReadErrorException;
 import common.SequentialByteReader;
@@ -140,11 +141,15 @@ public class ChunkHandler implements ImageHandler
      *
      * @throws ImageReadErrorException
      *         if an error occurs while parsing the PNG file
+     * @throws IOException
+     *         if there is a problem reading the PNG file
      */
     @Override
-    public boolean parseMetadata() throws ImageReadErrorException
+    public boolean parseMetadata() throws ImageReadErrorException, IOException
     {
+        verifySignature();
         readChunks();
+
         return (chunks.size() > 0);
     }
 
@@ -164,6 +169,34 @@ public class ChunkHandler implements ImageHandler
         }
 
         return sb.toString();
+    }
+
+    /**
+     * Checks if the specified file contains the expected magic numbers in the first few bytes in
+     * the file stream. If the magic numbers are correctly verified, these bytes will then be
+     * skipped.
+     * 
+     * <p>
+     * Note: PNG_SIGNATURE_BYTES (magic numbers) are mapped to
+     * {0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'}
+     * </p>
+     *
+     * @throws ImageReadErrorException
+     *         if the file contains incorrect magic numbers
+     * @throws IOException
+     *         if the magic numbers cannot be determined
+     */
+    private void verifySignature() throws ImageReadErrorException, IOException
+    {
+        if (DigitalSignature.detectFormat(imageFile) != DigitalSignature.PNG)
+        {
+            throw new ImageReadErrorException("Invalid PNG signature detected in file [" + imageFile + "]");
+        }
+
+        int[] sig = DigitalSignature.PNG.getMagicNumbers(0);
+
+        // Skip the actual PNG magic bytes safely
+        reader.skip(sig.length);
     }
 
     /**
@@ -218,11 +251,11 @@ public class ChunkHandler implements ImageHandler
                 optionalData = Optional.empty();
             }
 
-            int crc = (int) reader.readUnsignedInteger();
+            int crc32 = (int) reader.readUnsignedInteger();
 
             if (optionalData.isPresent())
             {
-                addChunk(length, chunkType, crc, optionalData.get());
+                addChunk(length, chunkType, crc32, optionalData.get());
 
                 LOGGER.debug("Chunk type [" + chunkType + "] added for file [" + imageFile + "]");
             }

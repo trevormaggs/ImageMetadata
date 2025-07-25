@@ -138,6 +138,11 @@ public class HandlerBox extends FullBox
             sb.append(prefix);
         }
 
+        for (int i = 0; i < getHierarchyDepth(); i++)
+        {
+            sb.append("\t");
+        }
+
         sb.append(String.format("%s '%s':\t\t\t'%s'", this.getClass().getSimpleName(), getTypeAsString(), getHandlerType()));
         sb.append(System.lineSeparator());
 

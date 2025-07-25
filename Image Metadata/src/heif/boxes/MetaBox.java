@@ -50,10 +50,10 @@ public class MetaBox extends FullBox
     {
         super(box, reader);
 
-        containedBoxes = new LinkedHashMap<>();
-
         int startpos = reader.getCurrentPosition();
         int endpos = startpos + available();
+
+        containedBoxes = new LinkedHashMap<>();
 
         do
         {
@@ -72,7 +72,6 @@ public class MetaBox extends FullBox
             {
                 Box containedBox = BoxFactory.createBox(reader);
                 containedBoxes.put(containedBox.getHeifType(), containedBox);
-                // System.out.printf("LOOK %s\n", containedBox.getTypeAsString());
             }
 
         } while (reader.getCurrentPosition() < endpos);
@@ -128,9 +127,14 @@ public class MetaBox extends FullBox
             sb.append(prefix);
         }
 
+        for (int i = 0; i < getHierarchyDepth(); i++)
+        {
+            sb.append("\t");
+        }
+
         sb.append(String.format("%s '%s':\t(%s)", this.getClass().getSimpleName(), getTypeAsString(), getHeifType().getBoxCategory()));
         sb.append(System.lineSeparator());
-        
+
         return sb.toString();
     }
 }

@@ -120,6 +120,11 @@ public class ItemReferenceBox extends FullBox
             sb.append(prefix);
         }
 
+        for (int i = 0; i < getHierarchyDepth(); i++)
+        {
+            sb.append("\t");
+        }
+
         sb.append(String.format("%s '%s':", this.getClass().getSimpleName(), getTypeAsString()));
         sb.append(System.lineSeparator());
 
@@ -184,7 +189,12 @@ public class ItemReferenceBox extends FullBox
                 sb.append(prefix);
             }
 
-            sb.append(String.format("\treferenceType='%s': from_item_ID=%d, ref_count=%d, to_item_ID=", getTypeAsString(), fromItemID, referenceCount));
+            for (int i = 0; i < getHierarchyDepth(); i++)
+            {
+                sb.append("\t");
+            }
+
+            sb.append(String.format("referenceType='%s': from_item_ID=%d, ref_count=%d, to_item_ID=", getTypeAsString(), fromItemID, referenceCount));
 
             for (int j = 0; j < referenceCount; j++)
             {

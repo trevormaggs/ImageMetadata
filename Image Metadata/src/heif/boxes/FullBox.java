@@ -171,6 +171,11 @@ public class FullBox extends Box
             sb.append(prefix);
         }
 
+        for (int i = 0; i < getHierarchyDepth(); i++)
+        {
+            sb.append("\t");
+        }
+
         sb.append(String.format("%s '%s':\t\t\t\t\t(%s)", this.getClass().getSimpleName(), getTypeAsString(), getHeifType().getBoxCategory()));
 
         return sb.toString();

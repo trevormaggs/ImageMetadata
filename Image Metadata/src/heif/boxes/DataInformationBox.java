@@ -94,6 +94,11 @@ public class DataInformationBox extends Box
             sb.append(prefix);
         }
 
+        for (int i = 0; i < getHierarchyDepth(); i++)
+        {
+            sb.append("\t");
+        }
+
         sb.append(String.format("%s '%s':\t(%s)", this.getClass().getSimpleName(), getTypeAsString(), getHeifType().getBoxCategory()));
         sb.append(System.lineSeparator());
 
@@ -151,11 +156,21 @@ public class DataInformationBox extends Box
                 sb.append(prefix);
             }
 
-            sb.append(String.format("\t%s '%s':\tentryCount=%d%n", this.getClass().getSimpleName(), getTypeAsString(), entryCount));
+            for (int i = 0; i < getHierarchyDepth(); i++)
+            {
+                sb.append("\t");
+            }
+
+            sb.append(String.format("%s '%s':\tentryCount=%d%n", this.getClass().getSimpleName(), getTypeAsString(), entryCount));
 
             for (int i = 0; i < entryCount; i++)
             {
-                sb.append(String.format("\t\t\tName: '%s'\tLocation: '%s'%n", dataEntry[i].name, dataEntry[i].location));
+                for (int j = 0; j <= getHierarchyDepth(); j++)
+                {
+                    sb.append("\t");
+                }
+
+                sb.append(String.format("Name: '%s'\tLocation: '%s'%n", dataEntry[i].name, dataEntry[i].location));
             }
 
             return sb.toString();

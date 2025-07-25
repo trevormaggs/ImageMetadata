@@ -209,6 +209,11 @@ public class ColourInformationBox extends Box
             sb.append(prefix);
         }
 
+        for (int i = 0; i < getHierarchyDepth(); i++)
+        {
+            sb.append("\t");
+        }
+
         sb.append(String.format("%s '%s': Type=%s", this.getClass().getSimpleName(), getTypeAsString(), colourType));
 
         if (TYPE_NCLX.equals(colourType))

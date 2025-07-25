@@ -92,6 +92,11 @@ public class PrimaryItemBox extends FullBox
             sb.append(prefix);
         }
 
+        for (int i = 0; i < getHierarchyDepth(); i++)
+        {
+            sb.append("\t");
+        }
+
         sb.append(String.format("%s '%s':\t\tPrimaryItemID=%d", this.getClass().getSimpleName(), getTypeAsString(), getItemID()));
         sb.append(System.lineSeparator());
 

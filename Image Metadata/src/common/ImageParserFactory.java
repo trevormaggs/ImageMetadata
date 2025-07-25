@@ -74,7 +74,7 @@ public final class ImageParserFactory
                 return new TifParser(fpath);
             case PNG:
                 return new PngParser(fpath);
-            case HEIC:
+            case HEIF:
                 return new HeifParser(fpath);
             case WEBP:
                 throw new UnsupportedOperationException("WebP support not implemented yet");

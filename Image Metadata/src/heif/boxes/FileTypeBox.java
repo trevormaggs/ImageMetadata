@@ -147,6 +147,11 @@ public class FileTypeBox extends Box
             sb.append(prefix);
         }
 
+        for (int i = 0; i < getHierarchyDepth(); i++)
+        {
+            sb.append("\t");
+        }
+
         sb.append(String.format("%s '%s':\t\t\t\t", this.getClass().getSimpleName(), getTypeAsString()));
         sb.append(String.format("'major-brand=%s', ", getMajorBrand()));
         sb.append(String.format("compatible-brands='%s'", Arrays.toString(getCompatibleBrands())));

@@ -38,6 +38,7 @@ import png.ChunkType.Category;
 public class ChunkHandler implements ImageHandler
 {
     private static final LogFactory LOGGER = LogFactory.getLogger(ChunkHandler.class);
+    private static final boolean STRICTMODE = false;
     private final Path imageFile;
     private final SequentialByteReader reader;
     private final EnumSet<ChunkType> requiredChunks;
@@ -84,7 +85,7 @@ public class ChunkHandler implements ImageHandler
 
     /**
      * Retrieves all textual metadata chunks from the PNG file as an unmodifiable list.
-     * 
+     *
      * <p>
      * Textual metadata includes {@code tEXt}, {@code iTXt}, and {@code zTXt} chunks, which store
      * key-value text pairs or compressed textual information.
@@ -150,7 +151,13 @@ public class ChunkHandler implements ImageHandler
         verifySignature();
         readChunks();
 
-        return (chunks.size() > 0);
+        if (chunks.isEmpty())
+        {
+            LOGGER.info("No chunks extracted from PNG file [" + imageFile + "]");
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -172,10 +179,9 @@ public class ChunkHandler implements ImageHandler
     }
 
     /**
-     * Checks if the specified file contains the expected magic numbers in the first few bytes in
-     * the file stream. If the magic numbers are correctly verified, these bytes will then be
-     * skipped.
-     * 
+     * Checks if the PNG file contains the expected magic numbers in the first few bytes in
+     * the file stream. If these numbers are correctly verified, they will then be skipped.
+     *
      * <p>
      * Note: PNG_SIGNATURE_BYTES (magic numbers) are mapped to
      * {0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'}
@@ -200,25 +206,29 @@ public class ChunkHandler implements ImageHandler
     }
 
     /**
-     * Reads the PNG data stream and extracts matching chunk types into memory.
+     * Processes the PNG data stream and extracts matching chunk types into memory.
      *
      * @throws ImageReadErrorException
      *         if invalid structure or duplicate chunks are found
-     * @throws IOException
-     *         if I/O issues occur while reading
      */
     private void readChunks() throws ImageReadErrorException
     {
         int position = 0;
+        byte[] typeBytes;
+        byte[] chunkData;
         ChunkType chunkType;
-        Optional<byte[]> optionalData;
 
         do
         {
+            chunkData = null;
+
             if (reader.getCurrentPosition() + 12 > reader.length())
             {
-                /* 12 bytes = minimum chunk (length + type + CRC, even if data is zero-length) */
-                throw new ImageReadErrorException("Unexpected end of PNG file before IEND chunk");
+                /*
+                 * 12 bytes = minimum chunk (length (4) + type (4) + CRC (4),
+                 * even if data is zero-length)
+                 */
+                throw new ImageReadErrorException("Unexpected end of PNG file before IEND chunk detected");
             }
 
             int length = (int) reader.readUnsignedInteger();
@@ -228,36 +238,46 @@ public class ChunkHandler implements ImageHandler
                 throw new ImageReadErrorException("Invalid PNG chunk length [" + length + "]");
             }
 
-            chunkType = ChunkType.getChunkType(reader.readBytes(4));
+            typeBytes = reader.readBytes(4);
+            chunkType = ChunkType.getChunkType(typeBytes);
 
-            if (position == 0 && chunkType != ChunkType.IHDR)
+            if (chunkType != ChunkType.UNKNOWN)
             {
-                throw new ImageReadErrorException("PNG format error: First chunk must be [" + ChunkType.IHDR + "], but found [" + chunkType + "]");
-            }
+                if (position == 0 && chunkType != ChunkType.IHDR)
+                {
+                    throw new ImageReadErrorException("PNG format error in file [" + imageFile + "]: First chunk must be [" + ChunkType.IHDR + "], but found [" + chunkType + "]");
+                }
 
-            if (!chunkType.isMultipleAllowed() && existsChunk(chunkType))
-            {
-                throw new ImageReadErrorException("PNG format error: Duplicate [" + chunkType + "] found. This is disallowed");
-            }
+                if (!chunkType.isMultipleAllowed() && existsChunk(chunkType))
+                {
+                    throw new ImageReadErrorException("PNG format error in file [" + imageFile + "]: Duplicate [" + chunkType + "] found. This is disallowed");
+                }
 
-            if (requiredChunks == null || requiredChunks.contains(chunkType))
-            {
-                optionalData = Optional.of(reader.readBytes(length));
+                if (requiredChunks == null || requiredChunks.contains(chunkType))
+                {
+                    chunkData = reader.readBytes(length);
+                }
+
+                else
+                {
+                    reader.skip(length);
+                }
+
+                int crc32 = (int) reader.readUnsignedInteger();
+
+                if (chunkData != null)
+                {
+                    addChunk(chunkType, length, typeBytes, crc32, chunkData);
+                    LOGGER.debug("Chunk type [" + chunkType + "] added for file [" + imageFile + "]");
+                }
             }
 
             else
             {
-                reader.skip(length);
-                optionalData = Optional.empty();
-            }
+                /* Skipped the full data length plus 4 bytes for CRC length */
+                reader.skip(length + 4);
 
-            int crc32 = (int) reader.readUnsignedInteger();
-
-            if (optionalData.isPresent())
-            {
-                addChunk(length, chunkType, crc32, optionalData.get());
-
-                LOGGER.debug("Chunk type [" + chunkType + "] added for file [" + imageFile + "]");
+                LOGGER.warn("Unknown chunk type [" + chunkType + "] detected. Skipped");
             }
 
             position++;
@@ -269,34 +289,60 @@ public class ChunkHandler implements ImageHandler
      * Adds a parsed chunk to the internal chunk collection. Special types such as {@code iTXt},
      * {@code zTXt}, and {@code tEXt} are instantiated into specific subclasses.
      *
-     * @param length
-     *        the data length of the chunk
      * @param chunkType
      *        the type of PNG chunk
-     * @param crc
-     *        the CRC value (currently not implemented)
+     * @param length
+     *        the data length of the chunk
+     * @param typeBytes
+     *        the raw 4-byte chunk type for CRC calculation
+     * @param crc32
+     *        the CRC value read from the file
      * @param data
      *        raw chunk data
+     * 
+     * @throws ImageReadErrorException
+     *         if there is a CRC calculation mismatch error
      */
-    private void addChunk(int length, ChunkType chunkType, int crc, byte[] data)
+    private void addChunk(ChunkType chunkType, int length, byte[] typeBytes, int crc32, byte[] data) throws ImageReadErrorException
     {
+        PngChunk newChunk;
+
         switch (chunkType)
         {
             case tEXt:
-                chunks.add(new PngChunkTEXT(length, chunkType, crc, data));
+                newChunk = new PngChunkTEXT(length, typeBytes, crc32, data);
             break;
 
             case iTXt:
-                chunks.add(new PngChunkITXT(length, chunkType, crc, data));
+                newChunk = new PngChunkITXT(length, typeBytes, crc32, data);
             break;
 
             case zTXt:
-                chunks.add(new PngChunkZTXT(length, chunkType, crc, data));
+                newChunk = new PngChunkZTXT(length, typeBytes, crc32, data);
             break;
 
             default:
-                chunks.add(new PngChunk(length, chunkType, crc, data));
+                newChunk = new PngChunk(length, typeBytes, crc32, data);
         }
+
+        int expectedCrc = newChunk.calculateCrc();
+
+        if (expectedCrc != crc32)
+        {
+            String msg = String.format("CRC mismatch for chunk [%s] in file [%s]. Calculated: 0x%08X, Expected: 0x%08X. File may be corrupt.", chunkType, imageFile, expectedCrc, crc32);
+
+            if (STRICTMODE)
+            {
+                throw new ImageReadErrorException(msg);
+            }
+
+            else
+            {
+                LOGGER.warn(msg);
+            }
+        }
+
+        chunks.add(newChunk);
     }
 
     /**

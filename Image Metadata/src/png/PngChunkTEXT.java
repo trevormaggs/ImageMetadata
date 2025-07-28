@@ -1,6 +1,8 @@
 package png;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Optional;
 import logger.LogFactory;
 import common.ByteValueConverter;
 
@@ -23,17 +25,17 @@ public class PngChunkTEXT extends PngChunk
      * Constructs a {@code PngChunkTEXT} instance with the specified metadata.
      *
      * @param length
-     *        the length of the data payload (excluding type and CRC fields)
-     * @param chunkType
-     *        the chunk type as a {@link ChunkType}
-     * @param crc
-     *        the CRC value (not currently validated)
+     *        the length of the chunk's data field (excluding type and CRC)
+     * @param typeBytes
+     *        the raw 4-byte chunk type
+     * @param crc32
+     *        the CRC value read from the file
      * @param data
-     *        the raw chunk data
+     *        raw chunk data
      */
-    public PngChunkTEXT(int length, ChunkType chunkType, int crc, byte[] data)
+    public PngChunkTEXT(int length, byte[] typeBytes, int crc, byte[] data)
     {
-        super(length, chunkType, crc, data);
+        super(length, typeBytes, crc, data);
     }
 
     /**
@@ -48,33 +50,45 @@ public class PngChunkTEXT extends PngChunk
      * <li><strong>Null Separator</strong>: 1 byte</li>
      * <li><strong>Text</strong>: Latin-1 string (0 or more bytes)</li>
      * </ul>
+     * 
+     * <p>
+     * <strong>API Note:</strong> this {@link getKeywordPair()} method must be invoked first before
+     * calling other getter methods.
+     * </p>
      *
-     * @return a {@link TextEntry} containing the keyword and text, or {@code null} if invalid
+     * @return an {@link Optional} containing the extracted keyword and text as a {@link TextEntry}
+     *         instance if present, otherwise, {@link Optional#empty()}
      */
     @Override
-    public TextEntry getKeywordPair()
+    public Optional<TextEntry> getKeywordPair()
     {
         byte[] data = getDataArray();
         String[] parts = ByteValueConverter.splitNullDelimitedStrings(data, StandardCharsets.ISO_8859_1);
 
-        if (parts.length == 2)
+        if (parts.length < 2)
         {
-            this.keyword = parts[0];
-            this.text = parts[1];
-            return new TextEntry(getTag(), keyword, text);
+            LOGGER.warn("tEXt chunk missing null separator or malformed [" + Arrays.toString(data) + "]");
+            return Optional.empty();
         }
 
-        else
+        keyword = parts[0];
+        text = parts[1];
+
+        if (keyword.length() == 0 || keyword.length() > 79)
         {
-            LOGGER.error("Invalid tEXt chunk: expected keyword and text pair, but found " + parts.length + " parts.");
-            return null;
+            LOGGER.warn("Invalid tEXt keyword length (must be 1–79 characters)");
+            return Optional.empty();
         }
+
+        return Optional.of(new TextEntry(getTag(), keyword, text));
     }
 
     /**
-     * Returns the decoded keyword from this tEXt chunk.
+     * Returns the decoded keyword from this tEXt chunk. <b>Note</b>, the {@link #getKeywordPair()}
+     * method must be called first before calling this method to ensure data integrity.
      *
-     * @return the keyword, or {@code null} if not yet decoded
+     *
+     * @return the text or null if not yet decoded
      */
     public String getKeyword()
     {
@@ -82,12 +96,31 @@ public class PngChunkTEXT extends PngChunk
     }
 
     /**
-     * Returns the decoded text from this tEXt chunk.
+     * Returns the decoded text from this tEXt chunk. <b>Note</b>, the {@link #getKeywordPair()}
+     * method must be called first before calling this method to ensure data integrity.
      *
-     * @return the text, or {@code null} if not yet decoded
+     *
+     * @return the text or null if not yet decoded
      */
     public String getText()
     {
         return text;
+    }
+
+    /**
+     * Returns a string representation of the chunk's properties and contents.
+     *
+     * @return a formatted string describing this chunk
+     */
+    @Override
+    public String toString()
+    {
+        StringBuilder line = new StringBuilder();
+
+        line.append(super.toString());
+        line.append(String.format(" %-20s %s%n", "[Keyword]", getKeyword()));
+        line.append(String.format(" %-20s %s%n", "[Text]", getText()));
+
+        return line.toString();
     }
 }

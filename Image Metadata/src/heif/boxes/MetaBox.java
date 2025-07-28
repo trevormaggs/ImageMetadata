@@ -24,11 +24,14 @@ import heif.HeifBoxType;
  * <ul>
  * <li>1.0 - Initial release by Trevor Maggs on 22 July 2025</li>
  * </ul>
+ * 
+ * <p>
+ * <strong>API Note:</strong> Additional testing is required to validate the reliability and
+ * robustness of this implementation.
+ * </p>
  *
  * @author Trevor Maggs
  * @since 22 July 2025
- * @implNote Additional testing is required to confirm the reliability and robustness of this
- *           implementation.
  */
 public class MetaBox extends FullBox
 {

@@ -149,7 +149,7 @@ public class IFDHandler implements ImageHandler
      */
     public Optional<List<DirectoryIFD>> getDirectories()
     {
-        return (directoryList.isEmpty() ? Optional.empty() : Optional.of(Collections.unmodifiableList(directoryList)));              
+        return (directoryList.isEmpty() ? Optional.empty() : Optional.of(Collections.unmodifiableList(directoryList)));
     }
 
     /**

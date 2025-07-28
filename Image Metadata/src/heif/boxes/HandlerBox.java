@@ -19,6 +19,11 @@ import common.SequentialByteReader;
  * <p>
  * Version History:
  * </p>
+ * 
+ * <p>
+ * <strong>API Note:</strong> Additional testing is required to validate the reliability and
+ * robustness of this implementation.
+ * </p>
  *
  * <ul>
  * <li>1.0 - Initial release by Trevor Maggs on 31 May 2025</li>
@@ -26,8 +31,6 @@ import common.SequentialByteReader;
  *
  * @author Trevor Maggs
  * @since 31 May 2025
- * @implNote Additional testing is required to confirm the reliability and robustness of this
- *           implementation
  */
 public class HandlerBox extends FullBox
 {

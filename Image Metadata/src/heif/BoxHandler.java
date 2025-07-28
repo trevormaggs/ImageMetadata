@@ -12,6 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import common.DigitalSignature;
 import common.ImageHandler;
 import common.ImageReadErrorException;
 import common.SequentialByteReader;
@@ -294,10 +295,13 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
      *
      * @return true if at least one HEIF box was successfully parsed and extracted, or false if no
      *         relevant boxes were found
+     * @throws IOException
+     * @throws ImageReadErrorException
      */
     @Override
-    public boolean parseMetadata()
+    public boolean parseMetadata() throws ImageReadErrorException, IOException
     {
+        verifySignature();
         parse();
 
         return (heifBoxMap.size() > 0);
@@ -321,7 +325,7 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
             private final Deque<Box> stack = new ArrayDeque<>();
 
             {
-                List<Box> roots = getRootBoxes();
+                List<Box> roots = getTopLevelBoxes();
 
                 // Add roots in reverse order to maintain original sequence
                 for (int i = roots.size() - 1; i >= 0; i--)
@@ -453,6 +457,24 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
     }
 
     /**
+     * Checks if the HEIC file contains the expected magic numbers in the first few bytes in
+     * the file stream. If the magic numbers are not correctly verified, an exception will be
+     * thrown.
+     *
+     * @throws ImageReadErrorException
+     *         if the file contains incorrect magic numbers
+     * @throws IOException
+     *         if the magic numbers cannot be determined
+     */
+    private void verifySignature() throws ImageReadErrorException, IOException
+    {
+        if (DigitalSignature.detectFormat(imageFile) != DigitalSignature.HEIF)
+        {
+            throw new ImageReadErrorException("Invalid HEIF signature detected in file [" + imageFile + "]");
+        }
+    }
+
+    /**
      * Parses all HEIF boxes from the file stream using {@link BoxFactory#createBox} and builds the
      * internal box tree structure.
      *
@@ -541,7 +563,7 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
      *
      * @return a list of root {@link Box} instances in parsing order
      */
-    private List<Box> getRootBoxes()
+    private List<Box> getTopLevelBoxes()
     {
         List<Box> roots = new ArrayList<>();
 

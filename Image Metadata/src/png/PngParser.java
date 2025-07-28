@@ -168,10 +168,9 @@ public class PngParser extends AbstractImageParser
 
         try
         {
-            Metadata<BaseMetadata> png = new MetadataPNG<>();
-
             // Use big-endian byte order as per Specifications
             SequentialByteReader pngReader = new SequentialByteReader(readAllBytes(), PNG_BYTE_ORDER);
+            Metadata<BaseMetadata> png = new MetadataPNG<>();
             ChunkHandler handler = new ChunkHandler(getImageFile(), pngReader, chunkSet);
 
             handler.parseMetadata();
@@ -206,7 +205,7 @@ public class PngParser extends AbstractImageParser
 
             else
             {
-                LOGGER.warn("No Exif block found in file [" + getImageFile() + "]");
+                LOGGER.info("No Exif block found in file [" + getImageFile() + "]");
             }
 
             metadata = png;

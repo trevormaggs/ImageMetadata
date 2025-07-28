@@ -4,6 +4,8 @@ import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.zip.CRC32;
 import common.ByteValueConverter;
 import tif.TagEntries.TagPngChunk;
 
@@ -25,7 +27,7 @@ import tif.TagEntries.TagPngChunk;
 public class PngChunk
 {
     private final int length;
-    private final ChunkType chunkType;
+    private final byte[] typeBytes;
     private final int crc;
     private final byte[] payload;
     private final boolean ancillaryBit;
@@ -37,22 +39,22 @@ public class PngChunk
      * Constructs a new {@code PngChunk}, including an optional Exif parser.
      *
      * @param length
-     *        the length of the chunk's data
-     * @param chunkType
-     *        the type of the chunk
-     * @param crc
-     *        CRC value
+     *        the length of the chunk's data field (excluding type and CRC)
+     * @param typeBytes
+     *        the raw 4-byte chunk type
+     * @param crc32
+     *        the CRC value read from the file
      * @param data
-     *        the chunk's raw byte data
+     *        raw chunk data
      */
-    public PngChunk(int length, ChunkType chunkType, int crc, byte[] data)
+    public PngChunk(int length, byte[] typeBytes, int crc, byte[] data)
     {
         this.length = length;
-        this.chunkType = chunkType;
+        this.typeBytes = Arrays.copyOf(typeBytes, typeBytes.length);
         this.crc = crc;
         this.payload = Arrays.copyOf(data, data.length);
 
-        boolean[] flags = extractPropertyBits(ByteValueConverter.toInteger(chunkType.getChunkName().getBytes(), ByteOrder.BIG_ENDIAN));
+        boolean[] flags = extractPropertyBits(ByteValueConverter.toInteger(typeBytes, ByteOrder.BIG_ENDIAN));
         this.ancillaryBit = flags[0];
         this.privateBit = flags[1];
         this.reservedBit = flags[2];
@@ -106,7 +108,7 @@ public class PngChunk
      */
     public ChunkType getType()
     {
-        return chunkType;
+        return ChunkType.getChunkType(typeBytes);
     }
 
     /**
@@ -116,7 +118,7 @@ public class PngChunk
      */
     public TagPngChunk getTag()
     {
-        return TagPngChunk.getTagType(chunkType);
+        return TagPngChunk.getTagType(getType());
     }
 
     /**
@@ -125,9 +127,28 @@ public class PngChunk
      *
      * @return a CRC value defined as an integer
      */
-    public int getCrcValue()
+    public int getCrc()
     {
         return crc;
+    }
+
+    /**
+     * Calculates the CRC-32 checksum for this chunk (type code + data).
+     *
+     * @return The calculated CRC-32 value.
+     */
+    public int calculateCrc()
+    {
+        CRC32 crc32 = new CRC32();
+
+        crc32.update(typeBytes);
+
+        if (payload != null && payload.length > 0)
+        {
+            crc32.update(payload);
+        }
+
+        return (int) crc32.getValue();
     }
 
     /**
@@ -150,7 +171,7 @@ public class PngChunk
      */
     public boolean hasKeywordPair(TextKeyword keyword)
     {
-        if (chunkType.getCategory() == ChunkType.Category.TEXTUAL)
+        if (getType().getCategory() == ChunkType.Category.TEXTUAL)
         {
             String str = new String(payload, StandardCharsets.ISO_8859_1);
 
@@ -163,12 +184,11 @@ public class PngChunk
     /**
      * Extracts a {@link TextEntry} from this chunk if it is textual and correctly formatted.
      *
-     * @return a {@link TextEntry} with keyword and value, or {@code null} if not valid or not
-     *         textual
+     * @return always {@link Optional#empty()} by default
      */
-    public TextEntry getKeywordPair()
+    public Optional<TextEntry> getKeywordPair()
     {
-        return null;
+        return Optional.empty();
     }
 
     /**
@@ -235,13 +255,9 @@ public class PngChunk
         PngChunk other = (PngChunk) obj;
 
         return (length == other.length &&
+                Arrays.equals(typeBytes, other.typeBytes) &&
                 crc == other.crc &&
-                chunkType.equals(other.chunkType) &&
-                Arrays.equals(payload, other.payload) &&
-                ancillaryBit == other.ancillaryBit &&
-                privateBit == other.privateBit &&
-                reservedBit == other.reservedBit &&
-                safeToCopyBit == other.safeToCopyBit);
+                Arrays.equals(payload, other.payload));
     }
 
     /**
@@ -252,8 +268,9 @@ public class PngChunk
     @Override
     public int hashCode()
     {
-        int result = Objects.hash(length, chunkType, crc, ancillaryBit, privateBit, reservedBit, safeToCopyBit);
+        int result = Objects.hash(length, crc);
 
+        result = 31 * result + Arrays.hashCode(typeBytes);
         result = 31 * result + Arrays.hashCode(payload);
 
         return result;
@@ -271,9 +288,9 @@ public class PngChunk
         String[] parts = ByteValueConverter.splitNullDelimitedStrings(getDataArray());
 
         line.append(String.format(" %-20s %s%n", "[Tag Name]", getTag()));
-        line.append(String.format(" %-20s %s%n", "[Data Length]", length));
-        line.append(String.format(" %-20s %s%n", "[Chunk Type]", chunkType.getChunkName()));
-        line.append(String.format(" %-20s %s%n", "[CRC Value ]", crc));
+        line.append(String.format(" %-20s %s%n", "[Data Length]", getLength()));
+        line.append(String.format(" %-20s %s%n", "[Chunk Type]", getType()));
+        line.append(String.format(" %-20s %s%n", "[CRC Value ]", getCrc()));
         line.append(String.format(" %-20s %s%n", "[Byte Values]", Arrays.toString(payload)));
         line.append(String.format(" %-20s %s%n", "[Textual]", Arrays.toString(parts)));
 

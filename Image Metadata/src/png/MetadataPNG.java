@@ -265,11 +265,14 @@ public class MetadataPNG<T extends BaseMetadata> implements Metadata<T>
 
                         for (PngChunk chunk : cd)
                         {
+                            String keywordValue = (chunk.getKeywordPair().isPresent() ? chunk.getKeywordPair().get().getKeyword() : "N/A");
+                            String textValue = (chunk.getKeywordPair().isPresent() ? chunk.getKeywordPair().get().getValue() : "N/A");
+
                             sb.append(String.format(fmt, "Tag Type", chunk.getTag()));
                             sb.append(String.format(fmt, "Chunk Type", chunk.getType()));
                             sb.append(String.format(fmt, "Chunk Bytes", chunk.getLength()));
-                            sb.append(String.format(fmt, "Keyword", chunk.getKeywordPair().getKeyword()));
-                            sb.append(String.format(fmt, "Text", chunk.getKeywordPair().getValue()));
+                            sb.append(String.format(fmt, "Keyword", keywordValue));
+                            sb.append(String.format(fmt, "Text", textValue));
                             sb.append(System.lineSeparator());
                         }
 

@@ -31,8 +31,6 @@ public class ItemProtectionBox extends FullBox
      *        a parent Box object
      * @param reader
      *        a SequentialByteReader object for sequential byte array access
-     * @implNote This is not a perfect solution yet. Rigorous testing is required to validate the
-     *           reliability and robustness of this implementation
      */
     public ItemProtectionBox(Box box, SequentialByteReader reader)
     {

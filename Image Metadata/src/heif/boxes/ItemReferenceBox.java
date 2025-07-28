@@ -23,11 +23,14 @@ import common.SequentialByteReader;
  * <ul>
  * <li>1.0 - Initial release by Trevor Maggs on 31 May 2025</li>
  * </ul>
+ * 
+ * <p>
+ * <strong>API Note:</strong> Additional testing is required to validate the reliability and
+ * robustness of this implementation.
+ * </p>
  *
  * @author Trevor Maggs
  * @since 31 May 2025
- * @implNote This class requires additional testing to ensure full specification compliance and
- *           robustness.
  */
 public class ItemReferenceBox extends FullBox
 {

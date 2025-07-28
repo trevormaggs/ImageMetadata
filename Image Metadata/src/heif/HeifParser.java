@@ -7,7 +7,6 @@ import java.nio.file.Paths;
 import java.util.Optional;
 import common.AbstractImageParser;
 import common.BaseMetadata;
-import common.DigitalSignature;
 import common.ImageReadErrorException;
 import common.Metadata;
 import common.SequentialByteReader;
@@ -99,55 +98,44 @@ public class HeifParser extends AbstractImageParser
      *
      * @throws ImageReadErrorException
      *         if an error occurs while parsing the file
-     * @throws IOException
      */
     @Override
-    public Metadata<? extends BaseMetadata> readMetadata() throws ImageReadErrorException, IOException
+    public Metadata<? extends BaseMetadata> readMetadata() throws ImageReadErrorException
     {
         if (metadata == null)
         {
-            if (DigitalSignature.detectFormat(getImageFile()) == DigitalSignature.HEIF)
+            try
             {
-                try
+                // Use big-endian byte order as per ISO/IEC 14496-12
+                SequentialByteReader heifReader = new SequentialByteReader(readAllBytes(), HEIF_BYTE_ORDER);
+
+                handler = new BoxHandler(getImageFile(), heifReader);
+                handler.parseMetadata();
+
+                Optional<byte[]> exif = handler.getExifBlock();
+
+                if (!exif.isPresent())
                 {
-                    byte[] rawBytes = readAllBytes();
+                    LOGGER.warn("No Exif block found in file [" + getImageFile() + "]");
 
-                    // Use big-endian byte order as per ISO/IEC 14496-12
-                    SequentialByteReader heifReader = new SequentialByteReader(rawBytes, HEIF_BYTE_ORDER);
-
-                    handler = new BoxHandler(getImageFile(), heifReader);
-                    handler.parseMetadata();
-
-                    Optional<byte[]> exif = handler.getExifBlock();
-
-                    if (!exif.isPresent())
-                    {
-                        LOGGER.warn("No Exif block found in file [" + getImageFile() + "]");
-
-                        /* Fallback to empty metadata */
-                        metadata = new MetadataTIF();
-                    }
-
-                    else
-                    {
-                        metadata = new TifParser(getImageFile(), exif.get()).getMetadata();
-                    }
+                    /* Fallback to empty metadata */
+                    metadata = new MetadataTIF();
                 }
 
-                catch (IOException exc)
+                else
                 {
-                    throw new ImageReadErrorException("Failed to read HEIF file [" + getImageFile() + "]", exc);
+                    metadata = new TifParser(getImageFile(), exif.get()).getMetadata();
                 }
             }
 
-            else
+            catch (IOException exc)
             {
-                throw new ImageReadErrorException("Image file [" + getImageFile() + "] is not in HEIF format");
+                throw new ImageReadErrorException("Failed to read HEIF file [" + getImageFile() + "]", exc);
             }
-
-            // handler.displayHierarchy();
-            displayDiagnosticOutput();
         }
+
+        // handler.displayHierarchy();
+        displayDiagnosticOutput();
 
         return metadata;
     }

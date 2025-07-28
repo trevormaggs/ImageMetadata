@@ -20,10 +20,13 @@ import common.SequentialByteReader;
  * <li>1.0 – Initial release by Trevor Maggs on 2 June 2025</li>
  * </ul>
  * 
+ * <p>
+ * <strong>API Note:</strong> Additional testing is required to validate the reliability and
+ * robustness of this implementation.
+ * </p>
+ * 
  * @author Trevor Maggs
  * @since 2 June 2025
- * @implNote This implementation may require additional verification for robustness and format edge
- *           cases.
  */
 public class PixelInformationBox extends FullBox
 {

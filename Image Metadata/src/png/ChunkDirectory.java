@@ -131,7 +131,7 @@ public class ChunkDirectory implements Directory<PngChunk>
         {
             if (chunk.getType().getCategory() == ChunkType.Category.TEXTUAL)
             {
-                TextEntry pair = chunk.getKeywordPair();
+                TextEntry pair = chunk.getKeywordPair().get();
 
                 if (pair == null || !keyword.equals(pair.getKeyword()))
                 {

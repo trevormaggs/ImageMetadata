@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.zip.InflaterInputStream;
 import logger.LogFactory;
 import common.ByteValueConverter;
@@ -24,7 +25,7 @@ import common.ByteValueConverter;
  * </ul>
  *
  * @version 0.2
- * @since 21 June 2025
+ * @since 28 July 2025
  */
 public class PngChunkZTXT extends PngChunk
 {
@@ -36,29 +37,30 @@ public class PngChunkZTXT extends PngChunk
      * Constructs a {@code PngChunkZTXT} instance.
      *
      * @param length
-     *        the data length of the chunk (excluding chunk type and CRC)
-     * @param chunkType
-     *        the type of the chunk (should be {@code zTXt})
-     * @param crc
-     *        the CRC value (currently not validated)
+     *        the length of the chunk's data field (excluding type and CRC)
+     * @param typeBytes
+     *        the raw 4-byte chunk type
+     * @param crc32
+     *        the CRC value read from the file
      * @param data
-     *        the raw byte array representing the chunk contents
+     *        raw chunk data
      */
-    public PngChunkZTXT(int length, ChunkType chunkType, int crc, byte[] data)
+    public PngChunkZTXT(int length, byte[] typeBytes, int crc32, byte[] data)
     {
-        super(length, chunkType, crc, data);
+        super(length, typeBytes, crc32, data);
     }
 
     /**
      * Extracts and de-compresses the keyword-text pair from this zTXt chunk.
      *
-     * @return a {@link TextEntry} containing the keyword and the de-compressed text, or
-     *         {@code null} if parsing fails
+     * @return an {@link Optional} containing the extracted the keyword and the de-compressed text
+     *         as a {@link TextEntry} instance if present, otherwise, {@link Optional#empty()}
+     * 
      * @throws IllegalStateException
      *         if the compression method is unsupported or decompression fails
      */
     @Override
-    public TextEntry getKeywordPair()
+    public Optional<TextEntry> getKeywordPair()
     {
         byte[] data = getDataArray();
 
@@ -98,21 +100,22 @@ public class PngChunkZTXT extends PngChunk
                 text = new String(decompressed, StandardCharsets.ISO_8859_1);
             }
 
-            return new TextEntry(getTag(), keyword, text);
-
+            return Optional.of(new TextEntry(getTag(), keyword, text));
         }
+
         catch (IOException | IllegalStateException exc)
         {
-            LOGGER.error("Error parsing zTXt chunk: " + exc.getMessage());
+            LOGGER.error("Failed to parse zTXt chunk. Type: [" + getType().getChunkName() + "], Length: [" + getLength() + "]", exc);
         }
 
-        return null;
+        return Optional.empty();
     }
 
     /**
-     * Gets the keyword extracted from the iTXt chunk.
+     * Gets the keyword extracted from the zTXt chunk. <b>Note</b>, the {@link #getKeywordPair()}
+     * method must be called first before calling this method to ensure data integrity.
      *
-     * @return the keyword, or {@code null} if not yet parsed
+     * @return the text or null if not yet decoded
      */
     public String getKeyword()
     {
@@ -120,12 +123,30 @@ public class PngChunkZTXT extends PngChunk
     }
 
     /**
-     * Gets the text extracted from the iTXt chunk.
+     * Gets the text extracted from the zTXt chunk. <b>Note</b>, the {@link #getKeywordPair()}
+     * method must be called first before calling this method to ensure data integrity.
      *
-     * @return the UTF-8 text, or {@code null} if not yet parsed
+     * @return the text or null if not yet decoded
      */
     public String getText()
     {
         return text;
+    }
+
+    /**
+     * Returns a string representation of the chunk's properties and contents.
+     *
+     * @return a formatted string describing this chunk
+     */
+    @Override
+    public String toString()
+    {
+        StringBuilder line = new StringBuilder();
+
+        line.append(super.toString());
+        line.append(String.format(" %-20s %s%n", "[Keyword]", getKeyword()));
+        line.append(String.format(" %-20s %s%n", "[Text]", getText()));
+
+        return line.toString();
     }
 }

@@ -295,8 +295,11 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
      *
      * @return true if at least one HEIF box was successfully parsed and extracted, or false if no
      *         relevant boxes were found
-     * @throws IOException
+     * 
      * @throws ImageReadErrorException
+     *         if the file contains incorrect magic numbers
+     * @throws IOException
+     *         if the magic numbers cannot be determined
      */
     @Override
     public boolean parseMetadata() throws ImageReadErrorException, IOException

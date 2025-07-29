@@ -1,7 +1,6 @@
 package png;
 
 import java.nio.ByteOrder;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
@@ -29,7 +28,7 @@ public class PngChunk
     private final int length;
     private final byte[] typeBytes;
     private final int crc;
-    private final byte[] payload;
+    protected final byte[] payload;
     private final boolean ancillaryBit;
     private final boolean privateBit;
     private final boolean reservedBit;
@@ -47,11 +46,11 @@ public class PngChunk
      * @param data
      *        raw chunk data
      */
-    public PngChunk(int length, byte[] typeBytes, int crc, byte[] data)
+    public PngChunk(int length, byte[] typeBytes, int crc32, byte[] data)
     {
         this.length = length;
         this.typeBytes = Arrays.copyOf(typeBytes, typeBytes.length);
-        this.crc = crc;
+        this.crc = crc32;
         this.payload = Arrays.copyOf(data, data.length);
 
         boolean[] flags = extractPropertyBits(ByteValueConverter.toInteger(typeBytes, ByteOrder.BIG_ENDIAN));
@@ -142,11 +141,7 @@ public class PngChunk
         CRC32 crc32 = new CRC32();
 
         crc32.update(typeBytes);
-
-        if (payload != null && payload.length > 0)
-        {
-            crc32.update(payload);
-        }
+        crc32.update(payload);
 
         return (int) crc32.getValue();
     }
@@ -162,27 +157,22 @@ public class PngChunk
     }
 
     /**
-     * Checks whether this chunk contains the specified textual keyword.
+     * This method should be sub-classed by one of the textual chunks to create useful
+     * functionality.
      *
      * @param keyword
      *        the {@link TextKeyword} to search for
      *
-     * @return true if found, false otherwise
+     * @return always false by default
      */
     public boolean hasKeywordPair(TextKeyword keyword)
     {
-        if (getType().getCategory() == ChunkType.Category.TEXTUAL)
-        {
-            String str = new String(payload, StandardCharsets.ISO_8859_1);
-
-            return str.contains(keyword.getKeyword());
-        }
-
         return false;
     }
 
     /**
-     * Extracts a {@link TextEntry} from this chunk if it is textual and correctly formatted.
+     * This method should be sub-classed by one of the textual chunks to create useful
+     * functionality.
      *
      * @return always {@link Optional#empty()} by default
      */

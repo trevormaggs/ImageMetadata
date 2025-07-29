@@ -69,14 +69,13 @@ public class PngChunkITXT extends PngChunk
     @Override
     public Optional<TextEntry> getKeywordPair()
     {
-        int pos;
+        int pos = 0;
         byte[] data = getDataArray();
 
         try
         {
             // Read to length of keyword from offset 0
             keyword = ByteValueConverter.readNullTerminatedString(data, 0, StandardCharsets.ISO_8859_1);
-
             pos = keyword.length() + 1;
 
             if (pos > 80)
@@ -94,7 +93,12 @@ public class PngChunkITXT extends PngChunk
                     throw new IllegalStateException("Invalid compression flag in iTXt: expected 0 (uncompressed) or 1 (compressed). Found: [" + compressionFlag + "]");
                 }
 
-                // Read one byte after compressionFlag
+                /*
+                 * Read one byte after compressionFlag
+                 * 
+                 * Compression method is always present (even if compression flag == 0),
+                 * but only used when compressed
+                 */
                 int compressionMethod = data[pos++] & 0xFF;
 
                 if (compressionFlag == 1 && compressionMethod != 0)
@@ -108,7 +112,7 @@ public class PngChunkITXT extends PngChunk
 
                 // Read to length of Translated keyword after languageTag plus one null character
                 translatedKeyword = ByteValueConverter.readNullTerminatedString(data, pos, StandardCharsets.UTF_8);
-                pos += translatedKeyword.length() + 1;
+                pos += translatedKeyword.getBytes(StandardCharsets.UTF_8).length + 1;
 
                 // Text field (compressed or uncompressed, UTF-8)
                 if (compressionFlag == 1)
@@ -138,7 +142,7 @@ public class PngChunkITXT extends PngChunk
 
         catch (IOException | IllegalStateException exc)
         {
-            LOGGER.error("Failed to parse iTXt chunk (type: [" + getType().getChunkName() + "], length: [" + getLength() + "])", exc);
+            LOGGER.error(exc.getMessage(), exc);
         }
 
         return Optional.empty();

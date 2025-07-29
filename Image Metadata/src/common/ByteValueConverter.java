@@ -33,6 +33,8 @@ import java.util.List;
  */
 public final class ByteValueConverter
 {
+    private static final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
+
     /**
      * Default constructor is unsupported and will always throw an exception.
      *
@@ -50,7 +52,8 @@ public final class ByteValueConverter
      * @param data
      *        the byte array to examine
      * 
-     * @return true if the array contains 0x00, false otherwise
+     * @return true if the specified byte array contains a null (0x00) byte, false otherwise,
+     *         including if the input data is null
      */
     public static boolean containsNullByte(byte[] data)
     {
@@ -76,9 +79,17 @@ public final class ByteValueConverter
      *        the byte array potentially containing a null terminator
      * 
      * @return a trimmed byte array, or the original if no null terminator is found
+     * 
+     * @throws IllegalArgumentException
+     *         if the data is null
      */
     public static byte[] trimNullTerminatedByteArray(byte[] data)
     {
+        if (data == null)
+        {
+            throw new IllegalArgumentException("Data cannot be null");
+        }
+
         for (int i = 0; i < data.length; i++)
         {
             if (data[i] == 0)
@@ -101,9 +112,22 @@ public final class ByteValueConverter
      *        the charset to decode the string
      * 
      * @return the decoded string without the null terminator
+     * 
+     * @throws IllegalArgumentException
+     *         if the offset is out of bounds or the data is null
      */
     public static String readNullTerminatedString(byte[] data, int offset, Charset charset)
     {
+        if (data == null)
+        {
+            throw new IllegalArgumentException("Data cannot be null");
+        }
+
+        if (offset < 0 || offset >= data.length)
+        {
+            throw new IllegalArgumentException("Offset out of bounds detected. Should be between 0 and " + data.length + ", but found [" + offset + "]");
+        }
+
         int pos = offset;
 
         while (pos < data.length && data[pos] != 0)
@@ -111,7 +135,13 @@ public final class ByteValueConverter
             pos++;
         }
 
+        if (pos == data.length)
+        {
+            throw new IllegalStateException("Null terminator not found for string at offset [" + data.length + "]");
+        }
+
         return new String(Arrays.copyOfRange(data, offset, pos), charset);
+
     }
 
     /**
@@ -137,9 +167,17 @@ public final class ByteValueConverter
      *        the character encoding
      * 
      * @return an array of strings
+     * 
+     * @throws IllegalArgumentException
+     *         if the data is null
      */
     public static String[] splitNullDelimitedStrings(byte[] data, Charset format)
     {
+        if (data == null)
+        {
+            throw new IllegalArgumentException("Data cannot be null");
+        }
+
         int start = 0;
         List<String> result = new ArrayList<>();
 
@@ -166,6 +204,37 @@ public final class ByteValueConverter
         }
 
         return result.toArray(new String[0]);
+    }
+
+    /**
+     * Converts a byte array to a hexadecimal string representation.
+     *
+     * @param bytes
+     *        the input byte array
+     * 
+     * @return a hexadecimal string
+     * 
+     * @throws IllegalArgumentException
+     *         if the data is null
+     */
+    public static String toHex(byte[] bytes)
+    {
+        if (bytes == null)
+        {
+            throw new IllegalArgumentException("Data bytes cannot be null");
+        }
+
+        char[] hexChars = new char[bytes.length * 2];
+
+        for (int j = 0; j < bytes.length; j++)
+        {
+            int v = bytes[j] & 0xFF;
+
+            hexChars[j * 2] = HEX_ARRAY[v >>> 4];
+            hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
+        }
+
+        return new String(hexChars);
     }
 
     /**
@@ -236,6 +305,16 @@ public final class ByteValueConverter
      */
     public static short toShort(byte[] bytes, int offset, ByteOrder order)
     {
+        if (bytes == null)
+        {
+            throw new IllegalArgumentException("Data bytes cannot be null");
+        }
+
+        if (offset < 0 || offset + 2 > bytes.length)
+        {
+            throw new IllegalArgumentException("Invalid input for toShort: byte offset is out of bounds");
+        }
+
         int byte0 = bytes[offset + 0] & 0xFF;
         int byte1 = bytes[offset + 1] & 0xFF;
 
@@ -314,6 +393,16 @@ public final class ByteValueConverter
      */
     public static int toInteger(byte[] bytes, int offset, ByteOrder order)
     {
+        if (bytes == null)
+        {
+            throw new IllegalArgumentException("Data bytes cannot be null");
+        }
+
+        if (offset < 0 || offset + 4 > bytes.length)
+        {
+            throw new IllegalArgumentException("Invalid input for toInteger: byte offset is out of bounds");
+        }
+
         final int byte0 = bytes[offset + 0] & 0xFF;
         final int byte1 = bytes[offset + 1] & 0xFF;
         final int byte2 = bytes[offset + 2] & 0xFF;
@@ -401,6 +490,16 @@ public final class ByteValueConverter
      */
     public static long toLong(byte[] bytes, int offset, ByteOrder order)
     {
+        if (bytes == null)
+        {
+            throw new IllegalArgumentException("Data bytes cannot be null");
+        }
+
+        if (offset < 0 || offset + 8 > bytes.length)
+        {
+            throw new IllegalArgumentException("Invalid input for toLong: byte offset is out of bounds");
+        }
+
         long byte0 = bytes[offset + 0] & 0xFFL;
         long byte1 = bytes[offset + 1] & 0xFFL;
         long byte2 = bytes[offset + 2] & 0xFFL;
@@ -451,6 +550,16 @@ public final class ByteValueConverter
      */
     public static float toFloat(byte[] bytes, int offset, ByteOrder order)
     {
+        if (bytes == null)
+        {
+            throw new IllegalArgumentException("Data bytes cannot be null");
+        }
+
+        if (offset < 0 || offset + 4 > bytes.length)
+        {
+            throw new IllegalArgumentException("Invalid input for toFloat: byte offset is out of bounds");
+        }
+
         return Float.intBitsToFloat(toInteger(bytes, offset, order));
     }
 
@@ -487,6 +596,16 @@ public final class ByteValueConverter
      */
     public static double toDouble(byte[] bytes, int offset, ByteOrder order)
     {
+        if (bytes == null)
+        {
+            throw new IllegalArgumentException("Data bytes cannot be null");
+        }
+
+        if (offset < 0 || offset + 8 > bytes.length)
+        {
+            throw new IllegalArgumentException("Invalid input for toDouble: byte offset is out of bounds");
+        }
+
         return Double.longBitsToDouble(toLong(bytes, offset, order));
     }
 
@@ -528,24 +647,31 @@ public final class ByteValueConverter
      */
     public static RationalNumber toRational(byte[] bytes, int offset, ByteOrder order, RationalNumber.DataType type)
     {
-        int divisor;
-        int numerator;
+        if (bytes == null || offset < 0 || offset + 8 > bytes.length)
+        {
+            throw new IllegalArgumentException("Invalid input for toRational: bytes array is null, offset is out of bounds, or array is too short for 8 bytes starting at offset.");
+        }
+
         int numeratorRaw = toInteger(bytes, offset, order);
         int denominatorRaw = toInteger(bytes, offset + 4, order);
 
-        if (order == ByteOrder.BIG_ENDIAN)
-        {
-            numerator = numeratorRaw;
-            divisor = denominatorRaw;
-        }
+        return new RationalNumber(numeratorRaw, denominatorRaw, type);
+    }
 
-        else
-        {
-            numerator = denominatorRaw;
-            divisor = numeratorRaw;
-        }
-
-        return new RationalNumber(numerator, divisor, type);
+    /**
+     * Convenience method for converting an entire byte array to an integer array using the
+     * specified byte order.
+     * 
+     * @param data
+     *        the input byte array
+     * @param order
+     *        the byte order to interpret the float values
+     * 
+     * @return an array of integer values
+     */
+    public static int[] toUnsignedShortArray(byte[] data, ByteOrder order)
+    {
+        return toUnsignedShortArray(data, 0, order);
     }
 
     /**
@@ -560,7 +686,7 @@ public final class ByteValueConverter
      *        the byte order for interpreting the specified bytes, using either
      *        {@code ByteOrder.BIG_ENDIAN} or {@code ByteOrder.LITTLE_ENDIAN}
      * 
-     * @return an int array containing the unsigned short values
+     * @return an integer array containing the unsigned short values
      * @throws IllegalArgumentException
      *         if the input is null or has an invalid length
      */
@@ -582,6 +708,250 @@ public final class ByteValueConverter
         for (int i = 0; i < count; i++)
         {
             result[i] = toUnsignedShort(data, offset + (i * 2), order);
+        }
+
+        return result;
+    }
+
+    /**
+     * Convenience method for converting an entire byte array to an integer array using the
+     * specified byte order.
+     * 
+     * @param data
+     *        the input byte array
+     * @param order
+     *        the byte order to interpret the float values
+     * 
+     * @return an array of integer values
+     */
+    public static int[] toIntegerArray(byte[] data, ByteOrder order)
+    {
+        return toIntegerArray(data, 0, order);
+    }
+
+    /**
+     * Converts a byte array to an array of signed 32-bit integers, honouring the specified byte
+     * order.
+     *
+     * @param data
+     *        the input byte array
+     * @param offset
+     *        the starting offset in the byte array
+     * @param order
+     *        the byte order for interpreting the specified bytes, using either
+     *        {@code ByteOrder.BIG_ENDIAN} or {@code ByteOrder.LITTLE_ENDIAN}
+     * 
+     * @return an int array containing the signed integer values
+     * 
+     * @throws IllegalArgumentException
+     *         if the input is null, offset is out of bounds, or the remaining length is not a
+     *         multiple of 4
+     */
+    public static int[] toIntegerArray(byte[] data, int offset, ByteOrder order)
+    {
+        final int dataSize = 4;
+
+        if (data == null)
+        {
+            throw new IllegalArgumentException("Input byte array cannot be null");
+        }
+
+        if (offset < 0 || offset > data.length)
+        {
+            throw new IllegalArgumentException("Offset [" + offset + "] is out of bounds for array of length [" + data.length + "]");
+        }
+
+        final int remainingLength = data.length - offset;
+
+        if (remainingLength % dataSize != 0)
+        {
+            throw new IllegalArgumentException("Byte array length minus offset (" + remainingLength + ") must be a multiple of [" + dataSize + "] to convert to integer array");
+        }
+
+        int count = remainingLength / dataSize;
+        int[] result = new int[count];
+
+        for (int i = 0; i < count; i++)
+        {
+            result[i] = toInteger(data, offset + (i * dataSize), order);
+        }
+
+        return result;
+    }
+
+    /**
+     * Converts a byte array to an array of signed 64-bit long integers, honouring the specified
+     * byte order.
+     *
+     * @param data
+     *        the input byte array
+     * @param offset
+     *        the starting offset in the byte array
+     * @param order
+     *        the byte order for interpreting the specified bytes, using either
+     *        {@code ByteOrder.BIG_ENDIAN} or {@code ByteOrder.LITTLE_ENDIAN}
+     * 
+     * @return a long array containing the signed long values
+     * 
+     * @throws IllegalArgumentException
+     *         if the input is null, offset is out of bounds, or the remaining length is not a
+     *         multiple of 8
+     */
+    public static long[] toLongArray(byte[] data, int offset, ByteOrder order)
+    {
+        final int dataSize = 8;
+
+        if (data == null)
+        {
+            throw new IllegalArgumentException("Input byte array cannot be null");
+        }
+
+        if (offset < 0 || offset > data.length)
+        {
+            throw new IllegalArgumentException("Offset " + offset + " is out of bounds for array of length " + data.length);
+        }
+
+        final int remainingLength = data.length - offset;
+
+        if (remainingLength % dataSize != 0)
+        {
+            throw new IllegalArgumentException("Byte array length minus offset (" + remainingLength + ") must be a multiple of " + dataSize + " to convert to long array");
+        }
+
+        int count = remainingLength / dataSize;
+        long[] result = new long[count];
+
+        for (int i = 0; i < count; i++)
+        {
+            result[i] = toLong(data, offset + (i * dataSize), order);
+        }
+
+        return result;
+    }
+
+    /**
+     * Convenience method for converting an entire byte array to a float array using the specified
+     * byte order.
+     * 
+     * @param data
+     *        the input byte array
+     * @param order
+     *        the byte order to interpret the float values
+     * 
+     * @return an array of float values
+     */
+    public static float[] toFloatArray(byte[] data, ByteOrder order)
+    {
+        return toFloatArray(data, 0, order);
+    }
+
+    /**
+     * Converts a byte array to an array of 32-bit float values, honouring the specified byte order.
+     *
+     * @param data
+     *        the input byte array
+     * @param offset
+     *        the starting offset in the byte array
+     * @param order
+     *        the byte order to interpret the float values
+     * 
+     * @return an array of float values
+     *
+     * @throws IllegalArgumentException
+     *         if the input is null, offset is out of bounds, or the remaining length is not a
+     *         multiple of 4
+     */
+    public static float[] toFloatArray(byte[] data, int offset, ByteOrder order)
+    {
+        final int dataSize = 4;
+
+        if (data == null)
+        {
+            throw new IllegalArgumentException("Input byte array cannot be null");
+        }
+
+        if (offset < 0 || offset > data.length)
+        {
+            throw new IllegalArgumentException("Offset [" + offset + "] is out of bounds for array of length [" + data.length + "]");
+        }
+
+        int remaining = data.length - offset;
+
+        if (remaining % dataSize != 0)
+        {
+            throw new IllegalArgumentException("Byte array length minus offset [" + remaining + "] must be a multiple of [" + dataSize + "] to convert to float array");
+        }
+
+        int count = remaining / dataSize;
+        float[] result = new float[count];
+
+        for (int i = 0; i < count; i++)
+        {
+            result[i] = toFloat(data, offset + (i * dataSize), order);
+        }
+
+        return result;
+    }
+
+    /**
+     * Convenience method for converting an entire byte array to a double array using the specified
+     * byte order.
+     * 
+     * @param data
+     *        the input byte array
+     * @param order
+     *        the byte order to interpret the double values
+     * @return an array of double values
+     */
+    public static double[] toDoubleArray(byte[] data, ByteOrder order)
+    {
+        return toDoubleArray(data, 0, order);
+    }
+
+    /**
+     * Converts a byte array to an array of 64-bit double values, honouring the specified byte
+     * order.
+     *
+     * @param data
+     *        the input byte array
+     * @param offset
+     *        the starting offset in the byte array
+     * @param order
+     *        the byte order to interpret the double values
+     * 
+     * @return an array of double values
+     *
+     * @throws IllegalArgumentException
+     *         if the input is null, offset is out of bounds, or the remaining length is not a
+     *         multiple of 8
+     */
+    public static double[] toDoubleArray(byte[] data, int offset, ByteOrder order)
+    {
+        final int dataSize = 8;
+
+        if (data == null)
+        {
+            throw new IllegalArgumentException("Input byte array cannot be null");
+        }
+
+        if (offset < 0 || offset > data.length)
+        {
+            throw new IllegalArgumentException("Offset [" + offset + "] is out of bounds for array of length [" + data.length + "]");
+        }
+
+        int remaining = data.length - offset;
+
+        if (remaining % dataSize != 0)
+        {
+            throw new IllegalArgumentException("Byte array length minus offset [" + remaining + "] must be a multiple of [" + dataSize + "] to convert to double array");
+        }
+
+        int count = remaining / dataSize;
+        double[] result = new double[count];
+
+        for (int i = 0; i < count; i++)
+        {
+            result[i] = toDouble(data, offset + (i * dataSize), order);
         }
 
         return result;
@@ -626,32 +996,5 @@ public final class ByteValueConverter
         }
 
         return result;
-    }
-
-    // TODO: add more support for arrays of other primitive values
-
-    // TODO: Please test it
-    private static final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
-
-    /**
-     * Converts a byte array to a hexadecimal string representation.
-     *
-     * @param bytes
-     *        the input byte array
-     * @return a hexadecimal string
-     */
-    public static String toHex(byte[] bytes)
-    {
-        char[] hexChars = new char[bytes.length * 2];
-
-        for (int j = 0; j < bytes.length; j++)
-        {
-            int v = bytes[j] & 0xFF;
-
-            hexChars[j * 2] = HEX_ARRAY[v >>> 4];
-            hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
-        }
-
-        return new String(hexChars);
     }
 }

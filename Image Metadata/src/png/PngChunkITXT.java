@@ -4,7 +4,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Optional;
 import java.util.zip.InflaterInputStream;
 import common.ByteValueConverter;
 import logger.LogFactory;
@@ -15,16 +14,29 @@ import logger.LogFactory;
  * This chunk supports both compressed and uncompressed UTF-8 encoded text, along with optional
  * language and translated keyword metadata.
  *
+ * <p>
+ * The iTXt chunk layout consists of:
+ * </p>
+ *
+ * <ul>
+ * <li>Keyword (Latin-1): 1–79 bytes + null terminator</li>
+ * <li>Compression flag: 1 byte (0 = uncompressed, 1 = compressed)</li>
+ * <li>Compression method: 1 byte (must be 0 for zlib/deflate)</li>
+ * <li>Language tag (Latin-1): null-terminated string</li>
+ * <li>Translated keyword (UTF-8): null-terminated string</li>
+ * <li>Text (UTF-8): compressed or plain text depending on the compression flag</li>
+ * </ul>
+ *
  * @version 1.0
  * @since 28 July 2025
  */
 public class PngChunkITXT extends PngChunk
 {
     private static final LogFactory LOGGER = LogFactory.getLogger(PngChunkITXT.class);
-    private String keyword;
-    private String text;
-    private String languageTag;
-    private String translatedKeyword;
+    private final String keyword;
+    private final String text;
+    private final String languageTag;
+    private final String translatedKeyword;
 
     /**
      * Constructs a new {@code PngChunkITXT} with the specified parameters.
@@ -41,44 +53,20 @@ public class PngChunkITXT extends PngChunk
     public PngChunkITXT(int length, byte[] typeBytes, int crc32, byte[] data)
     {
         super(length, typeBytes, crc32, data);
-    }
 
-    /**
-     * Parses and decodes the {@code iTXt} chunk, extracting the keyword and its associated
-     * UTF-8 encoded text content.
-     *
-     * <p>
-     * The iTXt chunk layout consists of:
-     * </p>
-     *
-     * <ul>
-     * <li>Keyword (Latin-1): 1–79 bytes + null terminator</li>
-     * <li>Compression flag: 1 byte (0 = uncompressed, 1 = compressed)</li>
-     * <li>Compression method: 1 byte (must be 0 for zlib/deflate)</li>
-     * <li>Language tag (Latin-1): null-terminated string</li>
-     * <li>Translated keyword (UTF-8): null-terminated string</li>
-     * <li>Text (UTF-8): compressed or plain text depending on the compression flag</li>
-     * </ul>
-     *
-     * @return an {@link Optional} containing the extracted keyword and text as a {@link TextEntry}
-     *         instance if present, otherwise, {@link Optional#empty()}
-     *
-     * @throws IllegalStateException
-     *         if the structure is malformed or decompression fails
-     */
-    @Override
-    public Optional<TextEntry> getKeywordPair()
-    {
         int pos = 0;
-        byte[] data = getDataArray();
+        String parsedKeyword;
+        String parsedText;
+        String parsedLanguage;
+        String parsedTranslated;
 
         try
         {
             // Read to length of keyword from offset 0
-            keyword = ByteValueConverter.readNullTerminatedString(data, 0, StandardCharsets.ISO_8859_1);
-            pos = keyword.length() + 1;
+            parsedKeyword = ByteValueConverter.readNullTerminatedString(data, 0, StandardCharsets.ISO_8859_1);
+            pos = parsedKeyword.length() + 1;
 
-            if (pos > 80)
+            if (parsedKeyword.isEmpty() || pos > 80)
             {
                 throw new IllegalStateException("Invalid iTXt keyword length (must be 1–79 characters)");
             }
@@ -95,7 +83,7 @@ public class PngChunkITXT extends PngChunk
 
                 /*
                  * Read one byte after compressionFlag
-                 * 
+                 *
                  * Compression method is always present (even if compression flag == 0),
                  * but only used when compressed
                  */
@@ -107,12 +95,12 @@ public class PngChunkITXT extends PngChunk
                 }
 
                 // Read to length of language after compressionMethod
-                languageTag = ByteValueConverter.readNullTerminatedString(data, pos, StandardCharsets.ISO_8859_1);
-                pos += languageTag.length() + 1;
+                parsedLanguage = ByteValueConverter.readNullTerminatedString(data, pos, StandardCharsets.ISO_8859_1);
+                pos += parsedLanguage.length() + 1;
 
                 // Read to length of Translated keyword after languageTag plus one null character
-                translatedKeyword = ByteValueConverter.readNullTerminatedString(data, pos, StandardCharsets.UTF_8);
-                pos += translatedKeyword.getBytes(StandardCharsets.UTF_8).length + 1;
+                parsedTranslated = ByteValueConverter.readNullTerminatedString(data, pos, StandardCharsets.UTF_8);
+                pos += parsedTranslated.getBytes(StandardCharsets.UTF_8).length + 1;
 
                 // Text field (compressed or uncompressed, UTF-8)
                 if (compressionFlag == 1)
@@ -122,16 +110,14 @@ public class PngChunkITXT extends PngChunk
                     try (InflaterInputStream inflater = new InflaterInputStream(new ByteArrayInputStream(compressed)))
                     {
                         byte[] decompressed = ByteValueConverter.readAllBytes(inflater);
-                        text = new String(decompressed, StandardCharsets.UTF_8);
+                        parsedText = new String(decompressed, StandardCharsets.UTF_8);
                     }
                 }
 
                 else
                 {
-                    text = new String(data, pos, data.length - pos, StandardCharsets.UTF_8);
+                    parsedText = new String(data, pos, data.length - pos, StandardCharsets.UTF_8);
                 }
-
-                return Optional.of(new TextEntry(getTag(), keyword, text));
             }
 
             else
@@ -142,17 +128,48 @@ public class PngChunkITXT extends PngChunk
 
         catch (IOException | IllegalStateException exc)
         {
-            LOGGER.error(exc.getMessage(), exc);
+            LOGGER.error(exc.getMessage() + ". Payload: [" + ByteValueConverter.toHex(payload) + "]", exc);
+
+            this.keyword = "";
+            this.text = "";
+            this.languageTag = "";
+            this.translatedKeyword = "";
+
+            return;
         }
 
-        return Optional.empty();
+        this.keyword = parsedKeyword;
+        this.text = parsedText;
+        this.languageTag = parsedLanguage;
+        this.translatedKeyword = parsedTranslated;
     }
 
     /**
-     * Gets the keyword extracted from the iTXt chunk. <b>Note</b>, the {@link #getKeywordPair()}
-     * method must be called first before calling this method to ensure data integrity.
+     * Checks whether this chunk contains the specified textual keyword.
      *
-     * @return the keyword or null if not yet parsed
+     * @param keyword
+     *        the {@link TextKeyword} to search for
+     *
+     * @return true if found, false otherwise
+     *
+     * @throws IllegalArgumentException
+     *         if the specified keyword is null
+     */
+    @Override
+    public boolean hasKeywordPair(TextKeyword keyword)
+    {
+        if (keyword == null || keyword.getKeyword() == null)
+        {
+            throw new IllegalArgumentException("Keyword cannot be null");
+        }
+
+        return keyword.getKeyword().equals(this.keyword);
+    }
+
+    /**
+     * Gets the keyword extracted from the iTXt chunk.
+     *
+     * @return the keyword
      */
     public String getKeyword()
     {
@@ -160,10 +177,9 @@ public class PngChunkITXT extends PngChunk
     }
 
     /**
-     * Gets the text extracted from the iTXt chunk. <b>Note</b>, the {@link #getKeywordPair()}
-     * method must be called first before calling this method to ensure data integrity.
+     * Gets the text extracted from the iTXt chunk.
      *
-     * @return the UTF-8 text or null if not yet parsed
+     * @return the UTF-8 text
      */
     public String getText()
     {
@@ -171,11 +187,9 @@ public class PngChunkITXT extends PngChunk
     }
 
     /**
-     * Gets the language tag extracted from the iTXt chunk. <b>Note</b>, the
-     * {@link #getKeywordPair()} method must be called first before calling this method to ensure
-     * data integrity.
+     * Gets the language tag extracted from the iTXt chunk.
      *
-     * @return the language tag or null if not yet parsed
+     * @return the language tag
      */
     public String getLanguageTag()
     {
@@ -183,11 +197,9 @@ public class PngChunkITXT extends PngChunk
     }
 
     /**
-     * Gets the translated keyword extracted from the iTXt chunk. <b>Note</b>, the
-     * {@link #getKeywordPair()} method must be called first before calling this method to ensure
-     * data integrity.
+     * Gets the translated keyword extracted from the iTXt chunk.
      *
-     * @return the translated keyword or null if not yet parsed
+     * @return the translated keyword
      */
     public String getTranslatedKeyword()
     {

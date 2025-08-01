@@ -72,18 +72,30 @@ public final class ByteValueConverter
     }
 
     /**
-     * Removes the first null terminator (0x00) from a byte array and returns a trimmed copy.
-     * Only the first null is considered, the remaining bytes are ignored.
+     * Extracts a byte array segment terminated by the first null ({@code 0x00}) byte.
+     *
+     * <p>
+     * This method searches for the first occurrence of a null byte ({@code 0x00}) in the specified
+     * {@code data} array. If a null byte is found, it returns a new array containing all bytes from
+     * the beginning of {@code data} up to, but not including, the first null byte. Any bytes after
+     * the first null terminator are ignored.
+     * </p>
+     *
+     * <p>
+     * If no null byte is found in the {@code data} array, a copy of the entire original
+     * {@code data} array is returned.
+     * </p>
      *
      * @param data
-     *        the byte array potentially containing a null terminator
+     *        The input byte array to be searched for a null terminator. Must not be {@code null}
      * 
-     * @return a trimmed byte array, or the original if no null terminator is found
+     * @return A new byte array containing the segment before the first null terminator, or a copy
+     *         of the entire original array if no null terminator is present.
      * 
      * @throws IllegalArgumentException
-     *         if the data is null
+     *         If the data parameter is null
      */
-    public static byte[] trimNullTerminatedByteArray(byte[] data)
+    public static byte[] readFirstNullTerminatedByteArray(byte[] data)
     {
         if (data == null)
         {
@@ -98,7 +110,7 @@ public final class ByteValueConverter
             }
         }
 
-        return data;
+        return Arrays.copyOf(data, data.length);
     }
 
     /**
@@ -214,27 +226,31 @@ public final class ByteValueConverter
      * 
      * @return a hexadecimal string
      * 
-     * @throws IllegalArgumentException
+     * @throws NullPointerException
      *         if the data is null
      */
     public static String toHex(byte[] bytes)
     {
+        StringBuilder sb = new StringBuilder();
+
         if (bytes == null)
         {
-            throw new IllegalArgumentException("Data bytes cannot be null");
+            throw new NullPointerException("Data bytes cannot be null");
         }
-
-        char[] hexChars = new char[bytes.length * 2];
 
         for (int j = 0; j < bytes.length; j++)
         {
             int v = bytes[j] & 0xFF;
 
-            hexChars[j * 2] = HEX_ARRAY[v >>> 4];
-            hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
+            sb.append("0x").append(HEX_ARRAY[v >>> 4]).append(HEX_ARRAY[v & 0x0F]);
+
+            if (j < bytes.length - 1)
+            {
+                sb.append(" ");
+            }
         }
 
-        return new String(hexChars);
+        return sb.toString();
     }
 
     /**
@@ -628,22 +644,30 @@ public final class ByteValueConverter
     }
 
     /**
-     * Because Java does not support the use of unsigned types, this takes care of reading the
-     * content of the specified 8-byte array and converting into a RationalNumber object.
+     * Reads an 8-byte segment from the specified byte array at the given offset and converts it
+     * into a {@link RationalNumber} object.
+     * 
+     * The first four bytes represent the numerator and the next four bytes represent the
+     * denominator, interpreted according to the specified byte order and data type (signed or
+     * unsigned).
      *
      * @param bytes
-     *        a byte array containing at least 8 bytes
+     *        a byte array containing at least 8 bytes from the offset
      * @param offset
-     *        the offset at which the position of the byte array starts
+     *        the offset at which to start reading the 8-byte segment
      * @param order
      *        the byte order for interpreting the specified bytes, using either
      *        {@code ByteOrder.BIG_ENDIAN} or {@code ByteOrder.LITTLE_ENDIAN}
      * @param type
-     *        indicates whether the specified values are to be treated as unsigned or not. It can
-     *        only be either {@code RationalNumber.DateType.UNSIGNED} or
-     *        {@code RationalNumber.DateType.SIGNED}
+     *        indicates whether the values should be treated as signed or unsigned. It can only be
+     *        either {@code RationalNumber.DataType.UNSIGNED} or
+     *        {@code RationalNumber.DataType.SIGNED}
      * 
      * @return a new RationalNumber object
+     * 
+     * @throws IllegalArgumentException
+     *         if the {@code bytes} array is null, the {@code offset} is out of bounds, or the array
+     *         is too short to read 8 bytes starting at the offset
      */
     public static RationalNumber toRational(byte[] bytes, int offset, ByteOrder order, RationalNumber.DataType type)
     {
@@ -996,5 +1020,29 @@ public final class ByteValueConverter
         }
 
         return result;
+    }
+
+    // Safe operation to add values
+    public static int add(int...values)
+    {
+        int sum = 0;
+
+        if (values == null || values.length < 2)
+        {
+            throw new IllegalArgumentException("You must provide at least two elements to be added");
+        }
+
+        for (int value : values)
+        {
+            // Manual overflow check for each addition
+            if (((value > 0) && (sum > Integer.MAX_VALUE - value)) || ((value < 0) && (sum < Integer.MIN_VALUE - value)))
+            {
+                throw new ArithmeticException("Integer overflow error");
+            }
+
+            sum += value;
+        }
+
+        return sum;
     }
 }

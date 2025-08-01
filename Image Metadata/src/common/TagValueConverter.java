@@ -31,6 +31,7 @@ public final class TagValueConverter
      *
      * @param entry
      *        the EntryIFD object
+     * 
      * @return the string representation of the entry’s value
      */
     public static String toStringValue(EntryIFD entry)
@@ -67,7 +68,7 @@ public final class TagValueConverter
                 switch (hint)
                 {
                     case HINT_STRING:
-                        return new String(ByteValueConverter.trimNullTerminatedByteArray(bytes), StandardCharsets.UTF_8);
+                        return new String(ByteValueConverter.readFirstNullTerminatedByteArray(bytes), StandardCharsets.UTF_8);
 
                     case HINT_BYTE:
                         StringBuilder sb = new StringBuilder();
@@ -98,6 +99,7 @@ public final class TagValueConverter
      *
      * @param entry
      *        the EntryIFD object
+     * 
      * @return the numeric value as a Number, or 0 if not applicable
      */
     public static Number toNumericValue(EntryIFD entry)

@@ -457,7 +457,7 @@ public class DirectoryIFD implements Directory<EntryIFD>
                     return value;
 
                 case TYPE_ASCII:
-                    String str = new String(ByteValueConverter.trimNullTerminatedByteArray(value), StandardCharsets.UTF_8);
+                    String str = new String(ByteValueConverter.readFirstNullTerminatedByteArray(value), StandardCharsets.UTF_8);
                     return str.isEmpty() ? new String[0] : str;
 
                 case TYPE_SHORT_U:

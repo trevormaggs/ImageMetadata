@@ -276,7 +276,6 @@ public class ChunkHandler implements ImageHandler
             {
                 /* Skipped the full data length plus 4 bytes for CRC length */
                 reader.skip(length + 4);
-
                 LOGGER.warn("Unknown chunk type [" + chunkType + "] detected. Skipped");
             }
 

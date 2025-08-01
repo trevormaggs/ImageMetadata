@@ -73,7 +73,7 @@ public class HandlerBox extends FullBox
          * 20 bytes - from this box
          */
         byte[] b = reader.readBytes((int) box.getBoxSize() - 32);
-        name = new String(ByteValueConverter.trimNullTerminatedByteArray(b), StandardCharsets.UTF_8);
+        name = new String(ByteValueConverter.readFirstNullTerminatedByteArray(b), StandardCharsets.UTF_8);
 
         byteUsed += reader.getCurrentPosition() - pos;
     }

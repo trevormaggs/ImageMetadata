@@ -6,6 +6,7 @@ import heif.HeifParser;
 import jpg.JpgParser;
 import png.PngParser;
 import tif.TifParser;
+import webp.WebpParser;
 
 /**
  * A static factory class responsible for returning appropriate image parser instances based on the
@@ -77,7 +78,7 @@ public final class ImageParserFactory
             case HEIF:
                 return new HeifParser(fpath);
             case WEBP:
-                throw new UnsupportedOperationException("WebP support not implemented yet");
+                return new WebpParser(fpath);
             default:
                 throw new UnsupportedOperationException("Unsupported image format detected [" + fpath.getFileName() + "]");
         }

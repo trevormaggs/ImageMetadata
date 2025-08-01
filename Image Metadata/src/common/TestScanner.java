@@ -88,9 +88,10 @@ public final class TestScanner
         try
         {
             // TestScanner scanner = TestScanner.loadImage("img\\gemmapreg.tif");
-            TestScanner scanner = TestScanner.loadImage("img\\testPNGimage.png");
+            // TestScanner scanner = TestScanner.loadImage("img\\testPNGimage.png");
             // TestScanner scanner = TestScanner.loadImage("img\\pool19.jpg");
             // TestScanner scanner = TestScanner.loadImage("img\\IMG_0831.HEIC");
+            TestScanner scanner = TestScanner.loadImage("img\\SandroBotticelli.webp");
 
             Metadata<?> meta = scanner.readMetadata();
 

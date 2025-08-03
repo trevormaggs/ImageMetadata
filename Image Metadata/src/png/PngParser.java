@@ -97,7 +97,7 @@ import tif.TifParser;
 public class PngParser extends AbstractImageParser
 {
     private static final LogFactory LOGGER = LogFactory.getLogger(PngParser.class);
-    public static final ByteOrder PNG_BYTE_ORDER = ByteOrder.BIG_ENDIAN;
+    private static final ByteOrder PNG_BYTE_ORDER = ByteOrder.BIG_ENDIAN;
 
     /**
      * This default constructor should not be invoked, or it will throw an exception to prevent
@@ -155,6 +155,7 @@ public class PngParser extends AbstractImageParser
      * See https://www.w3.org/TR/png/#11keywords for more information.
      *
      * @return a Metadata object containing extracted metadata
+     * 
      * @throws ImageReadErrorException
      *         in case of processing errors
      * @throws IOException
@@ -171,9 +172,9 @@ public class PngParser extends AbstractImageParser
             // Use big-endian byte order as per Specifications
             SequentialByteReader pngReader = new SequentialByteReader(readAllBytes(), PNG_BYTE_ORDER);
             Metadata<BaseMetadata> png = new MetadataPNG<>();
-            ChunkHandler handler = new ChunkHandler(getImageFile(), pngReader, chunkSet);
+            ChunkHandler handler = new ChunkHandler(pngReader, chunkSet);
 
-            handler.parseMetadata();
+            handler.parseMetadata(getImageFile());
 
             // Obtain textual information if present
             Optional<List<PngChunk>> textual = handler.getTextualData();

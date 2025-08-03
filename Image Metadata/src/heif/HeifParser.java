@@ -4,9 +4,11 @@ import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Objects;
 import java.util.Optional;
 import common.AbstractImageParser;
 import common.BaseMetadata;
+import common.DigitalSignature;
 import common.ImageReadErrorException;
 import common.Metadata;
 import common.SequentialByteReader;
@@ -97,22 +99,31 @@ public class HeifParser extends AbstractImageParser
      *         found, returns an empty metadata instance
      *
      * @throws ImageReadErrorException
-     *         if an error occurs while parsing the file
+     *         in case of processing errors
+     * @throws IOException
+     *         if the file is not in HEIF format
      */
     @Override
-    public Metadata<? extends BaseMetadata> readMetadata() throws ImageReadErrorException
+    public Metadata<? extends BaseMetadata> readMetadata() throws ImageReadErrorException, IOException
     {
         if (metadata == null)
         {
+            if (DigitalSignature.detectFormat(getImageFile()) != DigitalSignature.HEIF)
+            {
+                throw new ImageReadErrorException("Invalid HEIF signature detected in file [" + getImageFile() + "]");
+            }
+
             try
             {
+                byte[] bytes = Objects.requireNonNull(readAllBytes(), "Input bytes are null");
+
                 // Use big-endian byte order as per ISO/IEC 14496-12
-                SequentialByteReader heifReader = new SequentialByteReader(readAllBytes(), HEIF_BYTE_ORDER);
+                SequentialByteReader heifReader = new SequentialByteReader(bytes, HEIF_BYTE_ORDER);
 
                 handler = new BoxHandler(getImageFile(), heifReader);
                 handler.parseMetadata();
 
-                Optional<byte[]> exif = handler.getExifBlock();
+                Optional<byte[]> exif = handler.getExifData();
 
                 if (!exif.isPresent())
                 {
@@ -135,7 +146,7 @@ public class HeifParser extends AbstractImageParser
         }
 
         // handler.displayHierarchy();
-        displayDiagnosticOutput();
+        // displayDiagnosticOutput();
 
         return metadata;
     }

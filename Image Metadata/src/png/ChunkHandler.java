@@ -3,6 +3,7 @@ package png;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
@@ -38,8 +39,8 @@ import png.ChunkType.Category;
 public class ChunkHandler implements ImageHandler
 {
     private static final LogFactory LOGGER = LogFactory.getLogger(ChunkHandler.class);
+    private final byte[] PNG_SIGNATURE_BYTES = DigitalSignature.PNG.getMagicNumbers(0);
     private static final boolean STRICTMODE = false;
-    private final Path imageFile;
     private final SequentialByteReader reader;
     private final EnumSet<ChunkType> requiredChunks;
     private final List<PngChunk> chunks;
@@ -58,16 +59,13 @@ public class ChunkHandler implements ImageHandler
     /**
      * Constructs a handler to parse selected chunks from a PNG image file.
      *
-     * @param fpath
-     *        the PNG file path
      * @param reader
      *        byte reader for raw PNG stream
      * @param requiredChunks
      *        an optional set of chunk types to be extracted (null means all chunks are selected)
      */
-    public ChunkHandler(Path fpath, SequentialByteReader reader, EnumSet<ChunkType> requiredChunks)
+    public ChunkHandler(SequentialByteReader reader, EnumSet<ChunkType> requiredChunks)
     {
-        this.imageFile = fpath;
         this.reader = reader;
         this.requiredChunks = requiredChunks;
         this.chunks = new ArrayList<>();
@@ -127,7 +125,7 @@ public class ChunkHandler implements ImageHandler
         {
             if (chunk.getType() == ChunkType.eXIf)
             {
-                return Optional.of(chunk.getDataArray());
+                return Optional.of(chunk.getPayloadArray());
             }
         }
 
@@ -135,8 +133,27 @@ public class ChunkHandler implements ImageHandler
     }
 
     /**
-     * Begins metadata processing by parsing the PNG file and extracting chunk data.
+     * Checks if a chunk with the specified type has already been set.
      *
+     * @param type
+     *        the type of the chunk
+     *
+     * @return true if the chunk is already present
+     */
+    public boolean existsChunk(ChunkType type)
+    {
+        return chunks.stream().anyMatch(chunk -> chunk.getType() == type);
+    }
+
+    /**
+     * Begins metadata processing by parsing the PNG file and extracting chunk data.
+     * 
+     * It also checks if the PNG file contains the expected magic numbers in the first few bytes in
+     * the file stream. If these numbers actually exist, they will then be skipped.
+     *
+     * @param imageFile
+     *        the image file path
+     * 
      * @return true if at least one chunk element was successfully extracted, or false if no
      *         relevant data was found
      *
@@ -146,10 +163,21 @@ public class ChunkHandler implements ImageHandler
      *         if there is a problem reading the PNG file
      */
     @Override
-    public boolean parseMetadata() throws ImageReadErrorException, IOException
+    public boolean parseMetadata(Path imageFile) throws ImageReadErrorException, IOException
     {
-        verifySignature();
-        readChunks();
+        byte[] data = reader.peek(0, PNG_SIGNATURE_BYTES.length);
+
+        /*
+         * Note: PNG_SIGNATURE_BYTES (magic numbers) are mapped to
+         * {0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'}
+         */
+        if (data.length >= PNG_SIGNATURE_BYTES.length && Arrays.equals(Arrays.copyOf(data, PNG_SIGNATURE_BYTES.length), PNG_SIGNATURE_BYTES))
+        {
+            // Skip the actual PNG magic bytes safely
+            reader.skip(PNG_SIGNATURE_BYTES.length);
+        }
+
+        readChunks(imageFile);
 
         if (chunks.isEmpty())
         {
@@ -179,39 +207,16 @@ public class ChunkHandler implements ImageHandler
     }
 
     /**
-     * Checks if the PNG file contains the expected magic numbers in the first few bytes in
-     * the file stream. If these numbers are correctly verified, they will then be skipped.
-     *
-     * <p>
-     * Note: PNG_SIGNATURE_BYTES (magic numbers) are mapped to
-     * {0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'}
-     * </p>
-     *
-     * @throws ImageReadErrorException
-     *         if the file contains incorrect magic numbers
-     * @throws IOException
-     *         if the magic numbers cannot be determined
-     */
-    private void verifySignature() throws ImageReadErrorException, IOException
-    {
-        if (DigitalSignature.detectFormat(imageFile) != DigitalSignature.PNG)
-        {
-            throw new ImageReadErrorException("Invalid PNG signature detected in file [" + imageFile + "]");
-        }
-
-        int[] sig = DigitalSignature.PNG.getMagicNumbers(0);
-
-        // Skip the actual PNG magic bytes safely
-        reader.skip(sig.length);
-    }
-
-    /**
      * Processes the PNG data stream and extracts matching chunk types into memory.
+     * 
+     * @param imageFile
+     *        the image file path
      *
      * @throws ImageReadErrorException
-     *         if invalid structure or duplicate chunks are found
+     *         if invalid structure or duplicate chunks are found, including a CRC calculation
+     *         mismatch error
      */
-    private void readChunks() throws ImageReadErrorException
+    private void readChunks(Path imageFile) throws ImageReadErrorException
     {
         int position = 0;
         byte[] typeBytes;
@@ -267,7 +272,25 @@ public class ChunkHandler implements ImageHandler
 
                 if (chunkData != null)
                 {
-                    addChunk(chunkType, length, typeBytes, crc32, chunkData);
+                    PngChunk newChunk = addChunk(chunkType, length, typeBytes, crc32, chunkData);
+
+                    int expectedCrc = newChunk.calculateCrc();
+
+                    if (expectedCrc != crc32)
+                    {
+                        String msg = String.format("CRC mismatch for chunk [%s] in file [%s]. Calculated: 0x%08X, Expected: 0x%08X. File may be corrupt.", chunkType, imageFile, expectedCrc, crc32);
+
+                        if (STRICTMODE)
+                        {
+                            throw new ImageReadErrorException(msg);
+                        }
+
+                        else
+                        {
+                            LOGGER.warn(msg);
+                        }
+                    }
+
                     LOGGER.debug("Chunk type [" + chunkType + "] added for file [" + imageFile + "]");
                 }
             }
@@ -276,7 +299,7 @@ public class ChunkHandler implements ImageHandler
             {
                 /* Skipped the full data length plus 4 bytes for CRC length */
                 reader.skip(length + 4);
-                LOGGER.warn("Unknown chunk type [" + chunkType + "] detected. Skipped");
+                LOGGER.warn("Unknown chunk type [" + chunkType + "] skipped");
             }
 
             position++;
@@ -298,11 +321,8 @@ public class ChunkHandler implements ImageHandler
      *        the CRC value read from the file
      * @param data
      *        raw chunk data
-     * 
-     * @throws ImageReadErrorException
-     *         if there is a CRC calculation mismatch error
      */
-    private void addChunk(ChunkType chunkType, int length, byte[] typeBytes, int crc32, byte[] data) throws ImageReadErrorException
+    private PngChunk addChunk(ChunkType chunkType, int length, byte[] typeBytes, int crc32, byte[] data) throws ImageReadErrorException
     {
         PngChunk newChunk;
 
@@ -324,36 +344,8 @@ public class ChunkHandler implements ImageHandler
                 newChunk = new PngChunk(length, typeBytes, crc32, data);
         }
 
-        int expectedCrc = newChunk.calculateCrc();
-
-        if (expectedCrc != crc32)
-        {
-            String msg = String.format("CRC mismatch for chunk [%s] in file [%s]. Calculated: 0x%08X, Expected: 0x%08X. File may be corrupt.", chunkType, imageFile, expectedCrc, crc32);
-
-            if (STRICTMODE)
-            {
-                throw new ImageReadErrorException(msg);
-            }
-
-            else
-            {
-                LOGGER.warn(msg);
-            }
-        }
-
         chunks.add(newChunk);
-    }
 
-    /**
-     * Checks if a chunk with the specified type has already been set.
-     *
-     * @param type
-     *        the type of the chunk
-     *
-     * @return true if the chunk is already present
-     */
-    private boolean existsChunk(ChunkType type)
-    {
-        return chunks.stream().anyMatch(chunk -> chunk.getType() == type);
+        return newChunk;
     }
 }

@@ -6,17 +6,20 @@ import static webp.WebPChunkType.VP8L;
 import static webp.WebPChunkType.VP8X;
 import static webp.WebPChunkType.WEBP;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Optional;
 import common.ByteValueConverter;
-import common.DigitalSignature;
 import common.ImageHandler;
 import common.ImageReadErrorException;
 import common.SequentialByteReader;
+import jpg.JpgParser;
 import logger.LogFactory;
 
 /**
@@ -31,17 +34,17 @@ public class WebpHandler implements ImageHandler
 {
     private static final LogFactory LOGGER = LogFactory.getLogger(WebpHandler.class);
     private static final EnumSet<WebPChunkType> FIRST_CHUNK_TYPES = EnumSet.of(VP8, VP8L, VP8X);
-    private final Path imageFile;
     private final SequentialByteReader reader;
     private final List<WebpChunk> chunks;
     private final EnumSet<WebPChunkType> requiredChunks;
-    private int fileSize;
+    private final int fileSize;
 
     /**
-     * This default constructor should not be used. It always throws an exception.
+     * This default constructor should not be invoked, or it will throw an exception to prevent
+     * instantiation.
      *
      * @throws UnsupportedOperationException
-     *         always thrown to prevent misuse
+     *         to indicate that instantiation is not supported
      */
     public WebpHandler()
     {
@@ -50,20 +53,21 @@ public class WebpHandler implements ImageHandler
 
     /**
      * Constructs a handler to parse selected chunks from a WebP image file.
-     *
-     * @param fpath
-     *        the WebP file path
+     * 
      * @param reader
      *        byte reader for raw WebP stream
      * @param requiredChunks
      *        an optional set of chunk types to be extracted (null means all chunks are selected)
+     *
+     * @throws IllegalStateException
+     *         if the WebP header information is corrupted
      */
-    public WebpHandler(Path fpath, SequentialByteReader reader, EnumSet<WebPChunkType> requiredChunks)
+    public WebpHandler(SequentialByteReader reader, EnumSet<WebPChunkType> requiredChunks)
     {
-        this.imageFile = fpath;
         this.reader = reader;
         this.chunks = new ArrayList<>();
         this.requiredChunks = requiredChunks;
+        this.fileSize = readFileHeader(reader);
     }
 
     /**
@@ -98,6 +102,43 @@ public class WebpHandler implements ImageHandler
     }
 
     /**
+     * Retrieves the embedded EXIF data from the WebP file, if present.
+     *
+     * <p>
+     * The EXIF metadata is stored in the {@code EXIF} chunk as raw TIFF-formatted data. If the WebP
+     * file contains an {@code EXIF} chunk, its byte array is returned wrapped in {@link Optional}.
+     * If no {@code EXIF} chunk exists, {@link Optional#empty()} is returned.
+     * </p>
+     *
+     * @return an {@link Optional} containing the EXIF data as a byte array if found, or
+     *         {@link Optional#empty()} if absent
+     */
+    public Optional<byte[]> getExifData()
+    {
+        for (WebpChunk chunk : chunks)
+        {
+            if (chunk.getType() == WebPChunkType.EXIF)
+            {
+                byte[] data = chunk.getPayloadArray();
+
+                /*
+                 * According to research on other sources, it seems sometimes the WebP files happen
+                 * to contain the JPG premable within the TIFF header block for some strange
+                 * reasons, the snippet below makes sure the JPEG segment is skipped.
+                 */
+                if (data.length >= JpgParser.JPG_EXIF_IDENTIFIER.length && Arrays.equals(Arrays.copyOf(data, JpgParser.JPG_EXIF_IDENTIFIER.length), JpgParser.JPG_EXIF_IDENTIFIER))
+                {
+                    data = Arrays.copyOfRange(data, JpgParser.JPG_EXIF_IDENTIFIER.length, data.length);
+                }
+
+                return Optional.of(data);
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    /**
      * Begins metadata processing by parsing the WebP file and extracting chunk data.
      *
      * @return true if at least one chunk element was successfully extracted, or false if no
@@ -109,11 +150,16 @@ public class WebpHandler implements ImageHandler
      *         if there is a problem reading the file
      */
     @Override
-    public boolean parseMetadata() throws ImageReadErrorException, IOException
+    public boolean parseMetadata(Path imageFile) throws ImageReadErrorException, IOException
     {
-        verifySignature();
-        readFileHeader();
-        readChunk();
+        long fileLength = Files.size(imageFile);
+
+        if (fileLength < fileSize)
+        {
+            throw new ImageReadErrorException("Declared file size exceeds actual file length.");
+        }
+
+        readChunk(imageFile);
 
         if (chunks.isEmpty())
         {
@@ -143,23 +189,6 @@ public class WebpHandler implements ImageHandler
     }
 
     /**
-     * Checks if the WebP file contains the expected magic numbers in the first few bytes in the
-     * stream data. If these numbers are correctly verified, no exception will be thrown.
-     *
-     * @throws ImageReadErrorException
-     *         if the file contains incorrect magic numbers
-     * @throws IOException
-     *         if the magic numbers cannot be determined
-     */
-    private void verifySignature() throws ImageReadErrorException, IOException
-    {
-        if (DigitalSignature.detectFormat(imageFile) != DigitalSignature.WEBP)
-        {
-            throw new ImageReadErrorException("Invalid WebP signature detected in file [" + imageFile + "]");
-        }
-    }
-
-    /**
      * Adds a parsed chunk to the internal chunk collection.
      *
      * @param fourCC
@@ -168,53 +197,17 @@ public class WebpHandler implements ImageHandler
      *        the length of the chunk's payload
      * @param data
      *        raw chunk data
-     *
-     * @throws ImageReadErrorException
-     *         if a duplicate chunk is found. Multiple chunks of the same type are not allowed
      */
     private void addChunk(int fourCC, int length, byte[] data) throws ImageReadErrorException
     {
-        if (existsChunk(WebPChunkType.findType(fourCC)))
-        {
-            throw new ImageReadErrorException("Duplicate chunk detected [" + fourCC + "]");
-        }
+        WebPChunkType type = WebPChunkType.findType(fourCC);
 
-        System.out.printf("fourCC = %s\n", WebPChunkType.findType(fourCC));
+        if (!type.isMultipleAllowed() && existsChunk(type))
+        {
+            LOGGER.warn("Duplicate chunk detected [" + type + "]");
+        }
 
         chunks.add(new WebpChunk(fourCC, length, data));
-        LOGGER.debug("Chunk type [" + WebPChunkType.findType(fourCC) + "] added for file [" + imageFile + "]");
-    }
-
-    /**
-     * Read the file header of the given WebP file. Basically, it checks for correct RIFF and WEBP
-     * signature entries within the first few stream bytes. It also determines the full size of this
-     * file.
-     *
-     * @throws ImageReadErrorException
-     *         if the WebP header information is corrupted
-     */
-    private void readFileHeader() throws ImageReadErrorException
-    {
-        byte[] type = reader.readBytes(4);
-
-        if (!Arrays.equals(RIFF.getChunkName().getBytes(), type))
-        {
-            throw new ImageReadErrorException("Header [RIFF] not found in file [" + imageFile + "]. Found [" + ByteValueConverter.toHex(type) + "]. Not a valid WEBP format");
-        }
-
-        fileSize = (int) reader.readUnsignedInteger();
-
-        if (fileSize < 0)
-        {
-            throw new ImageReadErrorException("File [" + imageFile + "] has a negative size. Found [" + fileSize + "] bytes");
-        }
-
-        type = reader.readBytes(4);
-
-        if (!Arrays.equals(WEBP.getChunkName().getBytes(), type))
-        {
-            throw new ImageReadErrorException("Chunk type [WEBP] not found in file [" + imageFile + "]. Found [" + ByteValueConverter.toHex(type) + "]. Not a valid WEBP format");
-        }
     }
 
     /**
@@ -223,7 +216,7 @@ public class WebpHandler implements ImageHandler
      * @throws ImageReadErrorException
      *         if invalid structure or erroneous chunks are detected
      */
-    private void readChunk() throws ImageReadErrorException
+    private void readChunk(Path imageFile) throws ImageReadErrorException
     {
         byte[] data;
         boolean firstChunk = true;
@@ -235,7 +228,7 @@ public class WebpHandler implements ImageHandler
 
             WebPChunkType chunkType = WebPChunkType.findType(fourCC);
 
-            if (payloadLength < 0)
+            if (payloadLength < 0 || payloadLength > fileSize)
             {
                 throw new ImageReadErrorException("Chunk Payload too large. Found [" + payloadLength + "]");
             }
@@ -255,7 +248,7 @@ public class WebpHandler implements ImageHandler
             else
             {
                 reader.skip(payloadLength);
-                LOGGER.debug("Chunk type [" + chunkType + "] skipped");
+                LOGGER.debug("Chunk type [" + chunkType + "] skipped for file [" + imageFile + "]");
             }
 
             /*
@@ -270,5 +263,39 @@ public class WebpHandler implements ImageHandler
             firstChunk = false;
 
         } while (reader.getCurrentPosition() < fileSize);
+    }
+
+    /**
+     * Read the file header of the given WebP file. Basically, it checks for correct RIFF and WEBP
+     * signature entries within the first few stream bytes. It also determines the full size of this
+     * file.
+     *
+     * @throws IllegalStateException
+     *         if the WebP header information is corrupted
+     */
+    private static int readFileHeader(SequentialByteReader reader)
+    {
+        byte[] type = reader.readBytes(4);
+
+        if (!Arrays.equals(RIFF.getChunkName().getBytes(StandardCharsets.US_ASCII), type))
+        {
+            throw new IllegalStateException("Header [RIFF] not found. Found [" + ByteValueConverter.toHex(type) + "]. Not a valid WEBP format");
+        }
+
+        int size = (int) reader.readUnsignedInteger() + 8;
+
+        if (size < 0)
+        {
+            throw new IllegalStateException("WebP header contains a negative size. Found [" + size + "] bytes");
+        }
+
+        type = reader.readBytes(4);
+
+        if (!Arrays.equals(WEBP.getChunkName().getBytes(), type))
+        {
+            throw new IllegalStateException("Chunk type [WEBP] not found. Found [" + ByteValueConverter.toHex(type) + "]. Not a valid WEBP format");
+        }
+
+        return size;
     }
 }

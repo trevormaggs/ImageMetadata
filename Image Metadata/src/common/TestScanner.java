@@ -126,8 +126,6 @@ public final class TestScanner
                     if (png.hasTextualData())
                     {
                         ChunkDirectory dir = (ChunkDirectory) png.getDirectory(TextKeyword.CREATE);
-                        // ChunkDirectory dir = (ChunkDirectory)
-                        // png.getDirectory(CHUNK_TAG_TEXTUAL_DATA);
                         List<TextEntry> keyword = dir.getTextualData(TextKeyword.CREATE);
 
                         System.out.printf("%s\n", png.toString("PNG METADATA SUMMARY LIST"));

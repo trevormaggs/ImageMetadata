@@ -12,7 +12,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import common.DigitalSignature;
 import common.ImageHandler;
 import common.ImageReadErrorException;
 import common.SequentialByteReader;
@@ -41,7 +40,7 @@ import logger.LogFactory;
  * <li>{@code ISO/IEC 14496-12:2015}</li>
  * <li>{@code ISO/IEC 23008-12:2017}</li>
  * </ul>
- * 
+ *
  * <p>
  * <strong>API Note:</strong> According to HEIF/HEIC standards, some box types are
  * optional and may appear zero or one time per file.
@@ -221,7 +220,7 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
      * @throws ImageReadErrorException
      *         if the Exif block is missing, malformed, or cannot be located
      */
-    public Optional<byte[]> getExifBlock() throws ImageReadErrorException
+    public Optional<byte[]> getExifData() throws ImageReadErrorException
     {
         Optional<List<ExtentData>> optionalExif = getExifExtents();
 
@@ -295,7 +294,7 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
      *
      * @return true if at least one HEIF box was successfully parsed and extracted, or false if no
      *         relevant boxes were found
-     * 
+     *
      * @throws ImageReadErrorException
      *         if the file contains incorrect magic numbers
      * @throws IOException
@@ -304,9 +303,7 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
     @Override
     public boolean parseMetadata() throws ImageReadErrorException, IOException
     {
-        verifySignature();
         parse();
-
         return (heifBoxMap.size() > 0);
     }
 
@@ -456,24 +453,6 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
             }
 
             System.out.println(box.getTypeAsString());
-        }
-    }
-
-    /**
-     * Checks if the HEIC file contains the expected magic numbers in the first few bytes in
-     * the file stream. If the magic numbers are not correctly verified, an exception will be
-     * thrown.
-     *
-     * @throws ImageReadErrorException
-     *         if the file contains incorrect magic numbers
-     * @throws IOException
-     *         if the magic numbers cannot be determined
-     */
-    private void verifySignature() throws ImageReadErrorException, IOException
-    {
-        if (DigitalSignature.detectFormat(imageFile) != DigitalSignature.HEIF)
-        {
-            throw new ImageReadErrorException("Invalid HEIF signature detected in file [" + imageFile + "]");
         }
     }
 

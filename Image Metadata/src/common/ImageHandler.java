@@ -1,6 +1,7 @@
 package common;
 
 import java.io.IOException;
+import java.nio.file.Path;
 
 /**
  * Defines the contract for a handler that is responsible for processing image files and extracting
@@ -34,6 +35,9 @@ public interface ImageHandler
      * read the appropriate sections of the image file and collect any available metadata into their
      * internal structures.
      * </p>
+     * 
+     * @param imageFile
+     *        the image file path
      *
      * @return true if metadata was successfully extracted, otherwise false
      * 
@@ -42,5 +46,5 @@ public interface ImageHandler
      * @throws IOException
      *         if there is a problem reading the image file
      */
-    public boolean parseMetadata() throws ImageReadErrorException, IOException;
+    public boolean parseMetadata(Path imageFile) throws ImageReadErrorException, IOException;
 }

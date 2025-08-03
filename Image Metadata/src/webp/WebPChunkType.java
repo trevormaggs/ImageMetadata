@@ -57,8 +57,8 @@ public enum WebPChunkType
     /** Contains the alpha (transparency) channel data. */
     ALPH("ALPH", "Alpha Channel"),
 
-    /** Contains frame information for an animated WebP file. */
-    ANMF("ANMF", "Frame information for Animation"),
+    /** Contains frame information for an animated WebP file. It can be multiple */
+    ANMF("ANMF", "Frame information for Animation", true),
 
     /** Represents an unrecognised chunk type. */
     OTHER("WXYZ", "Other");
@@ -66,6 +66,7 @@ public enum WebPChunkType
     private final String chunkType;
     private final String description;
     private final int fourccValue;
+    private final boolean multipleAllowed;
     private static final Map<Integer, WebPChunkType> LOOKUP_MAP = new HashMap<>();
 
     static
@@ -77,7 +78,8 @@ public enum WebPChunkType
     }
 
     /**
-     * Constructs a new WebPChunkType enum constant.
+     * Constructs a new WebPChunkType enum constant. The corresponding chunk can only be a single
+     * occurrence within the WebP file.
      *
      * @param fourCC
      *        a four-character code string, for example: {@code RIFF}, {@code VP8 } etc
@@ -86,8 +88,25 @@ public enum WebPChunkType
      */
     private WebPChunkType(String fourCC, String desc)
     {
+        this(fourCC, desc, false);
+    }
+
+    /**
+     * Constructs a new WebPChunkType enum constant.
+     *
+     * @param fourCC
+     *        a four-character code string, for example: {@code RIFF}, {@code VP8 } etc
+     * @param desc
+     *        a human-readable description of the chunk type
+     * @param multipleAllowed
+     *        {@code true} if multiple instances of this chunk type can appear in a WebP file,
+     *        otherwise false
+     */
+    private WebPChunkType(String fourCC, String desc, boolean multipleAllowed)
+    {
         this.chunkType = fourCC;
         this.description = desc;
+        this.multipleAllowed = multipleAllowed;
         this.fourccValue = ByteValueConverter.toInteger(fourCC.getBytes(StandardCharsets.US_ASCII), ByteOrder.LITTLE_ENDIAN);
     }
 
@@ -109,6 +128,20 @@ public enum WebPChunkType
     public String getDescription()
     {
         return description;
+    }
+
+    /**
+     * Checks if multiple instances of this chunk type are allowed within a single WebP file. Most
+     * chunks, for example: VP8, VP8L, ICCP, EXIF, XMP, ANIM and VP8X should be at most one of
+     * these, and if more are present, readers may ignore all but the first.
+     * 
+     * But ANMF chunks can be multiples to allow a sequence of frames to be embedded in the file.
+     * 
+     * @return true if multiple occurrences are allowed, otherwise false
+     */
+    public boolean isMultipleAllowed()
+    {
+        return multipleAllowed;
     }
 
     /**

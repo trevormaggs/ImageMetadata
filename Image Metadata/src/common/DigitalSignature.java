@@ -44,9 +44,33 @@ public enum DigitalSignature
         this.magicNumbers = magicNumbers;
     }
 
-    public int[] getMagicNumbers(int index)
+    /**
+     * Returns a byte array of magic numbers based on the specified array index.
+     *
+     * @param index
+     *        the index of the magic number array to retrieve
+     * 
+     * @return an array of bytes containing the magic numbers
+     * 
+     * @throws IllegalArgumentException
+     *         if the index is out of bounds
+     */
+    public byte[] getMagicNumbers(int index)
     {
-        return magicNumbers[index];
+        if (index < 0 || index >= magicNumbers.length)
+        {
+            throw new IllegalArgumentException("Index [" + index + "] is out of bounds for magicNumbers array");
+        }
+
+        int[] intArray = magicNumbers[index];
+        byte[] byteArray = new byte[intArray.length];
+
+        for (int i = 0; i < intArray.length; i++)
+        {
+            byteArray[i] = (byte) intArray[i];
+        }
+
+        return byteArray;
     }
 
     /**

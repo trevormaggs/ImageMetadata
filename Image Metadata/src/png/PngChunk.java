@@ -151,7 +151,7 @@ public class PngChunk
      *
      * @return the raw data as a byte sub-array
      */
-    public byte[] getDataArray()
+    public byte[] getPayloadArray()
     {
         return Arrays.copyOf(payload, payload.length);
     }
@@ -275,7 +275,7 @@ public class PngChunk
     public String toString()
     {
         StringBuilder line = new StringBuilder();
-        String[] parts = ByteValueConverter.splitNullDelimitedStrings(getDataArray());
+        String[] parts = ByteValueConverter.splitNullDelimitedStrings(getPayloadArray());
 
         line.append(String.format(" %-20s %s%n", "[Tag Name]", getTag()));
         line.append(String.format(" %-20s %s%n", "[Data Length]", getLength()));

@@ -43,7 +43,7 @@ import tif.TifParser;
 public class JpgParser extends AbstractImageParser
 {
     private static final LogFactory LOGGER = LogFactory.getLogger(JpgParser.class);
-    private static final byte[] JPG_EXIF_IDENTIFIER = "Exif\0\0".getBytes();
+    public static final byte[] JPG_EXIF_IDENTIFIER = "Exif\0\0".getBytes();
 
     /**
      * Default constructor is unsupported and will always throw an exception.

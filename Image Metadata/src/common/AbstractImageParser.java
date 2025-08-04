@@ -75,7 +75,7 @@ public abstract class AbstractImageParser
      *
      * @return the image file {@link Path}
      */
-    protected Path getImageFile()
+    public Path getImageFile()
     {
         return imageFile;
     }
@@ -83,13 +83,16 @@ public abstract class AbstractImageParser
     /**
      * Reads the entire contents of the image file into a byte array.
      *
-     * @return the file's raw byte data
+     * @return the file's raw byte data, otherwise an empty array is returned
+     * 
      * @throws IOException
      *         if the file cannot be read
      */
     protected byte[] readAllBytes() throws IOException
     {
-        return Files.readAllBytes(imageFile);
+        byte[] b = Files.readAllBytes(imageFile);
+
+        return (b.length > 0 ? b : new byte[0]);
     }
 
     /**

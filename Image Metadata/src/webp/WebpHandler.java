@@ -34,6 +34,7 @@ public class WebpHandler implements ImageHandler
 {
     private static final LogFactory LOGGER = LogFactory.getLogger(WebpHandler.class);
     private static final EnumSet<WebPChunkType> FIRST_CHUNK_TYPES = EnumSet.of(VP8, VP8L, VP8X);
+    private final Path imageFile;
     private final SequentialByteReader reader;
     private final List<WebpChunk> chunks;
     private final EnumSet<WebPChunkType> requiredChunks;
@@ -53,7 +54,9 @@ public class WebpHandler implements ImageHandler
 
     /**
      * Constructs a handler to parse selected chunks from a WebP image file.
-     * 
+     *
+     * @param fpath
+     *        the path to the WebP file for logging purposes
      * @param reader
      *        byte reader for raw WebP stream
      * @param requiredChunks
@@ -62,8 +65,9 @@ public class WebpHandler implements ImageHandler
      * @throws IllegalStateException
      *         if the WebP header information is corrupted
      */
-    public WebpHandler(SequentialByteReader reader, EnumSet<WebPChunkType> requiredChunks)
+    public WebpHandler(Path fpath, SequentialByteReader reader, EnumSet<WebPChunkType> requiredChunks)
     {
+        this.imageFile = fpath;
         this.reader = reader;
         this.chunks = new ArrayList<>();
         this.requiredChunks = requiredChunks;
@@ -90,17 +94,8 @@ public class WebpHandler implements ImageHandler
      */
     public boolean existsChunk(WebPChunkType type)
     {
-        for (WebpChunk chunk : chunks)
-        {
-            if (chunk.getType() == type)
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return chunks.stream().anyMatch(chunk -> chunk.getType() == type);
     }
-
     /**
      * Retrieves the embedded EXIF data from the WebP file, if present.
      *
@@ -150,16 +145,14 @@ public class WebpHandler implements ImageHandler
      *         if there is a problem reading the file
      */
     @Override
-    public boolean parseMetadata(Path imageFile) throws ImageReadErrorException, IOException
+    public boolean parseMetadata() throws ImageReadErrorException, IOException
     {
-        long fileLength = Files.size(imageFile);
-
-        if (fileLength < fileSize)
+        if (Files.size(imageFile) < fileSize)
         {
-            throw new ImageReadErrorException("Declared file size exceeds actual file length.");
+            throw new ImageReadErrorException("Discovered file size exceeds actual file length");
         }
 
-        readChunk(imageFile);
+        parseChunks();
 
         if (chunks.isEmpty())
         {
@@ -198,10 +191,8 @@ public class WebpHandler implements ImageHandler
      * @param data
      *        raw chunk data
      */
-    private void addChunk(int fourCC, int length, byte[] data) throws ImageReadErrorException
+    private void addChunk(WebPChunkType type, int fourCC, int length, byte[] data) throws ImageReadErrorException
     {
-        WebPChunkType type = WebPChunkType.findType(fourCC);
-
         if (!type.isMultipleAllowed() && existsChunk(type))
         {
             LOGGER.warn("Duplicate chunk detected [" + type + "]");
@@ -216,7 +207,7 @@ public class WebpHandler implements ImageHandler
      * @throws ImageReadErrorException
      *         if invalid structure or erroneous chunks are detected
      */
-    private void readChunk(Path imageFile) throws ImageReadErrorException
+    private void parseChunks() throws ImageReadErrorException
     {
         byte[] data;
         boolean firstChunk = true;
@@ -241,7 +232,13 @@ public class WebpHandler implements ImageHandler
             if (requiredChunks == null || requiredChunks.contains(chunkType))
             {
                 data = reader.readBytes(payloadLength);
-                addChunk(fourCC, payloadLength, data);
+
+                if (data.length != payloadLength)
+                {
+                    throw new ImageReadErrorException("Chunk payload truncated. Expected [" + payloadLength + "], got [" + data.length + "]");
+                }
+
+                addChunk(chunkType, fourCC, payloadLength, data);
                 LOGGER.debug("Chunk type [" + chunkType + "] added for file [" + imageFile + "]");
             }
 

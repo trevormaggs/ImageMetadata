@@ -50,7 +50,7 @@ public class PngChunkITXT extends PngChunk
      * @param data
      *        raw chunk data
      */
-    public PngChunkITXT(int length, byte[] typeBytes, int crc32, byte[] data)
+    public PngChunkITXT(long length, byte[] typeBytes, int crc32, byte[] data)
     {
         super(length, typeBytes, crc32, data);
 

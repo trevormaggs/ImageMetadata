@@ -6,7 +6,6 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.EnumSet;
-import java.util.Objects;
 import java.util.Optional;
 import common.AbstractImageParser;
 import common.BaseMetadata;
@@ -105,6 +104,7 @@ public class WebpParser extends AbstractImageParser
 {
     private static final LogFactory LOGGER = LogFactory.getLogger(WebpParser.class);
     private static final ByteOrder WEBP_BYTE_ORDER = ByteOrder.LITTLE_ENDIAN;
+    private static final EnumSet<WebPChunkType> DEFAULT_METADATA_CHUNKS = EnumSet.of(WebPChunkType.EXIF);
 
     /**
      * This default constructor should not be invoked, or it will throw an exception to prevent
@@ -161,6 +161,8 @@ public class WebpParser extends AbstractImageParser
     @Override
     public Metadata<? extends BaseMetadata> readMetadata() throws ImageReadErrorException, IOException
     {
+        byte[] bytes = readAllBytes(); // Never return null
+
         if (DigitalSignature.detectFormat(getImageFile()) != DigitalSignature.WEBP)
         {
             throw new ImageReadErrorException("Image file [" + getImageFile() + "] is not a WebP type");
@@ -168,29 +170,33 @@ public class WebpParser extends AbstractImageParser
 
         try
         {
-            EnumSet<WebPChunkType> chunkSet = EnumSet.of(WebPChunkType.EXIF);
-            byte[] bytes = Objects.requireNonNull(readAllBytes(), "Input bytes are null");
-
-            // Use little-endian byte order as per Specifications
-            SequentialByteReader webpReader = new SequentialByteReader(bytes, WEBP_BYTE_ORDER);
-
-            WebpHandler handler = new WebpHandler(webpReader, chunkSet);
-            handler.parseMetadata(getImageFile());
-
-            Optional<byte[]> exif = handler.getExifData();
-
-            if (exif.isPresent())
+            if (bytes.length > 0)
             {
-                byte[] data = exif.get();
-                metadata = new TifParser(getImageFile(), data).getMetadata();
+                // Use little-endian byte order as per Specifications
+                SequentialByteReader webpReader = new SequentialByteReader(bytes, WEBP_BYTE_ORDER);
+
+                WebpHandler handler = new WebpHandler(getImageFile(), webpReader, DEFAULT_METADATA_CHUNKS);
+                handler.parseMetadata();
+
+                Optional<byte[]> exif = handler.getExifData();
+
+                if (exif.isPresent())
+                {
+                    metadata = new TifParser(getImageFile(), exif.get()).getMetadata();
+                }
+
+                else
+                {
+                    LOGGER.info("No Exif block found in file [" + getImageFile() + "]");
+
+                    /* Fallback to empty metadata */
+                    metadata = new MetadataTIF();
+                }
             }
 
             else
             {
-                LOGGER.info("No Exif block found in file [" + getImageFile() + "]");
-
-                /* Fallback to empty metadata */
-                metadata = new MetadataTIF();
+                throw new ImageReadErrorException("WebP file [" + getImageFile() + "] is empty");
             }
 
             // webpReader.printRawBytes();

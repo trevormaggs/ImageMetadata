@@ -73,7 +73,7 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
      * the HEIF file.
      *
      * @param fpath
-     *        the path to the HEIF file
+     *        the path to the HEIF file for logging purposes
      * @param reader
      *        the {@code SequentialByteReader} for reading file content
      *
@@ -91,7 +91,7 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
      * Constructs a {@code BoxHandler} using raw byte data.
      *
      * @param fpath
-     *        the path to the HEIF file
+     *        the path to the HEIF file for logging purposes
      * @param payload
      *        the raw file data as byte array
      */
@@ -220,7 +220,7 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
      * @throws ImageReadErrorException
      *         if the Exif block is missing, malformed, or cannot be located
      */
-    public Optional<byte[]> getExifData() throws ImageReadErrorException
+    public Optional<byte[]> getExifData2() throws ImageReadErrorException
     {
         Optional<List<ExtentData>> optionalExif = getExifExtents();
 
@@ -283,28 +283,117 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
 
         return Optional.empty();
     }
+    
+    /**
+     * Extracts the embedded Exif TIFF block from the HEIF container.
+     *
+     * <p>
+     * Supports multi-extent Exif data and correctly applies the TIFF header offset as specified in
+     * the Exif payload. If no Exif block is found, {@link Optional#empty()} is returned.
+     * </p>
+     *
+     * <p>
+     * The returned byte array starts at the TIFF header, excluding the standard Exif identifier
+     * prefix (usually {@code Exif\0\0}). According to <b>ISO/IEC 23008-12:2017 Annex A (p. 37)</b>,
+     * the first 4 bytes of the Exif item payload contain {@code exifTiffHeaderOffset}, which
+     * specifies the offset from the start of the payload to the TIFF header.
+     * </p>
+     *
+     * <p>
+     * The TIFF header typically begins with two magic bytes indicating byte order:
+     * </p>
+     *
+     * <ul>
+     * <li>{@code 0x4D 0x4D} – Motorola (big-endian)</li>
+     * <li>{@code 0x49 0x49} – Intel (little-endian)</li>
+     * </ul>
+     *
+     * @return an {@link Optional} containing the TIFF-compatible Exif block as a byte array if
+     * present, otherwise, {@link Optional#empty()}
+     *
+     * @throws ImageReadErrorException
+     * if the Exif block is missing, malformed, or cannot be located
+     */
+    public Optional<byte[]> getExifData() throws ImageReadErrorException
+    {
+        Optional<List<ExtentData>> optionalExif = getExifExtents();
+
+        if (!optionalExif.isPresent())
+        {
+            return Optional.empty();
+        }
+
+        List<ExtentData> extents = optionalExif.get();
+
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream())
+        {
+            // The first extent is handled separately due to the TIFF header offset
+            ExtentData firstExtent = extents.get(0);
+            reader.mark();
+            reader.seek(firstExtent.getExtentOffset());
+
+            if (firstExtent.getExtentLength() < 8)
+            {
+                throw new ImageReadErrorException("Extent too small to contain Exif header in [" + imageFile + "]");
+            }
+
+            int exifTiffHeaderOffset = reader.readInteger();
+
+            if (firstExtent.getExtentLength() < exifTiffHeaderOffset + 4)
+            {
+                throw new ImageReadErrorException("Invalid TIFF header offset for Exif block in [" + imageFile + "]");
+            }
+
+            // Skip to the TIFF header, excluding the offset field
+            reader.skip(exifTiffHeaderOffset);
+            
+            int payloadLength = firstExtent.getExtentLength() - exifTiffHeaderOffset - 4;
+            
+            baos.write(reader.peek(reader.getCurrentPosition(), payloadLength));
+            reader.reset();
+
+            // Process any subsequent extents
+            for (int i = 1; i < extents.size(); i++)
+            {
+                ExtentData extent = extents.get(i);
+                
+                reader.mark();
+                reader.seek(extent.getExtentOffset());
+                baos.write(reader.peek(reader.getCurrentPosition(), extent.getExtentLength()));
+                reader.reset();
+            }
+
+            // Return the combined payload if data was found
+            if (baos.size() > 0)
+            {
+                return Optional.of(baos.toByteArray());
+            }
+        }
+        catch (IOException exc)
+        {
+            throw new ImageReadErrorException("Unable to process Exif block: [" + exc.getMessage() + "]", exc);
+        }
+
+        return Optional.empty();
+    }
 
     /**
      * Parses the image data stream and attempts to extract metadata from the HEIF container.
      *
      * <p>
      * After calling this method, you can retrieve the extracted Exif block (if present) by invoking
-     * {@link #getExifBlock()}.
+     * {@link #getExifData()}.
      * </p>
      *
      * @return true if at least one HEIF box was successfully parsed and extracted, or false if no
      *         relevant boxes were found
-     *
-     * @throws ImageReadErrorException
-     *         if the file contains incorrect magic numbers
-     * @throws IOException
-     *         if the magic numbers cannot be determined
      */
     @Override
-    public boolean parseMetadata() throws ImageReadErrorException, IOException
+    public boolean parseMetadata()
     {
         parse();
-        return (heifBoxMap.size() > 0);
+
+        return (!heifBoxMap.isEmpty());
     }
 
     /**
@@ -436,6 +525,8 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
      */
     public void displayHierarchy()
     {
+        StringBuilder indent = new StringBuilder();
+
         for (Box box : this)
         {
             int depth = 0;
@@ -449,10 +540,10 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
 
             for (int i = 0; i < depth; i++)
             {
-                System.out.print("\t");
+                indent.append("  ");
             }
 
-            System.out.println(box.getTypeAsString());
+            LOGGER.debug(indent.toString() + box.getTypeAsString());
         }
     }
 

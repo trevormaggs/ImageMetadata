@@ -83,7 +83,8 @@ public class HeifParser extends AbstractImageParser
 
         for (Box box : handler)
         {
-            System.out.printf("%s", box.toString(null));
+            // System.out.printf("%s", box.toString(null));
+            LOGGER.debug(String.format("%s", box.toString(null)));
         }
     }
 
@@ -159,14 +160,13 @@ public class HeifParser extends AbstractImageParser
     @Override
     public Metadata<? extends BaseMetadata> getMetadata()
     {
-        if (metadata != null && metadata.hasMetadata())
+        if (metadata == null)
         {
-            return metadata;
+            LOGGER.warn("Metadata information has not been parsed yet.");
+
+            return new MetadataTIF();
         }
 
-        LOGGER.warn("Metadata information is not available in file [" + getImageFile() + "]");
-
-        /* Fallback to empty metadata */
-        return new MetadataTIF();
+        return metadata;
     }
 }

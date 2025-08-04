@@ -42,7 +42,7 @@ public class PngChunkTEXT extends PngChunk
      * @param data
      *        raw chunk data
      */
-    public PngChunkTEXT(int length, byte[] typeBytes, int crc32, byte[] data)
+    public PngChunkTEXT(long length, byte[] typeBytes, int crc32, byte[] data)
     {
         super(length, typeBytes, crc32, data);
 

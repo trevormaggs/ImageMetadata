@@ -49,7 +49,7 @@ public class PngChunkZTXT extends PngChunk
      * @param data
      *        raw chunk data
      */
-    public PngChunkZTXT(int length, byte[] typeBytes, int crc32, byte[] data)
+    public PngChunkZTXT(long length, byte[] typeBytes, int crc32, byte[] data)
     {
         super(length, typeBytes, crc32, data);
 

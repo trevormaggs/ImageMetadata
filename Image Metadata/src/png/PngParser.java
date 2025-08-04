@@ -116,7 +116,7 @@ public class PngParser extends AbstractImageParser
      *
      * @param fpath
      *        specifies the PNG file path, encapsulated in a Path object
-     * 
+     *
      * @throws IOException
      *         if an I/O issue arises
      */
@@ -132,7 +132,7 @@ public class PngParser extends AbstractImageParser
      *
      * @param file
      *        specifies the PNG image file to be read
-     * 
+     *
      * @throws IOException
      *         if an I/O problem has occurred
      */
@@ -144,18 +144,18 @@ public class PngParser extends AbstractImageParser
     /**
      * Parses data in the PNG image file and returns a new Metadata object. It is important to note
      * that PNG files usually do not have an EXIF segment block structured inside.
-     * 
+     *
      * However, it will attempt to find information from 4 possible chunks:
      * {@code ChunkType.eXIf, ChunkType.tEXt, ChunkType.iTXt or ChunkType.zTXt}. The last 3 chunks
      * are textual.
      *
      * If any of these 3 textual chunks does contain data, it will be quite rudimentary, such as
      * obtaining the Creation Time, Last Modification Date, etc.
-     * 
+     *
      * See https://www.w3.org/TR/png/#11keywords for more information.
      *
      * @return a Metadata object containing extracted metadata
-     * 
+     *
      * @throws ImageReadErrorException
      *         in case of processing errors
      * @throws IOException
@@ -172,9 +172,9 @@ public class PngParser extends AbstractImageParser
             // Use big-endian byte order as per Specifications
             SequentialByteReader pngReader = new SequentialByteReader(readAllBytes(), PNG_BYTE_ORDER);
             Metadata<BaseMetadata> png = new MetadataPNG<>();
-            ChunkHandler handler = new ChunkHandler(pngReader, chunkSet);
+            ChunkHandler handler = new ChunkHandler(getImageFile(), pngReader, chunkSet);
 
-            handler.parseMetadata(getImageFile());
+            handler.parseMetadata();
 
             // Obtain textual information if present
             Optional<List<PngChunk>> textual = handler.getTextualData();
@@ -233,14 +233,13 @@ public class PngParser extends AbstractImageParser
     @Override
     public Metadata<? extends BaseMetadata> getMetadata()
     {
-        if (metadata != null && metadata.hasMetadata())
+        if (metadata == null)
         {
-            return metadata;
+            LOGGER.warn("Metadata information has not been parsed yet.");
+
+            return new MetadataPNG<>();
         }
 
-        LOGGER.warn("Metadata information could not be found in file [" + getImageFile() + "]");
-
-        /* Fallback to empty metadata */
-        return new MetadataPNG<>();
+        return metadata;
     }
 }

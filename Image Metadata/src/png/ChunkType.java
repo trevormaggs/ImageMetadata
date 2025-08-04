@@ -211,6 +211,16 @@ public enum ChunkType
     }
 
     /**
+     * Retrieves a copy of the byte array for this chunk type.
+     *
+     * @return an array of bytes, containing the data
+     */
+    public byte[] getChunkBytes()
+    {
+        return Arrays.copyOf(realChunk, realChunk.length);
+    }
+
+    /**
      * Validates a 4-byte array to ensure it represents a valid PNG chunk type identifier. A valid
      * chunk type identifier must be exactly four bytes long and each byte must be an ASCII
      * alphabetic character (A-Z or a-z).
@@ -232,7 +242,7 @@ public enum ChunkType
         for (byte b : bytes)
         {
             /* Letters must be [A-Z] or [a-z] */
-            if (((b > 64 && b < 91) || (b > 96 && b < 123)) == false)
+            if (!Character.isLetter((char) (b & 0xFF)))
             {
                 LOGGER.error("PNG chunk type identifier must only contain alphabet characters");
                 return false;
@@ -283,7 +293,7 @@ public enum ChunkType
 
     /**
      * Checks whether the specified {@code ChunkType} enum constant is defined within this enum.
-     * This method essentially confirms if tyhe specified {@code ChunkType} object is one of the
+     * This method essentially confirms if the specified {@code ChunkType} object is one of the
      * valid constants declared in this enum.
      *
      * @param type

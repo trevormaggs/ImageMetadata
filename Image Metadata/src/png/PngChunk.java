@@ -25,7 +25,7 @@ import tif.TagEntries.TagPngChunk;
  */
 public class PngChunk
 {
-    private final int length;
+    private final long length;
     private final byte[] typeBytes;
     private final int crc;
     protected final byte[] payload;
@@ -46,7 +46,7 @@ public class PngChunk
      * @param data
      *        raw chunk data
      */
-    public PngChunk(int length, byte[] typeBytes, int crc32, byte[] data)
+    public PngChunk(long length, byte[] typeBytes, int crc32, byte[] data)
     {
         this.length = length;
         this.typeBytes = Arrays.copyOf(typeBytes, typeBytes.length);
@@ -95,7 +95,7 @@ public class PngChunk
      *
      * @return the length
      */
-    public int getLength()
+    public long getLength()
     {
         return length;
     }

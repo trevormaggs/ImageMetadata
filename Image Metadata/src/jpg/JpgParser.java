@@ -69,7 +69,14 @@ public class JpgParser extends AbstractImageParser
     {
         super(fpath);
 
-        LOGGER.info(String.format("Image file [%s] loaded", getImageFile()));
+        LOGGER.info("Image file [" + getImageFile() + "] loaded");
+
+        String ext = checkFileExtension();
+
+        if (!ext.equalsIgnoreCase(".jpg"))
+        {
+            LOGGER.warn("File [" + getImageFile().getFileName() + "] has an incorrect extension name. Found [" + ext + "], updating to [jpg]");
+        }
     }
 
     /**
@@ -174,7 +181,7 @@ public class JpgParser extends AbstractImageParser
                 ImageFileInputStream ImageStream = new ImageFileInputStream(fis);
 
                 app1SegmentBytes = readRawSegmentData(ImageStream, JpegSegmentConstants.APP1_SEGMENT);
-                metadata = new TifParser(getImageFile(), app1SegmentBytes).getMetadata();
+                metadata = TifParser.parseFromBytes(app1SegmentBytes);
             }
 
             catch (EOFException exc)

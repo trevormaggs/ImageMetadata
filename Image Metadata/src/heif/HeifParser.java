@@ -57,7 +57,15 @@ public class HeifParser extends AbstractImageParser
     public HeifParser(Path fpath) throws IOException
     {
         super(fpath);
-        LOGGER.info(String.format("Image file [%s] loaded", getImageFile()));
+
+        LOGGER.info("Image file [" + getImageFile() + "] loaded");
+
+        String ext = checkFileExtension();
+
+        if (!ext.equalsIgnoreCase(".heic"))
+        {
+            LOGGER.warn("File [" + getImageFile().getFileName() + "] has an incorrect extension name. Found [" + ext + "], updating to [heic]");
+        }
     }
 
     /**

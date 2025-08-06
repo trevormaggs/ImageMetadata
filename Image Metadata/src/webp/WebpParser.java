@@ -131,7 +131,14 @@ public class WebpParser extends AbstractImageParser
     {
         super(fpath);
 
-        LOGGER.info("Image file [" + getImageFile() + "] loaded for parsing");
+        LOGGER.info("Image file [" + getImageFile() + "] loaded");
+
+        String ext = checkFileExtension();
+
+        if (!ext.equalsIgnoreCase(".webp"))
+        {
+            LOGGER.warn("File [" + getImageFile().getFileName() + "] has an incorrect extension name. Found [" + ext + "], updating to [webp]");
+        }
     }
 
     /**
@@ -182,7 +189,7 @@ public class WebpParser extends AbstractImageParser
 
                 if (exif.isPresent())
                 {
-                    metadata = new TifParser(getImageFile(), exif.get()).getMetadata();
+                    metadata = TifParser.parseFromBytes(exif.get());
                 }
 
                 else

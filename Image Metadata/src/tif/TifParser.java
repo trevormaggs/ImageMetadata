@@ -45,7 +45,14 @@ public class TifParser extends AbstractImageParser
     {
         super(fpath);
 
-        LOGGER.info(String.format("Image file [%s] loaded", getImageFile()));
+        LOGGER.info("Image file [" + getImageFile() + "] loaded");
+
+        String ext = checkFileExtension();
+
+        if (!ext.equalsIgnoreCase(".tif"))
+        {
+            LOGGER.warn("File [" + getImageFile().getFileName() + "] has an incorrect extension name. Found [" + ext + "], updating to [tif]");
+        }
     }
 
     /**
@@ -177,12 +184,28 @@ public class TifParser extends AbstractImageParser
         return format;
     }
 
+    /**
+     * Parses TIFF metadata from a byte array.
+     *
+     * <p>
+     * This static utility method is designed for scenarios where TIFF-formatted data, such
+     * as an embedded EXIF segment, is already available in memory. It directly processes the
+     * byte array to extract and structure the metadata directories without needing to read a
+     * file from disk.
+     * </p>
+     *
+     * @param payload
+     *        the byte array containing the TIFF-formatted data
+     * @return a {@link MetadataTIF} object containing the parsed directories and tags
+     * 
+     * @throws ImageReadErrorException
+     *         if an error occurs during the TIFF structure parsing
+     * @throws IOException
+     *         if a problem occurs while reading from the byte array
+     */
     public static MetadataTIF parseFromBytes(byte[] payload) throws ImageReadErrorException, IOException
     {
-        SequentialByteReader tifReader = new SequentialByteReader(payload);
-        MetadataTIF tif = extractTifDirectories(tifReader);
-
-        return tif;
+        return extractTifDirectories(new SequentialByteReader(payload));
     }
 
     /**

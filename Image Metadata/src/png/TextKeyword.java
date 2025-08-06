@@ -10,7 +10,7 @@ import tif.TagHint;
  * keyword value should be interpreted.
  *
  * <p>
- * For examples: {@code Title}, {@code Author}, {@code Creation Time}, etc.
+ * Examples include: {@code Title}, {@code Author}, {@code Creation Time}, etc.
  * </p>
  *
  * @author Trevor Maggs
@@ -93,7 +93,7 @@ public enum TextKeyword
     {
         for (TextKeyword keyword : values())
         {
-            if (keyword.keyword.equals(word))
+            if (keyword.keyword.equalsIgnoreCase(word))
             {
                 return keyword;
             }

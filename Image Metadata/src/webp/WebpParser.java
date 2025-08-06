@@ -237,4 +237,15 @@ public class WebpParser extends AbstractImageParser
 
         return metadata;
     }
+
+    /**
+     * Returns the detected {@code WebP} format.
+     *
+     * @return a {@link DigitalSignature} enum constant representing this image format
+     */
+    @Override
+    public DigitalSignature getImageFormat()
+    {
+        return format;
+    }
 }

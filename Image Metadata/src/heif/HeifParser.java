@@ -57,7 +57,7 @@ public class HeifParser extends AbstractImageParser
     public HeifParser(Path fpath) throws IOException
     {
         super(fpath);
-        LOGGER.info(String.format("Image file [%s] loaded for reading%n", getImageFile()));
+        LOGGER.info(String.format("Image file [%s] loaded", getImageFile()));
     }
 
     /**
@@ -168,5 +168,16 @@ public class HeifParser extends AbstractImageParser
         }
 
         return metadata;
+    }
+
+    /**
+     * Returns the detected {@code HEIF} format.
+     *
+     * @return a {@link DigitalSignature} enum constant representing this image format
+     */
+    @Override
+    public DigitalSignature getImageFormat()
+    {
+        return format;
     }
 }

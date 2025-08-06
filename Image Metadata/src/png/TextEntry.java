@@ -1,7 +1,5 @@
 package png;
 
-import common.DateParser;
-import tif.TagHint;
 import tif.TagEntries.TagPngChunk;
 
 /**
@@ -14,7 +12,7 @@ import tif.TagEntries.TagPngChunk;
  * <p>
  * Change History:
  * </p>
- * 
+ *
  * <ul>
  * <li>Version 1.0 – Initial release by Trevor Maggs on 21 June 2025</li>
  * </ul>
@@ -72,18 +70,12 @@ public class TextEntry
     }
 
     /**
-     * Returns the interpreted value of this text entry. If the associated tag suggests a date hint,
-     * the value will be parsed as a date.
+     * Returns the interpreted value of this text entry.
      *
      * @return the raw or parsed value string
      */
     public String getValue()
     {
-        if (getKeywordEnum().getHint() == TagHint.HINT_DATE)
-        {
-            return DateParser.convertToDate(text).toString();
-        }
-
         return text;
     }
 

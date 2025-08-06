@@ -24,6 +24,15 @@ import java.nio.file.Path;
  * </ul>
  *
  * <p>
+ * <b>Example</b>
+ * </p>
+ * 
+ * <pre>
+ * AbstractImageParser parser = new JpgParser(Paths.get("image.jpg"));
+ * Metadata metadata = parser.readMetadata();
+ * </pre>
+ *
+ * <p>
  * <strong>Change History:</strong>
  * </p>
  * 
@@ -38,6 +47,7 @@ import java.nio.file.Path;
 public abstract class AbstractImageParser
 {
     private final Path imageFile;
+    protected final DigitalSignature format;
     protected Metadata<? extends BaseMetadata> metadata;
 
     /**
@@ -52,22 +62,27 @@ public abstract class AbstractImageParser
     }
 
     /**
-     * Creates this parser and validates the specified image file path.
+     * Constructs an image parser and validates the specified image file path.
      * 
      * @param fpath
-     *        the file path of the image to parse
+     *        the path to the image file to be parsed
      * 
+     * @throws IllegalArgumentException
+     *         if the image format is unsupported
      * @throws IOException
-     *         if the image cannot be accessed or is unsupported
+     *         if the file cannot be accessed
      */
     public AbstractImageParser(Path fpath) throws IOException
     {
-        if (DigitalSignature.detectFormat(fpath) == DigitalSignature.UNKNOWN)
+        DigitalSignature format = DigitalSignature.detectFormat(fpath);
+
+        if (format == DigitalSignature.UNKNOWN)
         {
             throw new IllegalArgumentException("Unsupported image format detected in [" + fpath + "]");
         }
 
         this.imageFile = fpath;
+        this.format = format;
     }
 
     /**
@@ -81,10 +96,33 @@ public abstract class AbstractImageParser
     }
 
     /**
+     * Returns the extension of the image file name, excluding the dot.
+     *
+     * <p>
+     * If the file name does not contain an extension, an empty string is returned.
+     * </p>
+     *
+     * @return the file extension, for example: {@code "jpg"} or {@code "png"} etc, or an empty
+     *         string if none
+     */
+    protected String checkFileExtension()
+    {
+        String filename = imageFile.getFileName().toString();
+        int pos = filename.lastIndexOf('.');
+
+        if (pos > 0 && pos < filename.length() - 1)
+        {
+            return filename.substring(pos + 1);
+        }
+
+        return "";
+    }
+
+    /**
      * Reads the entire contents of the image file into a byte array.
      *
-     * @return the file's raw byte data, otherwise an empty array is returned
-     * 
+     * @return a non-null byte array of the file's raw contents, or empty if file is zero-length
+     *
      * @throws IOException
      *         if the file cannot be read
      */
@@ -108,9 +146,17 @@ public abstract class AbstractImageParser
     public abstract Metadata<? extends BaseMetadata> readMetadata() throws ImageReadErrorException, IOException;
 
     /**
-     * Returns processed metadata.
+     * Returns the extracted metadata, if available.
      *
-     * @return a populated {@link Metadata} object if present, otherwise an empty object
+     * @return a populated {@link Metadata} object if parsing was successful, otherwise an empty
+     *         container
      */
     public abstract Metadata<? extends BaseMetadata> getMetadata();
+
+    /**
+     * Returns the detected image format, such as {@code TIFF}, {@code PNG}, or {@code JPG}.
+     *
+     * @return a {@link DigitalSignature} enum constant representing the image format
+     */
+    public abstract DigitalSignature getImageFormat();
 }

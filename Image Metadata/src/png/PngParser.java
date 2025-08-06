@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import common.AbstractImageParser;
 import common.BaseMetadata;
+import common.DigitalSignature;
 import common.ImageReadErrorException;
 import common.Metadata;
 import common.SequentialByteReader;
@@ -124,7 +125,14 @@ public class PngParser extends AbstractImageParser
     {
         super(fpath);
 
-        LOGGER.info("Image file [" + getImageFile() + "] loaded for parsing");
+        LOGGER.info("Image file [" + getImageFile() + "] loaded");
+
+        String ext = checkFileExtension();
+
+        if (!ext.equalsIgnoreCase(".png"))
+        {
+            LOGGER.warn("File [" + getImageFile().getFileName() + "] has an incorrect extension name. Found [" + ext + "], updating to [png]");
+        }
     }
 
     /**
@@ -201,7 +209,7 @@ public class PngParser extends AbstractImageParser
 
             if (exif.isPresent())
             {
-                png.addDirectory(new TifParser(getImageFile(), exif.get()).getMetadata());
+                png.addDirectory(TifParser.parseFromBytes(exif.get()));
             }
 
             else
@@ -241,5 +249,16 @@ public class PngParser extends AbstractImageParser
         }
 
         return metadata;
+    }
+
+    /**
+     * Returns the detected {@code PNG} format.
+     *
+     * @return a {@link DigitalSignature} enum constant representing this image format
+     */
+    @Override
+    public DigitalSignature getImageFormat()
+    {
+        return format;
     }
 }

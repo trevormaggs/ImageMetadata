@@ -574,7 +574,7 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
                 if (HeifBoxType.MEDIA_DATA.equalsTypeName(box.getTypeAsString()))
                 {
                     reader.skip(box.available());
-                    LOGGER.warn("Skipping unhandled Media Data box [" + box.getTypeAsString() + "]");
+                    LOGGER.warn("Unhandled Media Data box [" + box.getTypeAsString() + "] skipped");
                 }
 
                 walkBoxes(box, 0);

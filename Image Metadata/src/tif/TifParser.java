@@ -45,7 +45,7 @@ public class TifParser extends AbstractImageParser
     {
         super(fpath);
 
-        LOGGER.info(String.format("Image file [%s] loaded for reading", getImageFile()));
+        LOGGER.info(String.format("Image file [%s] loaded", getImageFile()));
     }
 
     /**
@@ -79,7 +79,7 @@ public class TifParser extends AbstractImageParser
     {
         this(fpath);
 
-        processDirectories(reader);
+        metadata = extractTifDirectories(reader);
     }
 
     /**
@@ -103,7 +103,7 @@ public class TifParser extends AbstractImageParser
     {
         this(fpath);
 
-        processDirectories(new SequentialByteReader(payload));
+        metadata = extractTifDirectories(new SequentialByteReader(payload));
     }
 
     /**
@@ -124,8 +124,7 @@ public class TifParser extends AbstractImageParser
             try (InputStream fis = Files.newInputStream(getImageFile()))
             {
                 SequentialByteReader tifReader = new SequentialByteReader(readAllBytes());
-                processDirectories(tifReader);
-
+                metadata = extractTifDirectories(tifReader);
                 // tifReader.printRawBytes();
             }
 
@@ -168,6 +167,25 @@ public class TifParser extends AbstractImageParser
     }
 
     /**
+     * Returns the detected {@code TIFF} format.
+     *
+     * @return a {@link DigitalSignature} enum constant representing this image format
+     */
+    @Override
+    public DigitalSignature getImageFormat()
+    {
+        return format;
+    }
+
+    public static MetadataTIF parseFromBytes(byte[] payload) throws ImageReadErrorException, IOException
+    {
+        SequentialByteReader tifReader = new SequentialByteReader(payload);
+        MetadataTIF tif = extractTifDirectories(tifReader);
+
+        return tif;
+    }
+
+    /**
      * Starts the processing of the IFD structures, handling the required information until all
      * directories have been read. It also ensures the TIFF segment data is checked beforehand for
      * integrity.
@@ -175,7 +193,7 @@ public class TifParser extends AbstractImageParser
      * @param reader
      *        a SequentialByteReader object providing access to the payload data
      */
-    private void processDirectories(SequentialByteReader reader)
+    private static MetadataTIF extractTifDirectories(SequentialByteReader reader)
     {
         MetadataTIF tif = new MetadataTIF();
         IFDHandler handler = new IFDHandler(reader);
@@ -190,8 +208,8 @@ public class TifParser extends AbstractImageParser
             {
                 tif.addDirectory(dir);
             }
-
-            metadata = tif;
         }
+
+        return tif;
     }
 }

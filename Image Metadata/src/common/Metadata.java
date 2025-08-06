@@ -41,18 +41,18 @@ public interface Metadata<T> extends BaseMetadata, Iterable<T>
      * <p>
      * This method supports multiple forms of lookup depending on the implementation, such as:
      * </p>
-     * 
+     *
      * <ul>
      * <li>Tag-based lookup (for example, {@code Taggable}, {@code TextKeyword})</li>
      * <li>Directory identifier (for example, {@code DirectoryIdentifier})</li>
      * <li>Type-based or instance-based queries</li>
      * </ul>
-     * 
+     *
      * @param <U>
      *        the type of the component used as a lookup key
      * @param component
      *        the lookup reference or identifying element
-     * 
+     *
      * @return the matching directory, or null if no match is found
      */
     public <U> T getDirectory(U component);
@@ -84,7 +84,7 @@ public interface Metadata<T> extends BaseMetadata, Iterable<T>
      *
      * @param prefix
      *        an optional string to prepend as a heading or label. It can be null
-     * 
+     *
      * @return a formatted string suitable for debugging, inspection, or textual analysis
      */
     public String toString(String prefix);

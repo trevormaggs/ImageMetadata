@@ -73,7 +73,7 @@ public class MetadataTIF implements Metadata<DirectoryIFD>
      *
      * @param dir
      *        the directory identifier to check
-     * 
+     *
      * @return true if the directory is stored; otherwise false
      */
     public boolean isDirectoryPresent(DirectoryIdentifier dir)
@@ -95,7 +95,7 @@ public class MetadataTIF implements Metadata<DirectoryIFD>
 
     /**
      * Retrieves a directory from the metadata map using a provided lookup component.
-     * 
+     *
      * <p>
      * If the component is a {@link DirectoryIdentifier}, a direct lookup is performed.
      * </p>
@@ -104,7 +104,7 @@ public class MetadataTIF implements Metadata<DirectoryIFD>
      *        the type of the lookup key
      * @param component
      *        the lookup component (expected to be {@code DirectoryIdentifier})
-     * 
+     *
      * @return the matching {@link DirectoryIFD}, or null if not found
      */
     @Override
@@ -187,7 +187,7 @@ public class MetadataTIF implements Metadata<DirectoryIFD>
      *
      * @param prefix
      *        an optional string to prepend as a heading or label. It can be null
-     * 
+     *
      * @return a formatted string suitable for debugging, inspection, or textual analysis
      */
     @Override

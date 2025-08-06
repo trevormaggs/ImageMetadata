@@ -7,8 +7,8 @@ import common.BaseMetadata;
 import common.Metadata;
 import png.ChunkType.Category;
 import tif.DirectoryIFD;
-import tif.MetadataTIF;
 import tif.DirectoryIFD.EntryIFD;
+import tif.MetadataTIF;
 import tif.TagEntries.Taggable;
 
 /**
@@ -85,13 +85,13 @@ public class MetadataPNG<T extends BaseMetadata> implements Metadata<T>
 
     /**
      * Retrieves a metadata directory based on the given component key.
-     * 
+     *
      * If multiple matches exist, the first encountered match is returned.
-     * 
+     *
      * <p>
      * The match strategy depends on the component type:
      * </p>
-     * 
+     *
      * <ul>
      * <li>{@link Taggable} → finds a {@link ChunkDirectory} containing the tag</li>
      * <li>{@link TextKeyword} → finds a {@link ChunkDirectory} containing the keyword</li>
@@ -102,14 +102,28 @@ public class MetadataPNG<T extends BaseMetadata> implements Metadata<T>
      *        the type of the component being used to look up the directory
      * @param component
      *        the lookup key or element
-     * 
+     *
      * @return a matching metadata directory, or null if not found
      */
     @Override
     public <U> T getDirectory(U component)
     {
-        if (component instanceof Taggable)
+        if (component instanceof ChunkType.Category)
         {
+            ChunkType.Category category = (ChunkType.Category) component;
+
+            for (T dir : components)
+            {
+                if (dir instanceof ChunkDirectory && ((ChunkDirectory) dir).getDirectoryCategory() == category)
+                {
+                    return dir;
+                }
+            }
+        }
+
+        else if (component instanceof Taggable)
+        {
+            /* Using TagPngChunk enum constants */
             Taggable tag = (Taggable) component;
 
             for (T dir : components)
@@ -123,6 +137,7 @@ public class MetadataPNG<T extends BaseMetadata> implements Metadata<T>
 
         else if (component instanceof TextKeyword)
         {
+            /* Using TextKeyword class */
             TextKeyword keyword = (TextKeyword) component;
 
             for (T dir : components)
@@ -136,6 +151,7 @@ public class MetadataPNG<T extends BaseMetadata> implements Metadata<T>
 
         else if (component instanceof Class<?>)
         {
+            /* Using class resources, i.e. MetadataTIF.class */
             Class<?> clazz = (Class<?>) component;
 
             for (T dir : components)
@@ -234,7 +250,7 @@ public class MetadataPNG<T extends BaseMetadata> implements Metadata<T>
      *
      * @param prefix
      *        an optional string to prepend as a heading or label. It can be null
-     * 
+     *
      * @return a formatted string suitable for debugging, inspection, or textual analysis
      */
     @Override

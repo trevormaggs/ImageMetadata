@@ -69,7 +69,7 @@ public class JpgParser extends AbstractImageParser
     {
         super(fpath);
 
-        LOGGER.info(String.format("Image file [%s] loaded for reading.%n", getImageFile()));
+        LOGGER.info(String.format("Image file [%s] loaded", getImageFile()));
     }
 
     /**
@@ -181,7 +181,7 @@ public class JpgParser extends AbstractImageParser
             {
                 if (app1SegmentBytes == null)
                 {
-                    LOGGER.warn(String.format("Empty metadata detected in file [%s]%n", getImageFile()));
+                    LOGGER.warn("Metadata information not found in file [" + getImageFile() + "]");
                 }
             }
 
@@ -212,9 +212,18 @@ public class JpgParser extends AbstractImageParser
             return metadata;
         }
 
-        LOGGER.warn("Metadata information could not be found in file [" + getImageFile() + "]");
-
         /* Fallback to empty metadata */
         return new MetadataTIF();
+    }
+
+    /**
+     * Returns the detected {@code JPG} format.
+     *
+     * @return a {@link DigitalSignature} enum constant representing this image format
+     */
+    @Override
+    public DigitalSignature getImageFormat()
+    {
+        return format;
     }
 }

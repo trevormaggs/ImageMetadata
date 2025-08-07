@@ -107,18 +107,6 @@ public class WebpParser extends AbstractImageParser
     private static final EnumSet<WebPChunkType> DEFAULT_METADATA_CHUNKS = EnumSet.of(WebPChunkType.EXIF);
 
     /**
-     * This default constructor should not be invoked, or it will throw an exception to prevent
-     * instantiation.
-     *
-     * @throws UnsupportedOperationException
-     *         to indicate that instantiation is not supported
-     */
-    public WebpParser()
-    {
-        throw new UnsupportedOperationException("Not intended for instantiation");
-    }
-
-    /**
      * This constructor creates an instance for processing the specified image file.
      *
      * @param fpath
@@ -133,9 +121,9 @@ public class WebpParser extends AbstractImageParser
 
         LOGGER.info("Image file [" + getImageFile() + "] loaded");
 
-        String ext = checkFileExtension();
+        String ext = getFileExtension();
 
-        if (!ext.equalsIgnoreCase(".webp"))
+        if (!ext.equalsIgnoreCase("webp"))
         {
             LOGGER.warn("File [" + getImageFile().getFileName() + "] has an incorrect extension name. Found [" + ext + "], updating to [webp]");
         }
@@ -189,7 +177,7 @@ public class WebpParser extends AbstractImageParser
 
                 if (exif.isPresent())
                 {
-                    metadata = TifParser.parseFromBytes(exif.get());
+                    metadata = TifParser.parseFromSegmentBytes(exif.get());
                 }
 
                 else
@@ -233,7 +221,7 @@ public class WebpParser extends AbstractImageParser
      * @return a populated {@link Metadata} object, or an empty one if no metadata was found
      */
     @Override
-    public Metadata<? extends BaseMetadata> getMetadata()
+    public Metadata<? extends BaseMetadata> getSafeMetadata()
     {
         if (metadata == null)
         {
@@ -253,6 +241,6 @@ public class WebpParser extends AbstractImageParser
     @Override
     public DigitalSignature getImageFormat()
     {
-        return format;
+        return DigitalSignature.WEBP;
     }
 }

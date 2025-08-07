@@ -101,18 +101,6 @@ public class PngParser extends AbstractImageParser
     private static final ByteOrder PNG_BYTE_ORDER = ByteOrder.BIG_ENDIAN;
 
     /**
-     * This default constructor should not be invoked, or it will throw an exception to prevent
-     * instantiation.
-     *
-     * @throws UnsupportedOperationException
-     *         to indicate that instantiation is not supported
-     */
-    public PngParser()
-    {
-        throw new UnsupportedOperationException("Not intended for instantiation");
-    }
-
-    /**
      * This constructor creates an instance for processing the specified image file.
      *
      * @param fpath
@@ -127,9 +115,9 @@ public class PngParser extends AbstractImageParser
 
         LOGGER.info("Image file [" + getImageFile() + "] loaded");
 
-        String ext = checkFileExtension();
+        String ext = getFileExtension();
 
-        if (!ext.equalsIgnoreCase(".png"))
+        if (!ext.equalsIgnoreCase("png"))
         {
             LOGGER.warn("File [" + getImageFile().getFileName() + "] has an incorrect extension name. Found [" + ext + "], updating to [png]");
         }
@@ -209,7 +197,7 @@ public class PngParser extends AbstractImageParser
 
             if (exif.isPresent())
             {
-                png.addDirectory(TifParser.parseFromBytes(exif.get()));
+                png.addDirectory(TifParser.parseFromSegmentBytes(exif.get()));
             }
 
             else
@@ -239,7 +227,7 @@ public class PngParser extends AbstractImageParser
      * @return a populated {@link Metadata} object, or an empty one if no metadata was found
      */
     @Override
-    public Metadata<? extends BaseMetadata> getMetadata()
+    public Metadata<? extends BaseMetadata> getSafeMetadata()
     {
         if (metadata == null)
         {
@@ -259,6 +247,6 @@ public class PngParser extends AbstractImageParser
     @Override
     public DigitalSignature getImageFormat()
     {
-        return format;
+        return DigitalSignature.PNG;
     }
 }

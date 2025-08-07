@@ -118,14 +118,17 @@ public class IFDHandler implements ImageHandler
     }
 
     /**
-     * Parses the image data stream and attempts to extract metadata.
+     * Parses the image data stream and attempts to extract metadata directories.
      *
      * <p>
-     * After calling this method, use {@link #getDirectories()} to retrieve the list of IFD
-     * directories that were successfully parsed.
+     * After invoking this method, use {@link #getDirectories()} to retrieve the list of IFD
+     * (Image File Directory) structures that were successfully parsed.
      * </p>
      *
-     * @return true if at least one metadata directory was extracted, otherwise false
+     * @return true if at least one metadata directory was successfully extracted, otherwise false
+     *
+     * @throws IllegalStateException
+     *         if the TIFF header is invalid or the stream data cannot be read correctly
      */
     @Override
     public boolean parseMetadata()
@@ -245,6 +248,9 @@ public class IFDHandler implements ImageHandler
      *        the directory type being processed
      * @param startOffset
      *        the file offset (from header base) where the IFD begins
+     * 
+     * @throws IllegalStateException
+     *         if there is a problem during reading the stream data
      */
     private void navigateImageFileDirectory(DirectoryIdentifier dirType, long startOffset)
     {

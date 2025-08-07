@@ -46,17 +46,6 @@ public class JpgParser extends AbstractImageParser
     public static final byte[] JPG_EXIF_IDENTIFIER = "Exif\0\0".getBytes();
 
     /**
-     * Default constructor is unsupported and will always throw an exception.
-     *
-     * @throws UnsupportedOperationException
-     *         to indicate that instantiation is not supported
-     */
-    public JpgParser()
-    {
-        throw new UnsupportedOperationException("Not intended for instantiation");
-    }
-
-    /**
      * Constructs a new instance with the specified file path.
      *
      * @param fpath
@@ -71,9 +60,9 @@ public class JpgParser extends AbstractImageParser
 
         LOGGER.info("Image file [" + getImageFile() + "] loaded");
 
-        String ext = checkFileExtension();
+        String ext = getFileExtension();
 
-        if (!ext.equalsIgnoreCase(".jpg"))
+        if (!ext.equalsIgnoreCase("jpg"))
         {
             LOGGER.warn("File [" + getImageFile().getFileName() + "] has an incorrect extension name. Found [" + ext + "], updating to [jpg]");
         }
@@ -181,7 +170,7 @@ public class JpgParser extends AbstractImageParser
                 ImageFileInputStream ImageStream = new ImageFileInputStream(fis);
 
                 app1SegmentBytes = readRawSegmentData(ImageStream, JpegSegmentConstants.APP1_SEGMENT);
-                metadata = TifParser.parseFromBytes(app1SegmentBytes);
+                metadata = TifParser.parseFromSegmentBytes(app1SegmentBytes);
             }
 
             catch (EOFException exc)
@@ -203,7 +192,7 @@ public class JpgParser extends AbstractImageParser
             }
         }
 
-        return getMetadata();
+        return getSafeMetadata();
     }
 
     /**
@@ -212,15 +201,15 @@ public class JpgParser extends AbstractImageParser
      * @return the metadata object, or an empty one if none was found
      */
     @Override
-    public Metadata<? extends BaseMetadata> getMetadata()
+    public Metadata<? extends BaseMetadata> getSafeMetadata()
     {
-        if (metadata != null && metadata.hasMetadata())
+        if (metadata == null)
         {
-            return metadata;
+            LOGGER.warn("Metadata information has not been parsed yet.");
+            return new MetadataTIF();
         }
 
-        /* Fallback to empty metadata */
-        return new MetadataTIF();
+        return metadata;
     }
 
     /**
@@ -231,6 +220,6 @@ public class JpgParser extends AbstractImageParser
     @Override
     public DigitalSignature getImageFormat()
     {
-        return format;
+        return DigitalSignature.JPG;
     }
 }

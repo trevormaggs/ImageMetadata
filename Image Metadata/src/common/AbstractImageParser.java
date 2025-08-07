@@ -47,42 +47,17 @@ import java.nio.file.Path;
 public abstract class AbstractImageParser
 {
     private final Path imageFile;
-    protected final DigitalSignature format;
     protected Metadata<? extends BaseMetadata> metadata;
 
     /**
-     * Prevents direct instantiation without a file path.
-     *
-     * @throws UnsupportedOperationException
-     *         to indicate that direct instantiation is not supported
-     */
-    public AbstractImageParser()
-    {
-        throw new UnsupportedOperationException("Instantiation not allowed");
-    }
-
-    /**
-     * Constructs an image parser and validates the specified image file path.
+     * Constructs an image parser.
      * 
      * @param fpath
      *        the path to the image file to be parsed
-     * 
-     * @throws IllegalArgumentException
-     *         if the image format is unsupported
-     * @throws IOException
-     *         if the file cannot be accessed
      */
-    public AbstractImageParser(Path fpath) throws IOException
+    public AbstractImageParser(Path fpath)
     {
-        DigitalSignature format = DigitalSignature.detectFormat(fpath);
-
-        if (format == DigitalSignature.UNKNOWN)
-        {
-            throw new IllegalArgumentException("Unsupported image format detected in [" + fpath + "]");
-        }
-
         this.imageFile = fpath;
-        this.format = format;
     }
 
     /**
@@ -105,7 +80,7 @@ public abstract class AbstractImageParser
      * @return the file extension, for example: {@code "jpg"} or {@code "png"} etc, or an empty
      *         string if none
      */
-    protected String checkFileExtension()
+    protected String getFileExtension()
     {
         String filename = imageFile.getFileName().toString();
         int pos = filename.lastIndexOf('.');
@@ -128,9 +103,7 @@ public abstract class AbstractImageParser
      */
     protected byte[] readAllBytes() throws IOException
     {
-        byte[] b = Files.readAllBytes(imageFile);
-
-        return (b.length > 0 ? b : new byte[0]);
+        return Files.readAllBytes(imageFile);
     }
 
     /**
@@ -151,7 +124,7 @@ public abstract class AbstractImageParser
      * @return a populated {@link Metadata} object if parsing was successful, otherwise an empty
      *         container
      */
-    public abstract Metadata<? extends BaseMetadata> getMetadata();
+    public abstract Metadata<? extends BaseMetadata> getSafeMetadata();
 
     /**
      * Returns the detected image format, such as {@code TIFF}, {@code PNG}, or {@code JPG}.

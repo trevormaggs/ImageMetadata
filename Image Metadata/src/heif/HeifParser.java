@@ -35,17 +35,6 @@ public class HeifParser extends AbstractImageParser
     private BoxHandler handler;
 
     /**
-     * This default constructor should not be invoked.
-     *
-     * @throws UnsupportedOperationException
-     *         to prevent instantiation without a file.
-     */
-    public HeifParser()
-    {
-        throw new UnsupportedOperationException("Not intended for instantiation");
-    }
-
-    /**
      * Constructs an instance to parse a HEIC/HEIF file.
      *
      * @param fpath
@@ -60,9 +49,9 @@ public class HeifParser extends AbstractImageParser
 
         LOGGER.info("Image file [" + getImageFile() + "] loaded");
 
-        String ext = checkFileExtension();
+        String ext = getFileExtension();
 
-        if (!ext.equalsIgnoreCase(".heic"))
+        if (!ext.equalsIgnoreCase("heic"))
         {
             LOGGER.warn("File [" + getImageFile().getFileName() + "] has an incorrect extension name. Found [" + ext + "], updating to [heic]");
         }
@@ -144,7 +133,7 @@ public class HeifParser extends AbstractImageParser
 
                 else
                 {
-                    metadata = new TifParser(getImageFile(), exif.get()).getMetadata();
+                    metadata = new TifParser(getImageFile(), exif.get()).getSafeMetadata();
                 }
             }
 
@@ -166,7 +155,7 @@ public class HeifParser extends AbstractImageParser
      * @return a populated {@link Metadata} object if present, otherwise an empty object
      */
     @Override
-    public Metadata<? extends BaseMetadata> getMetadata()
+    public Metadata<? extends BaseMetadata> getSafeMetadata()
     {
         if (metadata == null)
         {
@@ -186,6 +175,6 @@ public class HeifParser extends AbstractImageParser
     @Override
     public DigitalSignature getImageFormat()
     {
-        return format;
+        return DigitalSignature.HEIF;
     }
 }

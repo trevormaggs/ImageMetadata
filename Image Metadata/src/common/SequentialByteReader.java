@@ -242,7 +242,9 @@ public class SequentialByteReader extends AbstractByteReader
      *
      * @param n
      *        the number of bytes to skip
+     *        
      * @return the new position after skipping
+     * 
      * @throws IndexOutOfBoundsException
      *         if skipping would exceed the buffer bounds
      */

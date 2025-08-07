@@ -21,7 +21,7 @@ import webp.WebpParser;
  * <li>PNG</li>
  * <li>TIFF</li>
  * <li>HEIC (High Efficiency Image Format)</li>
- * <li>WebP (planned, not yet implemented)</li>
+ * <li>WebP</li>
  * </ul>
  *
  * <p>

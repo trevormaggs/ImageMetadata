@@ -1,9 +1,6 @@
 package tif;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -16,53 +13,54 @@ import common.Metadata;
 import common.SequentialByteReader;
 import logger.LogFactory;
 
+/**
+ * This program aims to read TIF image files and retrieve data structured in a series of Image File
+ * Directories (IFDs).
+ *
+ * <p>
+ * <b>TIF Data Stream</b>
+ * </p>
+ *
+ * <p>
+ * The TIF data stream begins with an 8-byte header, which specifies the byte order (either
+ * big-endian "II" or little-endian "MM"), a fixed identifier (0x002A), and the offset to the first
+ * IFD. The file is composed of one or more IFDs, each containing a series of tags that define the
+ * image's characteristics and metadata.
+ * </p>
+ *
+ * <p>
+ * The TIFF specification is extensible, allowing for custom tags and nested sub-directories, such
+ * as the {@code EXIF (Exchangeable Image File Format)}, which is a common sub-directory used in
+ * both TIFF and JPEG files.
+ * </p>
+ *
+ * <p>
+ * <b>Change History:</b>
+ * </p>
+ *
+ * <ul>
+ * <li>Version 1.0 - First release by Trevor Maggs on 7 August 2025</li>
+ * </ul>
+ *
+ * @see <a href="https://partners.adobe.com/public/developer/en/tiff/TIFF6.pdf">TIFF 6.0
+ *      Specification</a>
+ *
+ * @version 1.0
+ * @author Trevor Maggs, trevmaggs@tpg.com.au
+ * @since 7 August 2025
+ */
 public class TifParser extends AbstractImageParser
 {
     private static final LogFactory LOGGER = LogFactory.getLogger(TifParser.class);
 
     /**
-     * This default constructor should not be invoked, or it will throw an exception to prevent
-     * instantiation.
-     *
-     * @throws UnsupportedOperationException
-     *         to indicate that instantiation is not supported
-     */
-    public TifParser()
-    {
-        throw new UnsupportedOperationException("Not intended for instantiation");
-    }
-
-    /**
-     * This constructor creates an instance intended for parsing the specified TIFF image file.
-     *
-     * @param fpath
-     *        specifies the TIFF file path, encapsulated as a Path object
-     *
-     * @throws IOException
-     *         if an I/O problem has occurred
-     */
-    public TifParser(Path fpath) throws IOException
-    {
-        super(fpath);
-
-        LOGGER.info("Image file [" + getImageFile() + "] loaded");
-
-        String ext = checkFileExtension();
-
-        if (!ext.equalsIgnoreCase(".tif"))
-        {
-            LOGGER.warn("File [" + getImageFile().getFileName() + "] has an incorrect extension name. Found [" + ext + "], updating to [tif]");
-        }
-    }
-
-    /**
-     * This constructor creates an instance intended for parsing the specified TIFF image file.
+     * Creates an instance for parsing the specified TIFF image file.
      *
      * @param file
-     *        specifies the TIFF image file
+     *        the path to the TIFF file
      *
      * @throws IOException
-     *         if an I/O problem has occurred
+     *         if an I/O error occurs
      */
     public TifParser(String file) throws IOException
     {
@@ -70,28 +68,31 @@ public class TifParser extends AbstractImageParser
     }
 
     /**
-     * Constructs an instance used for reading the payload data contained in the specified
-     * SequentialByteReader object, providing read access. These data elements are mapped to Image
-     * File Directory (IFD) structures.
+     * Creates an instance intended for parsing the specified TIFF image file.
      *
      * @param fpath
-     *        specifies the file path, encapsulated as a Path object
-     * @param reader
-     *        a SequentialByteReader object containing the segment data
+     *        specifies the TIFF file path, encapsulated as a Path object
      *
      * @throws IOException
-     *         In case of an I/O issue.
+     *         if an I/O error occurs
      */
-    public TifParser(Path fpath, SequentialByteReader reader) throws IOException
+    public TifParser(Path fpath) throws IOException
     {
-        this(fpath);
+        super(fpath);
 
-        metadata = extractTifDirectories(reader);
+        LOGGER.info("Image file [" + getImageFile() + "] loaded");
+
+        String ext = getFileExtension();
+
+        if (!ext.equalsIgnoreCase("tif") && !ext.equalsIgnoreCase("tiff"))
+        {
+            LOGGER.warn("File [" + getImageFile().getFileName() + "] has an incorrect extension name. Found [" + ext + "], updating to [.tif]");
+        }
     }
 
     /**
-     * This constructor creates an instance used for parsing the payload data representing the Image
-     * File Directory (IFD) structures.
+     * Constructs an instance used for parsing the payload data representing the Image File
+     * Directory (IFD) structures.
      *
      * <p>
      * <b>Important Note:</b> Use this constructor when handling JPG image files, as they support
@@ -99,128 +100,110 @@ public class TifParser extends AbstractImageParser
      * </p>
      *
      * @param fpath
-     *        specifies the file path, encapsulated as a Path object
+     *        specifies the TIFF file path, encapsulated as a Path object
      * @param payload
-     *        an array of bytes containing raw data within the Exif segment block
+     *        byte array containing Exif TIFF data
      *
      * @throws IOException
-     *         if an I/O problem has occurred
+     *         if an I/O error occurs
+     * @throws ImageReadErrorException
+     *         if the IFD structures cannot be parsed
      */
-    public TifParser(Path fpath, byte[] payload) throws IOException
+    public TifParser(Path fpath, byte[] payload) throws ImageReadErrorException, IOException
     {
-        this(fpath);
+        super(fpath);
 
-        metadata = extractTifDirectories(new SequentialByteReader(payload));
+        try
+        {
+            metadata = parseFromSegmentBytes(payload);
+        }
+
+        catch (IllegalStateException exc)
+        {
+            throw new ImageReadErrorException("Failed to parse IFD structures from payload", exc);
+        }
     }
 
     /**
-     * Reads and processes a TIFF image file, returning a new Metadata object. Throws exceptions for
-     * any processing issues or non-TIFF formats are detected.
+     * Reads and processes a TIFF image file.
      *
-     * @return a Metadata object containing extracted metadata
+     * @return metadata extracted from the file
+     *
      * @throws IOException
-     *         if the file is not in TIFF format
+     *         if an I/O error occurs
      * @throws ImageReadErrorException
-     *         in case of processing errors
+     *         if the file is not a valid TIFF
      */
     @Override
     public Metadata<? extends BaseMetadata> readMetadata() throws ImageReadErrorException, IOException
     {
-        if (DigitalSignature.detectFormat(getImageFile()) == DigitalSignature.TIF)
+        try
         {
-            try (InputStream fis = Files.newInputStream(getImageFile()))
-            {
-                SequentialByteReader tifReader = new SequentialByteReader(readAllBytes());
-                metadata = extractTifDirectories(tifReader);
-                // tifReader.printRawBytes();
-            }
-
-            catch (NoSuchFileException exc)
-            {
-                throw new ImageReadErrorException("File [" + getImageFile() + "] does not exist", exc);
-            }
-
-            catch (IOException exc)
-            {
-                throw new ImageReadErrorException("Problem encountered while reading the stream from file [" + getImageFile() + "]", exc);
-            }
+            metadata = parseFromSegmentBytes(readAllBytes());
         }
 
-        else
+        catch (IllegalStateException exc)
         {
-            throw new ImageReadErrorException("Image file [" + getImageFile() + "] is not a TIFF type");
+            throw new ImageReadErrorException("TIFF file appears corrupted or has an invalid structure", exc);
         }
 
-        return getMetadata();
+        return getSafeMetadata();
     }
 
     /**
-     * Retrieves processed metadata from the TIFF image file.
+     * Retrieves the extracted metadata, or a fallback if unavailable.
      *
-     * @return a populated {@link Metadata} object if present, otherwise an empty object
+     * @return a {@link Metadata} object
      */
     @Override
-    public Metadata<? extends BaseMetadata> getMetadata()
+    public Metadata<? extends BaseMetadata> getSafeMetadata()
     {
-        if (metadata != null && metadata.hasMetadata())
+        if (metadata == null)
         {
-            return metadata;
+            LOGGER.warn("Metadata information has not been parsed yet.");
+            return new MetadataTIF();
         }
 
-        LOGGER.warn("Metadata information could not be found in file [" + getImageFile() + "]");
-
-        /* Fallback to empty metadata */
-        return new MetadataTIF();
+        return metadata;
     }
 
     /**
-     * Returns the detected {@code TIFF} format.
+     * Returns the detected TIFF format.
      *
-     * @return a {@link DigitalSignature} enum constant representing this image format
+     * @return a {@link DigitalSignature} enum
      */
     @Override
     public DigitalSignature getImageFormat()
     {
-        return format;
+        return DigitalSignature.TIF;
     }
 
     /**
-     * Parses TIFF metadata from a byte array.
+     * Parses TIFF metadata from a byte array, providing information on extracted TIFF directories.
      *
      * <p>
-     * This static utility method is designed for scenarios where TIFF-formatted data, such
-     * as an embedded EXIF segment, is already available in memory. It directly processes the
-     * byte array to extract and structure the metadata directories without needing to read a
-     * file from disk.
+     * For efficiency, use this static utility method where TIFF-formatted data, such as an embedded
+     * EXIF segment, is already available in memory. It directly processes the byte array to extract
+     * and structure the metadata directories without needing to read a file from disk again.
+     * </p>
+     *
+     * <p>
+     * Note: This method assumes the provided byte array is a valid TIFF or EXIF payload. No
+     * external validation is performed.
      * </p>
      *
      * @param payload
-     *        the byte array containing the TIFF-formatted data
-     * @return a {@link MetadataTIF} object containing the parsed directories and tags
-     * 
-     * @throws ImageReadErrorException
-     *         if an error occurs during the TIFF structure parsing
-     * @throws IOException
-     *         if a problem occurs while reading from the byte array
-     */
-    public static MetadataTIF parseFromBytes(byte[] payload) throws ImageReadErrorException, IOException
-    {
-        return extractTifDirectories(new SequentialByteReader(payload));
-    }
-
-    /**
-     * Starts the processing of the IFD structures, handling the required information until all
-     * directories have been read. It also ensures the TIFF segment data is checked beforehand for
-     * integrity.
+     *        byte array containing TIFF-formatted data
      *
-     * @param reader
-     *        a SequentialByteReader object providing access to the payload data
+     * @return parsed metadata
+     * 
+     * @throws IllegalStateException
+     *         if the TIFF header is invalid or the stream data cannot be read correctly
      */
-    private static MetadataTIF extractTifDirectories(SequentialByteReader reader)
+    public static MetadataTIF parseFromSegmentBytes(byte[] payload) throws IllegalStateException
     {
         MetadataTIF tif = new MetadataTIF();
-        IFDHandler handler = new IFDHandler(reader);
-
+        IFDHandler handler = new IFDHandler(new SequentialByteReader(payload));
         handler.parseMetadata();
 
         Optional<List<DirectoryIFD>> optionalData = handler.getDirectories();

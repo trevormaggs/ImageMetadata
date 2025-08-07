@@ -1,4 +1,4 @@
-package common;
+package batch;
 
 import static tif.TagEntries.TagEXIF.EXIF_TAG_CREATE_DATE;
 import static tif.TagEntries.TagEXIF.EXIF_TAG_DATE_TIME_ORIGINAL;
@@ -7,6 +7,11 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import common.AbstractImageParser;
+import common.DigitalSignature;
+import common.ImageParserFactory;
+import common.ImageReadErrorException;
+import common.Metadata;
 import logger.LogFactory;
 import png.ChunkDirectory;
 import png.MetadataPNG;
@@ -70,6 +75,11 @@ public final class TestScanner
     {
         return parser.getImageFile();
     }
+    
+    public DigitalSignature getImageFormat()
+    {
+        return parser.getImageFormat();
+    }
 
     /* Public static methods */
 
@@ -126,7 +136,7 @@ public final class TestScanner
                         ChunkDirectory dir = (ChunkDirectory) png.getDirectory(TextKeyword.CREATE);
                         List<TextEntry> keyword = dir.getTextualData(TextKeyword.CREATE);
 
-                        System.out.printf("%s\n", png.toString("PNG METADATA SUMMARY LIST"));
+                        //System.out.printf("%s\n", png.toString("PNG METADATA SUMMARY LIST"));
 
                         for (TextEntry element : keyword)
                         {

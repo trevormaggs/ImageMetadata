@@ -154,42 +154,37 @@ public class JpgParser extends AbstractImageParser
      * @return a populated {@link Metadata} object containing the metadata
      * 
      * @throws ImageReadErrorException
-     *         if the file is unreadable or not in JPG format
-     * @throws IOException
-     *         if an I/O error occurs while reading
+     *         if the file is unreadable
      */
     @Override
-    public Metadata<? extends BaseMetadata> readMetadata() throws ImageReadErrorException, IOException
+    public Metadata<? extends BaseMetadata> readMetadata() throws ImageReadErrorException
     {
-        if (DigitalSignature.detectFormat(getImageFile()) == DigitalSignature.JPG)
+        byte[] app1SegmentBytes = null;
+
+        try (InputStream fis = Files.newInputStream(getImageFile()))
         {
-            byte[] app1SegmentBytes = null;
+            ImageFileInputStream ImageStream = new ImageFileInputStream(fis);
 
-            try (InputStream fis = Files.newInputStream(getImageFile()))
+            app1SegmentBytes = readRawSegmentData(ImageStream, JpegSegmentConstants.APP1_SEGMENT);
+            metadata = TifParser.parseFromSegmentBytes(app1SegmentBytes);
+        }
+
+        catch (EOFException exc)
+        {
+            if (app1SegmentBytes == null)
             {
-                ImageFileInputStream ImageStream = new ImageFileInputStream(fis);
-
-                app1SegmentBytes = readRawSegmentData(ImageStream, JpegSegmentConstants.APP1_SEGMENT);
-                metadata = TifParser.parseFromSegmentBytes(app1SegmentBytes);
+                LOGGER.warn("Metadata information not found in file [" + getImageFile() + "]");
             }
+        }
 
-            catch (EOFException exc)
-            {
-                if (app1SegmentBytes == null)
-                {
-                    LOGGER.warn("Metadata information not found in file [" + getImageFile() + "]");
-                }
-            }
+        catch (NoSuchFileException exc)
+        {
+            throw new ImageReadErrorException("File [" + getImageFile() + "] does not exist", exc);
+        }
 
-            catch (NoSuchFileException exc)
-            {
-                throw new ImageReadErrorException("File [" + getImageFile() + "] does not exist", exc);
-            }
-
-            catch (IOException exc)
-            {
-                throw new ImageReadErrorException(exc);
-            }
+        catch (IOException exc)
+        {
+            throw new ImageReadErrorException(exc);
         }
 
         return getSafeMetadata();

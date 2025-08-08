@@ -1,6 +1,5 @@
 package png;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -142,6 +141,9 @@ public class ChunkHandler implements ImageHandler
      *
      * @return an {@link Optional} containing the EXIF data as a byte array if found, or
      *         {@link Optional#empty()} if absent
+     * 
+     * @throws throws
+     *         ImageReadErrorException if multiple chunks, that are disallowed, are detected
      */
     public Optional<byte[]> getExifData() throws ImageReadErrorException
     {
@@ -178,20 +180,18 @@ public class ChunkHandler implements ImageHandler
 
     /**
      * Begins metadata processing by parsing the PNG file and extracting chunk data.
-     * 
+     *
      * It also checks if the PNG file contains the expected magic numbers in the first few bytes in
      * the file stream. If these numbers actually exist, they will then be skipped.
-     * 
+     *
      * @return true if at least one chunk element was successfully extracted, or false if no
      *         relevant data was found
      *
      * @throws ImageReadErrorException
      *         if an error occurs while parsing the PNG file
-     * @throws IOException
-     *         if there is a problem reading the PNG file
      */
     @Override
-    public boolean parseMetadata() throws ImageReadErrorException, IOException
+    public boolean parseMetadata() throws ImageReadErrorException
     {
         byte[] data = reader.peek(0, PNG_SIGNATURE_BYTES.length);
 

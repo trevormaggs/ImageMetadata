@@ -158,11 +158,6 @@ public class WebpParser extends AbstractImageParser
     {
         byte[] bytes = readAllBytes(); // Never return null
 
-        if (DigitalSignature.detectFormat(getImageFile()) != DigitalSignature.WEBP)
-        {
-            throw new ImageReadErrorException("Image file [" + getImageFile() + "] is not a WebP type");
-        }
-
         try
         {
             if (bytes.length > 0)

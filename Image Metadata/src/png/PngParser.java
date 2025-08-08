@@ -154,11 +154,9 @@ public class PngParser extends AbstractImageParser
      *
      * @throws ImageReadErrorException
      *         in case of processing errors
-     * @throws IOException
-     *         if the file is not in PNG format
      */
     @Override
-    public Metadata<? extends BaseMetadata> readMetadata() throws ImageReadErrorException, IOException
+    public Metadata<? extends BaseMetadata> readMetadata() throws ImageReadErrorException
     {
         // For full metadata parsing (image properties + text), include IHDR, sRGB, etc.
         EnumSet<ChunkType> chunkSet = EnumSet.of(ChunkType.tEXt, ChunkType.zTXt, ChunkType.iTXt, ChunkType.eXIf);

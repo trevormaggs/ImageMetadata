@@ -60,6 +60,7 @@ public final class ImageParserFactory
      *        the file path of the image to be parsed
      * 
      * @return a concrete implementation of {@link AbstractImageParser}
+     * 
      * @throws IOException
      *         if an I/O error occurs while reading the file signature
      * @throws UnsupportedOperationException

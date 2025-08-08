@@ -2,6 +2,7 @@ package batch;
 
 import static tif.TagEntries.TagEXIF.EXIF_TAG_DATE_TIME_ORIGINAL;
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
 import java.nio.file.Files;
@@ -10,13 +11,13 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicLong;
 import common.DateParser;
 import common.DigitalSignature;
 import common.ImageReadErrorException;
@@ -52,9 +53,9 @@ import tif.MetadataTIF;
  * @author Trevor Maggs
  * @since 4 August 2025
  */
-public class BatchExecutor implements Iterable<MetaMedia>
+public class BatchExecutor3 implements Iterable<MetaMedia>
 {
-    private static final LogFactory LOGGER = LogFactory.getLogger(BatchExecutor.class);
+    private static final LogFactory LOGGER = LogFactory.getLogger(BatchExecutor3.class);
     public static final String DEFAULT_SOURCE_DIRECTORY = ".";
     public static final String DEFAULT_TARGET_DIRECTORY = "IMAGEDIR";
     public static final String DEFAULT_IMAGE_PREFIX = "image";
@@ -68,8 +69,7 @@ public class BatchExecutor implements Iterable<MetaMedia>
     private final boolean skipMediaFiles;
     private final boolean debug;
     private final String datetime;
-    private final String[] fileSet;
-    private final AtomicLong userDateOffset;
+    private final String[] fileGroup;
 
     /**
      * Constructs a BatchExecutor using the specified {@link BatchBuilder} configuration. This
@@ -81,7 +81,7 @@ public class BatchExecutor implements Iterable<MetaMedia>
      * @throws BatchErrorException
      *         in the event of an error during batch processing
      */
-    protected BatchExecutor(BatchBuilder builder) throws BatchErrorException
+    protected BatchExecutor3(BatchBuilder builder) throws BatchErrorException
     {
         this.sourceDir = Paths.get(builder.bd_sourceDir);
         this.prefix = builder.bd_prefix;
@@ -90,8 +90,7 @@ public class BatchExecutor implements Iterable<MetaMedia>
         this.skipMediaFiles = builder.bd_skipMediaFiles;
         this.debug = builder.bd_debug;
         this.datetime = builder.bd_datetime;
-        this.fileSet = Arrays.copyOf(builder.bd_files, builder.bd_files.length);
-        this.userDateOffset = new AtomicLong(0);
+        this.fileGroup = Arrays.copyOf(builder.bd_files, builder.bd_files.length);
 
         if (!Files.isDirectory(sourceDir))
         {
@@ -123,7 +122,7 @@ public class BatchExecutor implements Iterable<MetaMedia>
     protected void start() throws BatchErrorException
     {
         FileVisitor<Path> visitor = createImageVisitor();
-
+        
         try
         {
             if (Files.exists(targetDir))
@@ -135,26 +134,21 @@ public class BatchExecutor implements Iterable<MetaMedia>
 
             startLogging();
 
-            if (fileSet != null && fileSet.length > 0)
+            if (fileGroup.length > 0)
             {
-                for (String fileName : fileSet)
+                try (DirectoryStream<Path> stream = Files.newDirectoryStream(sourceDir))
                 {
-                    Path fpath = sourceDir.resolve(fileName);
-
-                    if (Files.exists(fpath) && Files.isRegularFile(fpath))
+                    for (Path fpath : stream)
                     {
-                        visitor.visitFile(fpath, Files.readAttributes(fpath, BasicFileAttributes.class));
-                    }
-
-                    else
-                    {
-                        LOGGER.warn("Skipping non-regular file [" + fpath + "]");
-                        continue;
+                        if (Arrays.asList(fileGroup).contains(fpath.getFileName().toString()))
+                        {
+                            visitor.visitFile(fpath, Files.readAttributes(fpath, BasicFileAttributes.class));
+                        }
                     }
                 }
             }
 
-            else
+            else if (Files.isDirectory(sourceDir))
             {
                 Files.walkFileTree(sourceDir, visitor);
             }
@@ -212,27 +206,6 @@ public class BatchExecutor implements Iterable<MetaMedia>
     }
 
     /**
-     * Indicates whether the user-provided date-time should be prepended to the
-     * resulting copied file name.
-     *
-     * @return true if the date-time should be prepended, otherwise false
-     */
-    protected boolean embedDateTime()
-    {
-        return embedDateTime;
-    }
-
-    /**
-     * Returns whether video files in the source directory should be skipped.
-     *
-     * @return true if video files should be ignored, otherwise false
-     */
-    protected boolean skipVideoFiles()
-    {
-        return skipMediaFiles;
-    }
-
-    /**
      * Returns an iterator over the internal sorted set of {@code MetaMedia} objects.
      *
      * @return an Iterator instance for navigating the MetaMedia set
@@ -243,18 +216,6 @@ public class BatchExecutor implements Iterable<MetaMedia>
         return imageSet.iterator();
     }
 
-    /**
-     * Creates and returns a {@link FileVisitor} instance to traverse the specified source
-     * directory.
-     * 
-     * <p>
-     * This visitor processes each file by extracting and analysing its metadata, such as the EXIF
-     * {@code DateTimeOriginal} tag. If a file contains relevant metadata, it is wrapped in a
-     * {@link MetaMedia} object and added to the internal sorted set.
-     * </p>
-     * 
-     * @return a configured {@link FileVisitor} for processing image files
-     */
     private FileVisitor<Path> createImageVisitor()
     {
         return new SimpleFileVisitor<Path>()
@@ -262,10 +223,7 @@ public class BatchExecutor implements Iterable<MetaMedia>
             @Override
             public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
             {
-                if (!dir.equals(sourceDir))
-                {
-                    LOGGER.info("Sub-directory [" + dir + "] is being read");
-                }
+                System.out.println("Scanning dir: " + dir);
 
                 return FileVisitResult.CONTINUE;
             }
@@ -275,7 +233,7 @@ public class BatchExecutor implements Iterable<MetaMedia>
             {
                 try
                 {
-                    MetaMedia media = processFile(fpath, attr, datetime, userDateOffset);
+                    MetaMedia media = processFile(fpath, attr, datetime);
 
                     if (media != null)
                     {
@@ -285,10 +243,7 @@ public class BatchExecutor implements Iterable<MetaMedia>
 
                 catch (ImageReadErrorException exc)
                 {
-                    String msg = "Failed to read image metadata from [" + fpath + "]";
-                    LOGGER.error(msg, exc);
-
-                    throw new IOException(msg, exc);
+                    throw new IOException(exc);
                 }
 
                 return FileVisitResult.CONTINUE;
@@ -327,38 +282,24 @@ public class BatchExecutor implements Iterable<MetaMedia>
     }
 
     /**
-     * Processes the specified file and returns a {@link MetaMedia} object with the determined
-     * {@code Date Taken} time-stamp.
-     *
-     * <p>
-     * Metadata sources are checked in the following order:
-     * </p>
-     * 
-     * <ol>
-     * <li>User-provided date</li>
-     * <li>Image metadata (EXIF, PNG textual, etc.)</li>
-     * <li>File's last modified time</li>
-     * </ol>
+     * Processes the specified file and adds to the data structure according to the file signature
+     * for efficient retrieval.
      *
      * @param fpath
-     *        the path representing the file to be processed
+     *        the path representing the file to be checked
      * @param attr
      *        the attributes of the file
-     * @param userDateTime
-     *        a user-defined date that overrides all other date sources
-     * @param userDateOffset
-     *        a synchronised offset to ensure unique time-stamps for user-provided dates
-     * 
-     * @return a populated {@link MetaMedia} object, or null if unsupported
-     * 
+     *
      * @throws IOException
      *         if an error occurs while reading the file
      * @throws ImageReadErrorException
      *         in the event of image parsing problems
      */
-    private static MetaMedia processFile(Path fpath, BasicFileAttributes attr, String userDateTime, AtomicLong userDateOffset) throws IOException, ImageReadErrorException
+    private static MetaMedia processFile(Path fpath, BasicFileAttributes attr, String userDateTime) throws IOException, ImageReadErrorException
     {
-        Date metadataDate = null;
+        MetaMedia media = null;
+        FileTime modifiedTime = null;
+
         TestScanner scanner = TestScanner.loadImage(fpath);
         DigitalSignature format = scanner.getImageFormat();
         Metadata<?> meta = scanner.readMetadata();
@@ -372,8 +313,10 @@ public class BatchExecutor implements Iterable<MetaMedia>
                 if (tif.hasExifData())
                 {
                     DirectoryIFD dir = tif.getDirectory(DirectoryIdentifier.EXIF_DIRECTORY_SUBIFD);
-                    metadataDate = dir.getDate(EXIF_TAG_DATE_TIME_ORIGINAL);
+                    modifiedTime = resolveDateTaken(dir.getDate(EXIF_TAG_DATE_TIME_ORIGINAL), fpath, attr, userDateTime);
                 }
+
+                media = new MetaMedia(fpath, modifiedTime, format);
             }
 
             else if (meta instanceof MetadataPNG)
@@ -383,20 +326,26 @@ public class BatchExecutor implements Iterable<MetaMedia>
                 if (png.hasExifData())
                 {
                     MetadataTIF tif = (MetadataTIF) png.getDirectory(MetadataTIF.class);
+
                     DirectoryIFD dir = tif.getDirectory(DirectoryIdentifier.EXIF_DIRECTORY_SUBIFD);
-                    metadataDate = dir.getDate(EXIF_TAG_DATE_TIME_ORIGINAL);
+                    modifiedTime = resolveDateTaken(dir.getDate(EXIF_TAG_DATE_TIME_ORIGINAL), fpath, attr, userDateTime);
                 }
 
-                else if (png.hasTextualData())
+                if (png.hasTextualData())
                 {
                     ChunkDirectory dir = (ChunkDirectory) png.getDirectory(ChunkType.Category.TEXTUAL);
                     List<TextEntry> data = dir.getTextualData(TextKeyword.CREATE);
 
-                    if (!data.isEmpty())
+                    // System.out.printf("%s\n", png.toString("PNG METADATA SUMMARY LIST"));
+
+                    for (TextEntry element : data)
                     {
-                        metadataDate = DateParser.convertToDate(data.get(0).getValue());
+                        System.out.printf("Textual in %s - %s\n\n", fpath.getFileName(), element.getValue());
+                        modifiedTime = resolveDateTaken(DateParser.convertToDate(element.getValue()), fpath, attr, userDateTime);
                     }
                 }
+
+                media = new MetaMedia(fpath, modifiedTime, format);
             }
 
             else
@@ -407,13 +356,10 @@ public class BatchExecutor implements Iterable<MetaMedia>
 
         else
         {
-            LOGGER.info(String.format("Metadata cannot be found [%s]", scanner.getFile()));
+            System.out.printf("Metadata cannot be found [%s]%n", scanner.getFile());
         }
 
-        // Resolve the final "Date Taken"
-        FileTime modifiedTime = resolveDateTaken(metadataDate, fpath, attr, userDateTime, userDateOffset);
-
-        return new MetaMedia(fpath, modifiedTime, format);
+        return media;
     }
 
     /**
@@ -424,9 +370,9 @@ public class BatchExecutor implements Iterable<MetaMedia>
      * </p>
      *
      * <ol>
-     * <li>A user-provided date, if available</li>
-     * <li>The date from image metadata, for example: EXIF or Textual chunk, if available</li>
-     * <li>The file's last modified time-stamp</li>
+     * <li>A user-provided date, if available.</li>
+     * <li>The date from image metadata, for example: EXIF or Textual chunk, if available.</li>
+     * <li>The file's last modified time-stamp.</li>
      * </ol>
      *
      * <p>
@@ -435,48 +381,41 @@ public class BatchExecutor implements Iterable<MetaMedia>
      * </p>
      *
      * @param metadataDate
-     *        the date retrieved from the image's metadata, for example: EXIF, PNG text
+     *        the date retrieved from the image's metadata, for example: EXIF, PNG text)
      * @param fpath
      *        the path to the image file
      * @param attr
      *        the file's basic attributes, used as a fallback value to get the last modified time
      * @param userDateTaken
      *        a user-defined date that overrides all other date sources
-     * @param userDateOffset
-     *        a synchronised offset to ensure unique time-stamps for user-provided dates
      *
      * @return a {@link FileTime} object representing the determined "Date Taken" time-stamp
      */
-    private static FileTime resolveDateTaken(Date metadataDate, Path fpath, BasicFileAttributes attr, String userDateTime, AtomicLong userDateOffset)
+    private static FileTime resolveDateTaken(Date metadataDate, Path fpath, BasicFileAttributes attr, String userDateTime)
     {
-        /* 1. User-provided date takes highest precedence */
-        if (userDateTime != null && !userDateTime.isEmpty())
+        Date newMetaDate;
+        FileTime modifiedTime = attr.lastModifiedTime();
+
+        if (!userDateTime.isEmpty())
         {
-            Date userDate = DateParser.convertToDate(userDateTime);
+            SimpleDateFormat df = new SimpleDateFormat("dd MMM yyyy");
+            newMetaDate = DateParser.convertToDate(userDateTime);
 
-            if (userDate != null)
-            {
-                long offset = userDateOffset.getAndIncrement();
-                long newTime = userDate.getTime() + (offset * DATE_OFFSET_MILLIS);
-
-                LOGGER.info("Date Taken for [" + fpath.getFileName() + "] updated with user-defined date [" + userDate + "] plus offset [" + offset + "]");
-
-                return FileTime.fromMillis(newTime);
-            }
+            LOGGER.info("Date Taken attribute updated with user-defined date [" + df.format(newMetaDate) + "] in file [" + fpath + "]");
         }
 
-        /* 2. Fallback to metadata date */
-        if (metadataDate != null)
+        else
         {
-            LOGGER.info("Date Taken for [" + fpath.getFileName() + "] using metadata date [" + metadataDate + "]");
-
-            return FileTime.fromMillis(metadataDate.getTime());
+            newMetaDate = new Date(metadataDate.getTime() + DATE_OFFSET_MILLIS);
         }
 
-        /* 3. Final fallback to file's last modified time */
-        LOGGER.info("No metadata date found for [" + fpath.getFileName() + "]. Using file's last modified date [" + attr.lastModifiedTime() + "]");
+        if (newMetaDate == null)
+        {
+            LOGGER.info("Unable to read Date Taken attribute in file [" + fpath + "]. File's last modified date assumed");
+            return modifiedTime;
+        }
 
-        return attr.lastModifiedTime();
+        return FileTime.fromMillis(newMetaDate.getTime());
     }
 
     /**
@@ -516,5 +455,35 @@ public class BatchExecutor implements Iterable<MetaMedia>
                 return FileVisitResult.CONTINUE;
             }
         });
+    }
+
+    public static void main(String[] args)
+    {
+        // String source = "/home/tmaggs/MyJava/TestBatch";
+        // -l trev -m "26 4 2006" -i=image2.jpg, image3.jpg "D:\KDR Project\Milestones\TestBatch"
+        // -p trev "D:\KDR Project\Milestones\TestBatch" -f=pool1.jpg, pool2.jpg,pool7.jpg
+        // -l misty -m "7 10 2012" img
+
+        BatchBuilder builder = new BatchBuilder()
+                .source("E:\\git\\ImageMetadata\\Image Metadata\\img")
+                .target(DEFAULT_TARGET_DIRECTORY)
+                .name("misty")
+                .descending(false)
+                // .datetime("07 Oct 2011")
+                // .embedDateTime(cli.existsOption("-e"))
+                .fileSet(new String[]{"IMG_0820.HEIC", "pool19.JPG", "gemmapreg.tif"})
+                .debug(false);
+
+        try
+        {
+            BatchExecutor batch = builder.build();
+
+            batch.start();
+        }
+
+        catch (BatchErrorException exc)
+        {
+            exc.printStackTrace();
+        }
     }
 }

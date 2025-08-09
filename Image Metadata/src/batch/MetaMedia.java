@@ -2,6 +2,7 @@ package batch;
 
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
+import java.util.Objects;
 import common.DigitalSignature;
 
 /**
@@ -174,16 +175,7 @@ public final class MetaMedia
      */
     public boolean isVideoFormat()
     {
-        switch (mediaFormat)
-        {
-            case AVI:
-            case MOV:
-            case MP4:
-                return true;
-
-            default:
-                return false;
-        }
+        return mediaFormat.isVideo();
     }
 
     /**
@@ -197,7 +189,7 @@ public final class MetaMedia
     @Override
     public boolean equals(Object other)
     {
-        if (other == this)
+        if (this == other)
         {
             return true;
         }
@@ -209,10 +201,8 @@ public final class MetaMedia
 
         MetaMedia meta = (MetaMedia) other;
 
-        return (meta.getDateTaken().equals(dateTaken) &&
-                meta.getPath().equals(mediaFile) &&
-                meta.getMediaFormat() == mediaFormat &&
-                meta.isMetadataEmpty() == hasEmptyMetadata);
+        return hasEmptyMetadata == meta.hasEmptyMetadata && mediaFormat == meta.mediaFormat
+                && Objects.equals(dateTaken, meta.dateTaken) && Objects.equals(mediaFile, meta.mediaFile);
     }
 
     /**
@@ -246,6 +236,7 @@ public final class MetaMedia
         line.append(String.format("  %-30s %s%n", "[Media File]", mediaFile));
         line.append(String.format("  %-30s %s%n", "[Date Taken]", dateTaken));
         line.append(String.format("  %-30s %s%n", "[Format]", mediaFormat));
+        line.append(String.format("  %-30s %s%n", "[Empty Metadata]", hasEmptyMetadata));
 
         return line.toString();
     }

@@ -4,7 +4,8 @@ import java.util.Comparator;
 import java.nio.file.Path;
 
 /**
- * Comparator that sorts MetaMedia objects by timestamp in ascending order. If time-stamps are equal,
+ * Comparator that sorts MetaMedia objects by timestamp in ascending order. If time-stamps are
+ * equal,
  * it falls back to comparing file paths to ensure uniqueness in sorted collections like TreeSet.
  */
 class DefaultTimestampComparator implements Comparator<MetaMedia>
@@ -38,6 +39,6 @@ class DefaultTimestampComparator implements Comparator<MetaMedia>
             return 1;
         }
 
-        return p1.toString().compareTo(p2.toString());
+        return p1.compareTo(p2);
     }
 }

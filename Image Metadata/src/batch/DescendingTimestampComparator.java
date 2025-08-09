@@ -39,6 +39,6 @@ class DescendingTimestampComparator implements Comparator<MetaMedia>
             return 1;
         }
 
-        return p1.toString().compareTo(p2.toString());
+        return p1.compareTo(p2);
     }
 }

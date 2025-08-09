@@ -74,6 +74,25 @@ public enum DigitalSignature
     }
 
     /**
+     * Returns whether this media file is a known video format, for example: MP4, MOV, AVI, etc.
+     *
+     * @return true if the media is a video, otherwise false
+     */
+    public boolean isVideo()
+    {
+        switch (this)
+        {
+            case AVI:
+            case MOV:
+            case MP4:
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
+    /**
      * Detects the file signature based on magic numbers.
      *
      * @param file

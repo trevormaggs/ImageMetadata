@@ -75,7 +75,7 @@ public final class TestScanner
     {
         return parser.getImageFile();
     }
-    
+
     public DigitalSignature getImageFormat()
     {
         return parser.getImageFormat();

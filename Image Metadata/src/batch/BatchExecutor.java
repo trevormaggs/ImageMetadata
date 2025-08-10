@@ -16,8 +16,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import common.AbstractImageParser;
 import common.DateParser;
 import common.DigitalSignature;
+import common.ImageParserFactory;
 import common.ImageReadErrorException;
 import common.Metadata;
 import common.SystemInfo;
@@ -54,10 +56,11 @@ import tif.MetadataTIF;
 public class BatchExecutor implements Iterable<MetaMedia>
 {
     private static final LogFactory LOGGER = LogFactory.getLogger(BatchExecutor.class);
+    private static final long DATE_OFFSET_MILLIS = 10_000L;
+    private static final FileVisitor<Path> DELETE_VISITOR;
     public static final String DEFAULT_SOURCE_DIRECTORY = ".";
     public static final String DEFAULT_TARGET_DIRECTORY = "IMAGEDIR";
     public static final String DEFAULT_IMAGE_PREFIX = "image";
-    private static final long DATE_OFFSET_MILLIS = 10_000L;
 
     private final String prefix;
     private final Path sourceDir;
@@ -69,6 +72,35 @@ public class BatchExecutor implements Iterable<MetaMedia>
     private final String datetime;
     private final String[] fileSet;
     private long dateOffsetUpdate;
+
+    static
+    {
+        DELETE_VISITOR = new SimpleFileVisitor<Path>()
+        {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException
+            {
+                Files.delete(file);
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException
+            {
+                if (exc == null)
+                {
+                    Files.delete(dir);
+                }
+
+                else
+                {
+                    throw exc;
+                }
+
+                return FileVisitResult.CONTINUE;
+            }
+        };
+    }
 
     /**
      * Constructs a BatchExecutor using the specified {@link BatchBuilder} configuration. This
@@ -89,7 +121,8 @@ public class BatchExecutor implements Iterable<MetaMedia>
         this.skipMediaFiles = builder.bd_skipMediaFiles;
         this.debug = builder.bd_debug;
         this.datetime = builder.bd_datetime;
-        this.fileSet = Arrays.copyOf(builder.bd_files, builder.bd_files.length);
+        this.fileSet = builder.bd_files != null ? Arrays.copyOf(builder.bd_files, builder.bd_files.length) : new String[0];
+
         this.dateOffsetUpdate = 0L;
 
         if (!Files.isDirectory(sourceDir))
@@ -127,7 +160,11 @@ public class BatchExecutor implements Iterable<MetaMedia>
         {
             if (Files.exists(targetDir))
             {
-                deleteTargetDirectory(targetDir);
+                /*
+                 * Permanently deletes the target directory and all of its contents.
+                 * This operation is destructive and cannot be undone.
+                 */
+                Files.walkFileTree(targetDir, DELETE_VISITOR);
             }
 
             Files.createDirectories(targetDir);
@@ -164,10 +201,7 @@ public class BatchExecutor implements Iterable<MetaMedia>
             throw new BatchErrorException("An I/O error has occurred", exc);
         }
 
-        for (MetaMedia file : imageSet)
-        {
-            System.out.printf("%s\n", file);
-        }
+        imageSet.forEach(System.out::println);
     }
 
     /**
@@ -274,7 +308,8 @@ public class BatchExecutor implements Iterable<MetaMedia>
             {
                 try
                 {
-                    MetaMedia media = processFile(fpath, attr, datetime, dateOffsetUpdate++);
+                    MetaMedia media = processFile(fpath, attr, datetime, dateOffsetUpdate);
+                    dateOffsetUpdate++;
 
                     if (media != null)
                     {
@@ -306,8 +341,7 @@ public class BatchExecutor implements Iterable<MetaMedia>
     {
         try
         {
-            // Set up the file for logging and disable the console handler
-            String logFilePath = getTargetDirectory() + "/batchlog_" + SystemInfo.getHostname() + ".log";
+            String logFilePath = Paths.get(targetDir.toString(), "batchlog_" + SystemInfo.getHostname() + ".log").toString();
 
             LOGGER.configure(logFilePath);
             LOGGER.setDebug(debug);
@@ -359,73 +393,94 @@ public class BatchExecutor implements Iterable<MetaMedia>
     {
         Date metadataDate = null;
         boolean emptyMetadata = false;
-        TestScanner scanner = TestScanner.loadImage(fpath);
-        DigitalSignature format = scanner.getImageFormat();
-        Metadata<?> meta = scanner.readMetadata();
+        AbstractImageParser parser = ImageParserFactory.getParser(fpath);
+        DigitalSignature format = parser.getImageFormat();
+        Metadata<?> meta = parser.readMetadata();
 
         if (meta != null && meta.hasMetadata())
         {
             if (meta instanceof MetadataTIF)
             {
-                MetadataTIF tif = (MetadataTIF) meta;
-
-                if (tif.hasExifData())
-                {
-                    DirectoryIFD dir = tif.getDirectory(DirectoryIdentifier.EXIF_DIRECTORY_SUBIFD);
-
-                    if (dir != null)
-                    {
-                        metadataDate = dir.getDate(EXIF_TAG_DATE_TIME_ORIGINAL);
-                    }
-                }
+                metadataDate = extractExifDate((MetadataTIF) meta);
             }
 
             else if (meta instanceof MetadataPNG)
             {
-                MetadataPNG<?> png = (MetadataPNG<?>) meta;
-
-                if (png.hasExifData())
-                {
-                    MetadataTIF tif = (MetadataTIF) png.getDirectory(MetadataTIF.class);
-                    DirectoryIFD dir = tif.getDirectory(DirectoryIdentifier.EXIF_DIRECTORY_SUBIFD);
-
-                    if (dir != null)
-                    {
-                        metadataDate = dir.getDate(EXIF_TAG_DATE_TIME_ORIGINAL);
-                    }
-                }
-
-                else if (png.hasTextualData())
-                {
-                    ChunkDirectory dir = (ChunkDirectory) png.getDirectory(ChunkType.Category.TEXTUAL);
-
-                    if (dir != null)
-                    {
-                        List<TextEntry> data = dir.getTextualData(TextKeyword.CREATE);
-
-                        if (!data.isEmpty())
-                        {
-                            metadataDate = DateParser.convertToDate(data.get(0).getValue());
-                        }
-                    }
-                }
+                metadataDate = extractPngDate((MetadataPNG<?>) meta);
             }
 
-            else
+            // If metadata exists but no usable date was found
+            if (metadataDate == null)
             {
-                LOGGER.info("File [" + fpath + "] is an unknown or unsupported image file");
+                emptyMetadata = true;
+                LOGGER.info("Metadata found, but no date field available for [" + parser.getImageFile() + "]");
             }
         }
 
         else
         {
             emptyMetadata = true;
-            LOGGER.info("Metadata cannot be found [" + scanner.getFile() + "]");
+            LOGGER.info("No EXIF/metadata date found for [" + parser.getImageFile() + "]");
         }
 
         FileTime modifiedTime = resolveDateTaken(metadataDate, fpath, attr, userDateTime, dateOffset);
 
         return new MetaMedia(fpath, modifiedTime, format, emptyMetadata);
+    }
+
+    private static Date extractExifDate(MetadataTIF tif)
+    {
+        if (tif.hasExifData())
+        {
+            DirectoryIFD dir = tif.getDirectory(DirectoryIdentifier.EXIF_DIRECTORY_SUBIFD);
+
+            if (dir != null)
+            {
+                return dir.getDate(EXIF_TAG_DATE_TIME_ORIGINAL);
+            }
+        }
+
+        return null;
+    }
+
+    private static Date extractPngDate(MetadataPNG<?> png)
+    {
+        if (png.hasExifData())
+        {
+            Object dir = png.getDirectory(MetadataTIF.class);
+
+            if (dir instanceof MetadataTIF)
+            {
+                Date exifDate = extractExifDate((MetadataTIF) dir);
+
+                if (exifDate != null)
+                {
+                    return exifDate;
+                }
+            }
+        }
+
+        else if (png.hasTextualData())
+        {
+            Object dir = png.getDirectory(ChunkType.Category.TEXTUAL);
+
+            if (dir instanceof ChunkDirectory)
+            {
+                List<TextEntry> data = ((ChunkDirectory) dir).getTextualData(TextKeyword.CREATE);
+
+                if (!data.isEmpty())
+                {
+                    Date parsed = DateParser.convertToDate(data.get(0).getValue());
+
+                    if (parsed != null)
+                    {
+                        return parsed;
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -473,6 +528,8 @@ public class BatchExecutor implements Iterable<MetaMedia>
                 LOGGER.info("Date Taken for [" + fpath.getFileName() + "] updated with user-defined date [" + userDate + "] plus offset [" + dateOffset + "]");
                 return FileTime.fromMillis(newTime);
             }
+
+            LOGGER.warn("Invalid user date format [" + userDateTime + "]. Falling back to metadata or file timestamp");
         }
 
         /* 2. Fallback to metadata date */
@@ -486,44 +543,5 @@ public class BatchExecutor implements Iterable<MetaMedia>
         LOGGER.info("No metadata date found for [" + fpath.getFileName() + "]. Using file's last modified date [" + attr.lastModifiedTime() + "]");
 
         return attr.lastModifiedTime();
-    }
-
-    /**
-     * Permanently deletes the target directory and all of its contents. This operation is
-     * destructive and cannot be undone.
-     *
-     * @param dir
-     *        the path of the directory to delete
-     *
-     * @throws IOException
-     *         if an error occurs while deleting files or directories
-     */
-    private static void deleteTargetDirectory(Path dir) throws IOException
-    {
-        Files.walkFileTree(dir, new SimpleFileVisitor<Path>()
-        {
-            @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attr) throws IOException
-            {
-                Files.delete(file);
-                return FileVisitResult.CONTINUE;
-            }
-
-            @Override
-            public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException
-            {
-                if (exc == null)
-                {
-                    Files.delete(dir);
-                }
-
-                else
-                {
-                    throw exc;
-                }
-
-                return FileVisitResult.CONTINUE;
-            }
-        });
     }
 }

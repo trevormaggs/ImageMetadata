@@ -53,8 +53,8 @@ public class MetaBox extends FullBox
     {
         super(box, reader);
 
-        int startpos = reader.getCurrentPosition();
-        int endpos = startpos + available();
+        long startpos = reader.getCurrentPosition();
+        long endpos = startpos + available();
 
         containedBoxes = new LinkedHashMap<>();
 

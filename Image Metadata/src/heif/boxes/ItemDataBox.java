@@ -43,7 +43,7 @@ public class ItemDataBox extends Box
 
         // Number of bytes remaining for this box payload
         int count = available();
-        int pos = reader.getCurrentPosition();
+        long pos = reader.getCurrentPosition();
 
         data = reader.readBytes(count);
         byteUsed += reader.getCurrentPosition() - pos;

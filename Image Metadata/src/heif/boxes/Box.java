@@ -21,7 +21,7 @@ public class Box
     private final byte[] boxTypeBytes;
     private final String userType;
     private final HeifBoxType type;
-    protected int byteUsed;
+    protected long byteUsed;
     private Box parent;
 
     /**
@@ -33,7 +33,7 @@ public class Box
      */
     public Box(SequentialByteReader reader)
     {
-        int startPos = reader.getCurrentPosition();
+        long startPos = reader.getCurrentPosition();
 
         this.order = reader.getByteOrder();
         long sizeField = reader.readUnsignedInteger();
@@ -180,7 +180,7 @@ public class Box
      *
      * @return bytes read so far
      */
-    public int byteUsed()
+    public long byteUsed()
     {
         return byteUsed;
     }

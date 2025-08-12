@@ -48,7 +48,7 @@ public class FileTypeBox extends Box
     {
         super(box);
 
-        int pos = reader.getCurrentPosition();
+        long pos = reader.getCurrentPosition();
 
         compatibleBrands = new ArrayList<>();
         majorBrand = reader.readBytes(4);

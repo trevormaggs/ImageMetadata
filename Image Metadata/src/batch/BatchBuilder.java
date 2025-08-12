@@ -1,5 +1,7 @@
 package batch;
 
+import java.io.IOException;
+
 /**
  * <p>
  * Implements the Builder design pattern for step-by-step construction of a {@link BatchExecutor}
@@ -34,7 +36,7 @@ public final class BatchBuilder
     protected String bd_datetime = "";
     protected boolean bd_descending = false;
     protected boolean bd_embedDateTime = false;
-    protected boolean bd_skipMediaFiles = false;
+    protected boolean bd_skipVideoFiles = false;
     protected boolean bd_debug = false;
     protected String[] bd_files = new String[0];
 
@@ -130,9 +132,9 @@ public final class BatchBuilder
      *
      * @return this object to allow method chaining
      */
-    public BatchBuilder skipMedia(final boolean media)
+    public BatchBuilder skipVideo(final boolean media)
     {
-        bd_skipMediaFiles = media;
+        bd_skipVideoFiles = media;
         return this;
     }
 
@@ -171,34 +173,10 @@ public final class BatchBuilder
      *
      * @throws BatchErrorException
      *         in case of an error during batch processing
+     * @throws IOException
      */
-    public BatchExecutor build() throws BatchErrorException
+    public BatchExecutor build() throws BatchErrorException, IOException
     {
         return new BatchExecutor(this);
-    }
-    
-    public static void main(String[] args)
-    {
-        // Example usage
-        BatchBuilder builder = new BatchBuilder()
-                .source("E:\\git\\ImageMetadata\\Image Metadata\\img")
-                .target(BatchExecutor.DEFAULT_TARGET_DIRECTORY)
-                .name("misty")
-                .descending(false)
-                // .datetime("07 Oct 2011") // Example of a user-defined date
-                // .embedDateTime(cli.existsOption("-e"))
-                //.fileSet(new String[]{"IMG_0820.HEIC", "pool19.JPG", "gemmapreg.tif"})
-                .debug(false);
-
-        try
-        {
-            BatchExecutor batch = builder.build();
-            batch.start();
-        }
-
-        catch (BatchErrorException exc)
-        {
-            exc.printStackTrace();
-        }
     }
 }

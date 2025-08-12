@@ -47,7 +47,7 @@ public class DataInformationBox extends Box
     {
         super(box);
 
-        int pos = reader.getCurrentPosition();
+        long pos = reader.getCurrentPosition();
         dref = new DataReferenceBox(new Box(reader), reader);
         byteUsed += reader.getCurrentPosition() - pos;
     }

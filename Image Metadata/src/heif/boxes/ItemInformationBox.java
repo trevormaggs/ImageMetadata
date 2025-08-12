@@ -55,7 +55,7 @@ public class ItemInformationBox extends FullBox
         super(box, reader);
 
         List<ItemInfoEntry> tmpEntries = new ArrayList<>();
-        int pos = reader.getCurrentPosition();
+        long pos = reader.getCurrentPosition();
 
         j = 1;
 

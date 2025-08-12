@@ -51,7 +51,7 @@ public class PrimaryItemBox extends FullBox
     {
         super(box, reader);
 
-        int pos = reader.getCurrentPosition();
+        long pos = reader.getCurrentPosition();
 
         itemID = (getVersion() == 0) ? reader.readUnsignedShort() : reader.readUnsignedInteger();
         byteUsed += reader.getCurrentPosition() - pos;

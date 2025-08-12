@@ -48,7 +48,7 @@ public class PixelInformationBox extends FullBox
     {
         super(box, reader);
 
-        int pos = reader.getCurrentPosition();
+        long pos = reader.getCurrentPosition();
 
         numChannels = reader.readUnsignedByte();
 

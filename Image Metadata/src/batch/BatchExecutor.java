@@ -34,26 +34,23 @@ import tif.DirectoryIdentifier;
 import tif.MetadataTIF;
 
 /**
- * <p>
  * Automates the batch processing of image files by copying, renaming, and chronologically sorting
  * them based on their EXIF metadata, such as {@code DateTimeOriginal}.
+ *
+ * <p>
+ * This class supports a range of image formats, including JPEG, TIFF, PNG, WebP, and HEIF. If EXIF
+ * metadata is not available, it defaults to using the file's last modified time-stamp.
  * </p>
  *
  * <p>
- * Supported formats include JPEG, TIFF, PNG, WebP and HEIF. If EXIF metadata is unavailable, the
- * file's last modified time-stamp is assumed.
+ * To access the sorted list of files, use the {@code Iterable<MetaMedia>} interface.
  * </p>
  *
- * <p>
- * To access the sorted set of files, iterate using the {@code Iterable<MetaMedia>} interface.
- * </p>
- *
- * @see MetaMedia
  * @version 1.0
  * @author Trevor Maggs
  * @since 4 August 2025
  */
-public class BatchExecutor implements Iterable<MetaMedia>
+public class BatchExecutor implements Batchable, Iterable<MetaMedia>
 {
     private static final LogFactory LOGGER = LogFactory.getLogger(BatchExecutor.class);
     private static final long DATE_OFFSET_MILLIS = 10_000L;
@@ -67,7 +64,7 @@ public class BatchExecutor implements Iterable<MetaMedia>
     private final Path targetDir;
     private final Set<MetaMedia> imageSet;
     private final boolean embedDateTime;
-    private final boolean skipMediaFiles;
+    private final boolean skipVideoFiles;
     private final boolean debug;
     private final String datetime;
     private final String[] fileSet;
@@ -103,12 +100,13 @@ public class BatchExecutor implements Iterable<MetaMedia>
     }
 
     /**
-     * Constructs a BatchExecutor using the specified {@link BatchBuilder} configuration. This
-     * constructor is package-private and should be invoked via {@link BatchBuilder#build()}.
+     * Constructs a {@code BatchExecutor} using the provided {@link BatchBuilder} configuration.
+     * This constructor is package-private and should be invoked through
+     * {@link BatchBuilder#build()}.
      *
      * @param builder
-     *        Builder object containing required parameters
-     *
+     *        the builder object containing required parameters
+     * 
      * @throws BatchErrorException
      *         in the event of an error during batch processing
      */
@@ -118,10 +116,10 @@ public class BatchExecutor implements Iterable<MetaMedia>
         this.prefix = builder.bd_prefix;
         this.targetDir = Paths.get(builder.bd_target);
         this.embedDateTime = builder.bd_embedDateTime;
-        this.skipMediaFiles = builder.bd_skipMediaFiles;
+        this.skipVideoFiles = builder.bd_skipVideoFiles;
         this.debug = builder.bd_debug;
         this.datetime = builder.bd_datetime;
-        this.fileSet = builder.bd_files != null ? Arrays.copyOf(builder.bd_files, builder.bd_files.length) : new String[0];
+        this.fileSet = Arrays.copyOf(builder.bd_files, builder.bd_files.length);
 
         this.dateOffsetUpdate = 0L;
 
@@ -146,13 +144,13 @@ public class BatchExecutor implements Iterable<MetaMedia>
     }
 
     /**
-     * Starts the batch processing workflow: cleans the target directory, begins logging, and
-     * processes the source directory or a set of files if supplied.
+     * Begins the batch processing workflow by cleaning the target directory, setting up logging,
+     * and processing the specified source files or directory.
      *
      * @throws BatchErrorException
-     *         if any I/O or metadata error occurs
+     *         if an I/O or metadata-related error occurs
      */
-    protected void start() throws BatchErrorException
+    protected void scan() throws BatchErrorException
     {
         FileVisitor<Path> visitor = createImageVisitor();
 
@@ -200,14 +198,12 @@ public class BatchExecutor implements Iterable<MetaMedia>
         {
             throw new BatchErrorException("An I/O error has occurred", exc);
         }
-
-        imageSet.forEach(System.out::println);
     }
 
     /**
-     * Retrieves the source directory where all original files are found.
+     * Retrieves the source directory where the original files are located.
      *
-     * @return the Path instance of the source directory
+     * @return the {@code Path} instance of the source directory
      */
     protected Path getSourceDirectory()
     {
@@ -215,9 +211,9 @@ public class BatchExecutor implements Iterable<MetaMedia>
     }
 
     /**
-     * Retrieves the target directory where all copied files are saved.
+     * Retrieves the target directory where the processed files will be saved.
      *
-     * @return the Path instance of the target directory
+     * @return the {@code Path} instance of the target directory
      */
     protected Path getTargetDirectory()
     {
@@ -225,7 +221,7 @@ public class BatchExecutor implements Iterable<MetaMedia>
     }
 
     /**
-     * Returns the prefix used when renaming each copied image file.
+     * Returns the prefix used for renaming each copied image file.
      *
      * @return the filename prefix
      */
@@ -235,9 +231,9 @@ public class BatchExecutor implements Iterable<MetaMedia>
     }
 
     /**
-     * Returns the number of image files identified and sorted after batch processing.
+     * Returns the total number of image files identified and processed after a batch run.
      *
-     * @return the total count of processed images
+     * @return the count of processed images
      */
     protected int getImageCount()
     {
@@ -245,10 +241,9 @@ public class BatchExecutor implements Iterable<MetaMedia>
     }
 
     /**
-     * Indicates whether the user-provided date-time should be prepended to the
-     * resulting copied file name.
+     * Indicates whether the user-provided date-time should be prepended to the renamed file.
      *
-     * @return true if the date-time should be prepended, otherwise false
+     * @return {@code true} if the date-time should be prepended, otherwise {@code false}
      */
     protected boolean embedDateTime()
     {
@@ -256,19 +251,19 @@ public class BatchExecutor implements Iterable<MetaMedia>
     }
 
     /**
-     * Returns whether video files in the source directory should be skipped.
+     * Returns whether video files in the source directory should be skipped during processing.
      *
-     * @return true if video files should be ignored, otherwise false
+     * @return {@code true} if video files should be ignored, otherwise {@code false}
      */
     protected boolean skipVideoFiles()
     {
-        return skipMediaFiles;
+        return skipVideoFiles;
     }
 
     /**
      * Returns an iterator over the internal sorted set of {@code MetaMedia} objects.
      *
-     * @return an Iterator instance for navigating the MetaMedia set
+     * @return an {@code Iterator} for navigating the {@code MetaMedia} set
      */
     @Override
     public Iterator<MetaMedia> iterator()
@@ -277,13 +272,12 @@ public class BatchExecutor implements Iterable<MetaMedia>
     }
 
     /**
-     * Creates and returns a {@link FileVisitor} instance to traverse the specified source
-     * directory.
+     * Creates and returns a {@link FileVisitor} instance to traverse the source directory.
      *
      * <p>
-     * This visitor processes each file by extracting and analysing its metadata, such as the EXIF
-     * {@code DateTimeOriginal} tag. If a file contains relevant metadata, it is wrapped in a
-     * {@link MetaMedia} object and added to the internal sorted set.
+     * This visitor extracts and analyses metadata from each file, such as the EXIF
+     * {@code DateTimeOriginal} tag. Files with relevant metadata are wrapped in a {@link MetaMedia}
+     * object and added to the internal sorted set.
      * </p>
      *
      * @return a configured {@link FileVisitor} for processing image files
@@ -331,8 +325,8 @@ public class BatchExecutor implements Iterable<MetaMedia>
     }
 
     /**
-     * Begins the logging system and writes initial configuration details to the log file. This
-     * method is for internal setup and not intended for external use.
+     * Begins the logging system and writes initial configuration details to a log file. This method
+     * is for internal setup and is not intended for external use.
      *
      * @throws BatchErrorException
      *         if the logging service cannot be set up
@@ -360,30 +354,31 @@ public class BatchExecutor implements Iterable<MetaMedia>
     }
 
     /**
-     * Processes the specified file and returns a {@link MetaMedia} object with the determined
+     * Processes the specified file and returns a {@link MetaMedia} object containing the determined
      * {@code Date Taken} time-stamp.
      *
      * <p>
-     * Metadata sources are checked in the following order:
+     * The method prioritises metadata sources in the following order:
      * </p>
      *
      * <ol>
      * <li>User-provided date</li>
-     * <li>Image metadata (EXIF, PNG textual, etc.)</li>
+     * <li>Image metadata, for example: EXIF, PNG textual data</li>
      * <li>File's last modified time</li>
      * </ol>
      *
      * @param fpath
-     *        the path representing the file to be processed
+     *        the path of the file to be processed
      * @param attr
-     *        the attributes of the file
+     *        the basic attributes of the file
      * @param userDateTime
-     *        a user-defined date that overrides all other date sources
+     *        a user-defined date string that overrides all other date sources
      * @param dateOffset
-     *        an offset value to ensure unique time-stamps for user-provided dates
-     *
-     * @return a populated {@link MetaMedia} object, or null if unsupported
-     *
+     *        a numeric offset to ensure unique time-stamps for files processed with the same
+     *        user-provided date
+     * 
+     * @return a populated {@link MetaMedia} object, or {@code null} if the file is not supported
+     * 
      * @throws IOException
      *         if an error occurs while reading the file
      * @throws ImageReadErrorException
@@ -428,6 +423,14 @@ public class BatchExecutor implements Iterable<MetaMedia>
         return new MetaMedia(fpath, modifiedTime, format, emptyMetadata);
     }
 
+    /**
+     * Extracts the date from EXIF metadata in a {@link MetadataTIF} object.
+     *
+     * @param tif
+     *        the {@code MetadataTIF} instance
+     * 
+     * @return a {@code Date} object from the EXIF data, or {@code null} if not found
+     */
     private static Date extractExifDate(MetadataTIF tif)
     {
         if (tif.hasExifData())
@@ -443,6 +446,15 @@ public class BatchExecutor implements Iterable<MetaMedia>
         return null;
     }
 
+    /**
+     * Extracts the date from PNG metadata. It first checks for embedded EXIF data, then
+     * falls back to textual chunks if available.
+     *
+     * @param png
+     *        the {@code MetadataPNG} instance
+     * 
+     * @return a {@code Date} object from the PNG data, or {@code null} if not found
+     */
     private static Date extractPngDate(MetadataPNG<?> png)
     {
         if (png.hasExifData())
@@ -484,10 +496,11 @@ public class BatchExecutor implements Iterable<MetaMedia>
     }
 
     /**
-     * Determines the appropriate {@code Date Taken} time-stamp for the image file.
+     * Determines the appropriate {@code Date Taken} time-stamp for an image file based on a set of
+     * prioritised sources.
      *
      * <p>
-     * The method prioritises date sources based on the following order:
+     * The method checks for dates in the following order:
      * </p>
      *
      * <ol>
@@ -497,21 +510,21 @@ public class BatchExecutor implements Iterable<MetaMedia>
      * </ol>
      *
      * <p>
-     * If a user-provided date is used, a 10-second offset is applied to prevent duplicate
-     * time-stamps for multiple files processed with the same date, ensuring proper sorting.
+     * When a user-provided date is used, a 10-second offset is applied for each file to ensure
+     * unique time-stamps, which prevents sorting conflicts.
      * </p>
      *
      * @param metadataDate
-     *        the date retrieved from the image's metadata, for example: EXIF, PNG text
+     *        the date retrieved from the image's metadata
      * @param fpath
      *        the path to the image file
      * @param attr
-     *        the file's basic attributes, used as a fallback value to get the last modified time
+     *        the file's basic attributes, used for the fallback last modified time
      * @param userDateTaken
-     *        a user-defined date that overrides all other date sources
+     *        a user-defined date string that takes precedence over other sources
      * @param dateOffset
-     *        an offset value to ensure unique time-stamps for user-provided dates
-     *
+     *        an offset value to create unique time-stamps for user-provided dates
+     * 
      * @return a {@link FileTime} object representing the determined "Date Taken" time-stamp
      */
     private static FileTime resolveDateTaken(Date metadataDate, Path fpath, BasicFileAttributes attr, String userDateTime, long dateOffset)
@@ -543,5 +556,21 @@ public class BatchExecutor implements Iterable<MetaMedia>
         LOGGER.info("No metadata date found for [" + fpath.getFileName() + "]. Using file's last modified date [" + attr.lastModifiedTime() + "]");
 
         return attr.lastModifiedTime();
+    }
+
+    /**
+     * Executes the batch copying process. To be sub-classed to provide an accurate implementation.
+     * 
+     * <p>
+     * This method iterates through the internal sorted set of {@link MetaMedia} objects and copies
+     * each source file to the target directory. It renames the copied file using the designated
+     * prefix and updates its file time attributes (creation, last modified, and last access) to
+     * match the "Date Taken" timestamp determined during the scan phase.
+     * </p>
+     */
+    @Override
+    public void copyToTarget()
+    {
+        this.forEach(System.out::println);
     }
 }

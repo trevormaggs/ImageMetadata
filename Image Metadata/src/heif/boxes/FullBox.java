@@ -41,7 +41,7 @@ public class FullBox extends Box
     {
         super(box);
 
-        int pos = reader.getCurrentPosition();
+        long pos = reader.getCurrentPosition();
 
         /* Reads 4 additional bytes (1 byte version + 3 bytes flags), on top of the Box header */
         version = reader.readUnsignedByte();

@@ -45,7 +45,7 @@ public class ImageRotationBox extends Box
     {
         super(box);
 
-        int pos = reader.getCurrentPosition();
+        long pos = reader.getCurrentPosition();
         int data = reader.readUnsignedByte();
 
         // First 6 bits are reserved

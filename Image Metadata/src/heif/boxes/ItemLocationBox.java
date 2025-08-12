@@ -58,7 +58,7 @@ public class ItemLocationBox extends FullBox
     {
         super(box, reader);
 
-        int pos = reader.getCurrentPosition();
+        long pos = reader.getCurrentPosition();
 
         int tmp = reader.readUnsignedByte();
         offsetSize = (tmp & 0xF0) >> 4;

@@ -52,8 +52,8 @@ public class ItemReferenceBox extends FullBox
     {
         super(box, reader);
 
-        int startpos = reader.getCurrentPosition();
-        int endpos = startpos + available();
+        long startpos = reader.getCurrentPosition();
+        long endpos = startpos + available();
 
         references = new ArrayList<>();
 

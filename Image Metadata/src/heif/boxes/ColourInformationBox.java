@@ -60,8 +60,8 @@ public class ColourInformationBox extends Box
     {
         super(box);
 
-        int startpos = reader.getCurrentPosition();
-        int endpos = startpos + available();
+        long startpos = reader.getCurrentPosition();
+        long endpos = startpos + available();
         int remainingBytes = available();
 
         // Read 4-byte colourType

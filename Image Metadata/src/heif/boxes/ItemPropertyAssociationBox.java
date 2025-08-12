@@ -50,7 +50,7 @@ public class ItemPropertyAssociationBox extends FullBox
     {
         super(box, reader);
 
-        int pos = reader.getCurrentPosition();
+        long pos = reader.getCurrentPosition();
 
         entryCount = (int) reader.readUnsignedInteger();
         entries = new ItemPropertyEntry[entryCount];

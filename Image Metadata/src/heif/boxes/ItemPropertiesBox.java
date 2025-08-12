@@ -75,8 +75,8 @@ public class ItemPropertiesBox extends Box
     {
         super(box);
 
-        int startpos = reader.getCurrentPosition();
-        int endpos = startpos + available();
+        long startpos = reader.getCurrentPosition();
+        long endpos = startpos + available();
 
         associations = new ArrayList<>();
 
@@ -216,8 +216,8 @@ public class ItemPropertiesBox extends Box
         {
             super(box);
 
-            int startpos = reader.getCurrentPosition();
-            int endpos = startpos + available();
+            long startpos = reader.getCurrentPosition();
+            long endpos = startpos + available();
 
             properties = new ArrayList<>();
 

@@ -50,7 +50,7 @@ public class HandlerBox extends FullBox
     {
         super(box, reader);
 
-        int pos = reader.getCurrentPosition();
+        long pos = reader.getCurrentPosition();
 
         /* Pre-defined = 0 */
         reader.skip(4);

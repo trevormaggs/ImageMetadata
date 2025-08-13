@@ -15,22 +15,15 @@ import common.SequentialByteReader;
  *
  * This implementation follows to the guidelines outlined in the Specification -
  * {@code ISO/IEC 14496-12:2015} on Page 29, and also {@code ISO/IEC 23008-12:2017 on Page 22}.
- *
- * <p>
- * Version History:
- * </p>
  * 
  * <p>
  * <strong>API Note:</strong> Additional testing is required to validate the reliability and
  * robustness of this implementation.
  * </p>
  *
- * <ul>
- * <li>1.0 - Initial release by Trevor Maggs on 31 May 2025</li>
- * </ul>
- *
  * @author Trevor Maggs
- * @since 31 May 2025
+ * @version 1.0
+ * @since 13 August 2025
  */
 public class HandlerBox extends FullBox
 {

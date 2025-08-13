@@ -22,17 +22,9 @@ import logger.LogFactory;
  * <a href="https://www.w3.org/TR/png/#4Concepts">https://www.w3.org/TR/png/#4Concepts</a>.
  * </p>
  *
- * <p>
- * Change History:
- * </p>
- *
- * <ul>
- * <li>Version 1.0 - Initial release by Trevor Maggs on 28 July 2025</li>
- * </ul>
- *
+ * @author Trevor Maggs
  * @version 1.0
- * @author Trevor Maggs, trevmaggs@tpg.com.au
- * @since 28 July 2025
+ * @since 13 August 2025
  */
 public enum ChunkType
 {

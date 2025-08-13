@@ -24,6 +24,10 @@ import common.ByteValueConverter;
  * This class correctly handles the little-endian byte ordering used for FourCCs in the RIFF
  * specification.
  * </p>
+ * 
+ * @author Trevor Maggs
+ * @version 1.0
+ * @since 13 August 2025
  */
 public enum WebPChunkType
 {

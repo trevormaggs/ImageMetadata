@@ -12,16 +12,6 @@ import logger.LogFactory;
  * the {@code colourType} field.
  *
  * <p>
- * Version History:
- * </p>
- *
- * <ul>
- * <li>1.0 - Initial release by Trevor Maggs on 28 May 2025</li>
- * <li>1.1 - Added getters for parsed colour properties and enhanced toString() by Trevor Maggs on
- * 24 July 2025</li>
- * </ul>
- * 
- * <p>
  * <strong>API Note:</strong>This implementation handles {@code nclx} colour types fully. For
  * {@code rICC} and {@code prof} types, the ICC profile data is ignored as its parsing is beyond the
  * current scope of this box. Further testing is needed for edge cases and compatibility if
@@ -29,7 +19,8 @@ import logger.LogFactory;
  * </p>
  * 
  * @author Trevor Maggs
- * @since 28 May 2025
+ * @version 1.0
+ * @since 13 August 2025
  */
 public class ColourInformationBox extends Box
 {

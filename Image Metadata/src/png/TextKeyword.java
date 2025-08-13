@@ -15,7 +15,7 @@ import tif.TagHint;
  *
  * @author Trevor Maggs
  * @version 1.0
- * @since 21 June 2025
+ * @since 13 August 2025
  */
 public enum TextKeyword
 {

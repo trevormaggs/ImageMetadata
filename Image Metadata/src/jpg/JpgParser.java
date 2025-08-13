@@ -28,17 +28,9 @@ import tif.TifParser;
  * segments beginning with the "Exif\0\0" identifier.
  * </p>
  *
- * <p>
- * <strong>Change History:</strong>
- * </p>
- * 
- * <ul>
- * <li>Version 1.0 - Initial release by Trevor Maggs on 21 June 2025</li>
- * </ul>
- *
- * @version 0.1
  * @author Trevor Maggs
- * @since 21 June 2025
+ * @version 1.0
+ * @since 13 August 2025
  */
 public class JpgParser extends AbstractImageParser
 {

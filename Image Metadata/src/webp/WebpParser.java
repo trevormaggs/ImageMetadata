@@ -85,20 +85,12 @@ import tif.TifParser;
  * is commonly used to extract orientation, date, and camera information.
  * </p>
  *
- * <p>
- * <b>Change History:</b>
- * </p>
- *
- * <ul>
- * <li>Version 1.0 - First release by Trevor Maggs on 31 July 2025</li>
- * </ul>
- *
  * @see <a href="https://developers.google.com/speed/webp/docs/riff_container">WebP RIFF Container
  *      Specification</a>
  *
+ * @author Trevor Maggs
  * @version 1.0
- * @author Trevor Maggs, trevmaggs@tpg.com.au
- * @since 3 August 2025
+ * @since 13 August 2025
  */
 public class WebpParser extends AbstractImageParser
 {

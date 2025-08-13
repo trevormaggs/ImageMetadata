@@ -1,11 +1,22 @@
 package batch;
 
+import java.io.BufferedOutputStream;
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import org.apache.commons.imaging.Imaging;
+import org.apache.commons.imaging.common.ImageMetadata;
+import org.apache.commons.imaging.formats.jpeg.JpegImageMetadata;
+import org.apache.commons.imaging.formats.jpeg.exif.ExifRewriter;
+import org.apache.commons.imaging.formats.tiff.TiffImageMetadata;
+import org.apache.commons.imaging.formats.tiff.constants.ExifTagConstants;
+import org.apache.commons.imaging.formats.tiff.write.TiffOutputDirectory;
+import org.apache.commons.imaging.formats.tiff.write.TiffOutputSet;
 import common.CommandLineParser;
 import common.ProjectBuildInfo;
 import common.cli.CommandLineReader;
@@ -24,16 +35,9 @@ import logger.LogFactory;
  * in an ascending (default) or descending chronological order.
  * </p>
  *
- * <p>
- * Change History:
- * </p>
- *
- * <ul>
- * <li>Version 1.0 - Initial release by Trevor Maggs on 16 July 2024</li>
- * </ul>
- *
  * @author Trevor Maggs
- * @since 16 July 2024
+ * @version 1.0
+ * @since 13 August 2025
  */
 public final class BatchConsole extends BatchExecutor
 {
@@ -52,7 +56,7 @@ public final class BatchConsole extends BatchExecutor
      * @throws IOException
      * @throws FileNotFoundException
      */
-    public BatchConsole(BatchBuilder builder) throws BatchErrorException
+    public BatchConsole(BatchBuilder builder) throws BatchErrorException, FileNotFoundException, IOException
     {
         super(builder);
 
@@ -61,7 +65,7 @@ public final class BatchConsole extends BatchExecutor
     }
 
     @Override
-    public void copyToTarget()
+    public void copyToTarget() throws FileNotFoundException, IOException
     {
         int k = 0;
         Path copied;
@@ -101,12 +105,16 @@ public final class BatchConsole extends BatchExecutor
 
             if (media.isMetadataEmpty())
             {
-                System.err.printf("%s\t%s\n", copied, media.getMediaFormat());
             }
 
-            else if ((media.isJPG() || media.isTIF()) && !media.isMetadataEmpty())
+            else if (media.isTIF())
+            {}
+            
+            else if (media.isJPG())
             {
-
+                System.err.printf("%s\t%s\n", copied, media.getPath());
+                
+                changeDateTimeMetadata(media.getPath().toFile(), copied.toFile(), captureTime);
             }
 
             else if (media.isPNG() && !media.isMetadataEmpty())
@@ -118,6 +126,60 @@ public final class BatchConsole extends BatchExecutor
             }
 
             // System.err.printf("%s\n", media);
+        }
+    }
+
+    /**
+     * Copies the specified original image file to the target file, and updates the
+     * {@code Date Taken} property in the image metadata with the provided date-time parameter.
+     *
+     * @param sourceFile
+     *        the original image file to be copied
+     * @param targetFile
+     *        the new target file, a copy of the specified source file
+     * @param datetime
+     *        The captured date-time to be updated
+     *
+     * @throws FileNotFoundException
+     *         if the target file cannot be found
+     * @throws IOException
+     *         if an error occurs during processing
+     */
+    protected static void changeDateTimeMetadata(File sourceFile, File targetFile, FileTime datetime) throws FileNotFoundException, IOException
+    {
+        try (FileOutputStream fos = new FileOutputStream(targetFile); BufferedOutputStream os = new BufferedOutputStream(fos))
+        {
+            TiffOutputSet outputSet = null;
+            ImageMetadata metadata = Imaging.getMetadata(sourceFile);
+            JpegImageMetadata jpegMetadata = (JpegImageMetadata) metadata;
+            String dateTaken = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss").format(datetime.toMillis());
+
+            if (jpegMetadata != null)
+            {
+                TiffImageMetadata exif = jpegMetadata.getExif();
+
+                if (exif != null)
+                {
+                    outputSet = exif.getOutputSet();
+                }
+            }
+
+            if (outputSet == null)
+            {
+                outputSet = new TiffOutputSet();
+            }
+
+            TiffOutputDirectory exifDirectory = outputSet.getOrCreateExifDirectory();
+
+            // Recreate the 'Date Taken' field
+            exifDirectory.removeField(ExifTagConstants.EXIF_TAG_DATE_TIME_ORIGINAL);
+            exifDirectory.add(ExifTagConstants.EXIF_TAG_DATE_TIME_ORIGINAL, dateTaken);
+
+            // Recreate the 'Digitized Date' field
+            exifDirectory.removeField(ExifTagConstants.EXIF_TAG_DATE_TIME_DIGITIZED);
+            exifDirectory.add(ExifTagConstants.EXIF_TAG_DATE_TIME_DIGITIZED, dateTaken);
+
+            new ExifRewriter().updateExifMetadataLossless(sourceFile, os, outputSet);
         }
     }
 

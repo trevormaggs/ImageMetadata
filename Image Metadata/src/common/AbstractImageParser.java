@@ -32,17 +32,9 @@ import java.nio.file.Path;
  * Metadata metadata = parser.readMetadata();
  * </pre>
  *
- * <p>
- * <strong>Change History:</strong>
- * </p>
- * 
- * <ul>
- * <li>Version 1.0 – Initial release by Trevor Maggs on 9 July 2025</li>
- * </ul>
- *
- * @version 1.0
- * @since 9 July 2025
  * @author Trevor Maggs
+ * @version 1.0
+ * @since 13 August 2025
  */
 public abstract class AbstractImageParser
 {

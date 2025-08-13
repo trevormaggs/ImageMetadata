@@ -12,18 +12,9 @@ import java.util.EnumSet;
  * Enumerates known image formats by identifying their distinct magic numbers in the image file
  * header. These magic numbers reside in the first few bytes of the file.
  *
- * <p>
- * <strong>Change logs:</strong>
- * </p>
- * <ul>
- * <li>Trevor Maggs created on 11 July 2024</li>
- * <li>Modified on 10 April 2025 - Simplified logic by removing offset</li>
- * <li>Revised on 11 July 2025 - Improved detection and Java 8 compatibility</li>
- * </ul>
- *
  * @author Trevor Maggs
- * @version 0.3
- * @since 11 July 2025
+ * @version 1.0
+ * @since 13 August 2025
  */
 public enum DigitalSignature
 {

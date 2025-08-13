@@ -26,7 +26,8 @@ import java.io.IOException;
  * </pre>
  * 
  * @author Trevor Maggs
- * @since 1.0
+ * @version 1.0
+ * @since 13 August 2025
  */
 public final class BatchBuilder
 {

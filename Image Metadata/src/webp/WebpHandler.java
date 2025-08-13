@@ -28,7 +28,7 @@ import logger.LogFactory;
  *
  * @author Trevor Maggs
  * @version 1.0
- * @since 1 August 2025
+ * @since 13 August 2025
  */
 public class WebpHandler implements ImageHandler
 {
@@ -39,18 +39,6 @@ public class WebpHandler implements ImageHandler
     private final List<WebpChunk> chunks;
     private final EnumSet<WebPChunkType> requiredChunks;
     private final int fileSize;
-
-    /**
-     * This default constructor should not be invoked, or it will throw an exception to prevent
-     * instantiation.
-     *
-     * @throws UnsupportedOperationException
-     *         to indicate that instantiation is not supported
-     */
-    public WebpHandler()
-    {
-        throw new UnsupportedOperationException("Not intended for instantiation");
-    }
 
     /**
      * Constructs a handler to parse selected chunks from a WebP image file.
@@ -131,6 +119,25 @@ public class WebpHandler implements ImageHandler
         }
 
         return Optional.empty();
+    }
+
+    /**
+     * Returns the length of the image file associated with the current InputStream resource.
+     *
+     * @return the length of the file in bytes, or 0 if the size cannot be determined
+     */
+    @Override
+    public long getSafeFileLength()
+    {
+        try
+        {
+            return Files.size(imageFile);
+        }
+
+        catch (IOException exc)
+        {
+            return 0;
+        }
     }
 
     /**

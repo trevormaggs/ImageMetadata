@@ -9,17 +9,9 @@ import tif.TagEntries.TagPngChunk;
  * Typically used to store entries from textual chunks such as {@code tEXt}, {@code iTXt}, or
  * {@code zTXt}.
  *
- * <p>
- * Change History:
- * </p>
- *
- * <ul>
- * <li>Version 1.0 – Initial release by Trevor Maggs on 21 June 2025</li>
- * </ul>
- *
- * @version 1.0
  * @author Trevor Maggs
- * @since 21 June 2025
+ * @version 1.0
+ * @since 13 August 2025
  */
 public class TextEntry
 {

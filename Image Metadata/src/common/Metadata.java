@@ -11,19 +11,12 @@ package common;
  * for use by both composite and leaf-style metadata implementations.
  * </p>
  *
- * <p>
- * <strong>Change History:</strong>
- * </p>
- * <ul>
- * <li>Version 1.0 – Initial release by Trevor Maggs on 9 July 2025</li>
- * </ul>
- *
  * @param <T>
  *        the type of metadata directory stored
  *
- * @version 1.0
  * @author Trevor Maggs
- * @since 9 July 2025
+ * @version 1.0
+ * @since 13 August 2025
  */
 public interface Metadata<T> extends BaseMetadata, Iterable<T>
 {

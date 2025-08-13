@@ -12,8 +12,9 @@ import java.util.Stack;
  * configurable byte order (big-endian or little-endian).
  * </p>
  * 
+ * @author Trevor Maggs
  * @version 1.0
- * @since 21 June 2025
+ * @since 13 August 2025
  */
 public class SequentialByteReader extends AbstractByteReader
 {

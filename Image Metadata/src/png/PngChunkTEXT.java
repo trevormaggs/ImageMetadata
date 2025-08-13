@@ -11,8 +11,9 @@ import logger.LogFactory;
  * This chunk contains a keyword and associated text string, both encoded in Latin-1. It extends
  * {@link PngChunk} to provide decoding of the textual content into a {@link TextEntry}.
  *
+ * @author Trevor Maggs
  * @version 1.0
- * @since 28 July 2025
+ * @since 13 August 2025
  */
 public class PngChunkTEXT extends PngChunk
 {

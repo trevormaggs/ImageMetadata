@@ -2,6 +2,7 @@ package heif;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -47,7 +48,8 @@ import logger.LogFactory;
  * </p>
  *
  * @author Trevor Maggs
- * @since 25 June 2025
+ * @version 1.0
+ * @since 13 August 2025
  */
 public class BoxHandler implements ImageHandler, Iterable<Box>
 {
@@ -283,7 +285,7 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
 
         return Optional.empty();
     }
-    
+
     /**
      * Extracts the embedded Exif TIFF block from the HEIF container.
      *
@@ -309,10 +311,10 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
      * </ul>
      *
      * @return an {@link Optional} containing the TIFF-compatible Exif block as a byte array if
-     * present, otherwise, {@link Optional#empty()}
+     *         present, otherwise, {@link Optional#empty()}
      *
      * @throws ImageReadErrorException
-     * if the Exif block is missing, malformed, or cannot be located
+     *         if the Exif block is missing, malformed, or cannot be located
      */
     public Optional<byte[]> getExifData() throws ImageReadErrorException
     {
@@ -346,9 +348,9 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
 
             // Skip to the TIFF header, excluding the offset field
             reader.skip(exifTiffHeaderOffset);
-            
+
             int payloadLength = firstExtent.getExtentLength() - exifTiffHeaderOffset - 4;
-            
+
             baos.write(reader.peek(reader.getCurrentPosition(), payloadLength));
             reader.reset();
 
@@ -356,7 +358,7 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
             for (int i = 1; i < extents.size(); i++)
             {
                 ExtentData extent = extents.get(i);
-                
+
                 reader.mark();
                 reader.seek(extent.getExtentOffset());
                 baos.write(reader.peek(reader.getCurrentPosition(), extent.getExtentLength()));
@@ -375,6 +377,25 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
         }
 
         return Optional.empty();
+    }
+
+    /**
+     * Returns the length of the image file associated with the current InputStream resource.
+     *
+     * @return the length of the file in bytes, or 0 if the size cannot be determined
+     */
+    @Override
+    public long getSafeFileLength()
+    {
+        try
+        {
+            return Files.size(imageFile);
+        }
+
+        catch (IOException exc)
+        {
+            return 0;
+        }
     }
 
     /**

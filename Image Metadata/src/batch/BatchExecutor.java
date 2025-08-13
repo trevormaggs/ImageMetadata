@@ -1,6 +1,7 @@
 package batch;
 
 import static tif.TagEntries.TagEXIF.EXIF_TAG_DATE_TIME_ORIGINAL;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
@@ -46,9 +47,9 @@ import tif.MetadataTIF;
  * To access the sorted list of files, use the {@code Iterable<MetaMedia>} interface.
  * </p>
  *
- * @version 1.0
  * @author Trevor Maggs
- * @since 4 August 2025
+ * @version 1.0
+ * @since 13 August 2025
  */
 public class BatchExecutor implements Batchable, Iterable<MetaMedia>
 {
@@ -569,7 +570,7 @@ public class BatchExecutor implements Batchable, Iterable<MetaMedia>
      * </p>
      */
     @Override
-    public void copyToTarget()
+    public void copyToTarget() throws FileNotFoundException, IOException
     {
         this.forEach(System.out::println);
     }

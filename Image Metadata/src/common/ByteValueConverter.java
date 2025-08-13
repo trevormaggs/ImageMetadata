@@ -19,17 +19,9 @@ import java.util.List;
  * This class is non-instantiable and thread-safe due to its state-less and static design.
  * </p>
  * 
- * <p>
- * <strong>Change History:</strong>
- * </p>
- * 
- * <ul>
- * <li>v1.0 - Initial release by Trevor Maggs, 21 June 2025</li>
- * </ul>
- *
  * @author Trevor Maggs
- * @version 0.1
- * @since 21 June 2025
+ * @version 1.0
+ * @since 13 August 2025
  */
 public final class ByteValueConverter
 {

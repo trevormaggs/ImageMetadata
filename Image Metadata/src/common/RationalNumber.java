@@ -16,17 +16,9 @@ import java.util.Objects;
  * Java does not have an unsigned type, both numerator and denominator variables are declared as
  * long to ensure storage for large numbers, preventing any potential negative numbers.
  * 
- * <p>
- * Change History:
- * </p>
- * 
- * <ul>
- * <li>Version 1.0 - Initial release by Trevor Maggs on 21 June 2025</li>
- * </ul>
- * 
- * @version 0.1
- * @author Trevor Maggs, trevmaggs@tpg.com.au
- * @since 21 June 2025
+ * @author Trevor Maggs
+ * @version 1.0
+ * @since 13 August 2025
  */
 public class RationalNumber extends Number
 {

@@ -34,20 +34,11 @@ import logger.LogFactory;
  * both TIFF and JPEG files.
  * </p>
  *
- * <p>
- * <b>Change History:</b>
- * </p>
+ * @see <a href="https://partners.adobe.com/public/developer/en/tiff/TIFF6.pdf">TIFF 6.0 Specification</a>
  *
- * <ul>
- * <li>Version 1.0 - First release by Trevor Maggs on 7 August 2025</li>
- * </ul>
- *
- * @see <a href="https://partners.adobe.com/public/developer/en/tiff/TIFF6.pdf">TIFF 6.0
- *      Specification</a>
- *
+ * @author Trevor Maggs
  * @version 1.0
- * @author Trevor Maggs, trevmaggs@tpg.com.au
- * @since 7 August 2025
+ * @since 13 August 2025
  */
 public class TifParser extends AbstractImageParser
 {
@@ -160,7 +151,7 @@ public class TifParser extends AbstractImageParser
     {
         if (metadata == null)
         {
-            LOGGER.warn("Metadata information has not been parsed yet.");
+            LOGGER.warn("Metadata information has not been parsed yet");
             return new MetadataTIF();
         }
 

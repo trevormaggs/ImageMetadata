@@ -20,8 +20,9 @@ import tif.TagEntries.TagPngChunk;
  * Refer to the PNG Specification for information on chunk layout and bit-flag meanings.
  * </p>
  *
- * @version 0.1
- * @since 21 June 2025
+ * @author Trevor Maggs
+ * @version 1.0
+ * @since 13 August 2025
  */
 public class PngChunk
 {

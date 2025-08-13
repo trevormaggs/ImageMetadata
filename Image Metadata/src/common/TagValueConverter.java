@@ -9,9 +9,9 @@ import tif.TagHint;
  * Utility class for converting EntryIFD values to human-readable or numeric forms, using hint-aware
  * transformation rules.
  *
- * @version 1.0
- * @since 10 July 2025
  * @author Trevor Maggs
+ * @version 1.0
+ * @since 13 August 2025
  */
 public final class TagValueConverter
 {

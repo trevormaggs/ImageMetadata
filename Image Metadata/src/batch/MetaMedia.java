@@ -9,17 +9,9 @@ import common.DigitalSignature;
  * Represents metadata for a single media file, including file path, capture date, file format, and
  * metadata availability.
  * 
- * <p>
- * <b>Change logs:</b>
- * </p>
- *
- * <ul>
- * <li>Trevor Maggs created on 4 August 2025</li>
- * </ul>
- *
  * @author Trevor Maggs
  * @version 1.0
- * @since 4 August 2025
+ * @since 13 August 2025
  */
 public final class MetaMedia
 {

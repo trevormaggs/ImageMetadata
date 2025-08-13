@@ -27,8 +27,9 @@ import logger.LogFactory;
  * <li>Text (UTF-8): compressed or plain text depending on the compression flag</li>
  * </ul>
  *
+ * @author Trevor Maggs
  * @version 1.0
- * @since 28 July 2025
+ * @since 13 August 2025
  */
 public class PngChunkITXT extends PngChunk
 {

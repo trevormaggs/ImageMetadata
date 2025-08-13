@@ -33,12 +33,12 @@ import java.util.Map;
  * </ul>
  *
  * <p>
- * Use {@link #fromTypeName(String)} or {@link #fromTypeBytes(byte[])} to resolve box types at
- * runtime.
+ * Use {@link #fromTypeName(String)} or {@link #fromTypeBytes(byte[])} to resolve box types at runtime.
  * </p>
  *
  * @author Trevor Maggs
- * @since 17 June 2025
+ * @version 1.0
+ * @since 13 August 2025
  */
 public enum HeifBoxType
 {

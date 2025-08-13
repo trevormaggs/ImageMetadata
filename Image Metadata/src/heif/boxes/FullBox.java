@@ -12,16 +12,9 @@ import common.SequentialByteReader;
  * For further technical details, refer to the Specification document - ISO/IEC 14496-12:2015 on
  * Pages 6 and 7 under {@code Object Structure}.
  *
- * <p>
- * Version History:
- * </p>
- *
- * <ul>
- * <li>1.0 - Initial release by Trevor Maggs on 28 May 2025</li>
- * </ul>
- *
  * @author Trevor Maggs
- * @since 28th May 2025
+ * @version 1.0
+ * @since 13 August 2025
  */
 public class FullBox extends Box
 {

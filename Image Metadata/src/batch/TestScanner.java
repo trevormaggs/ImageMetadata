@@ -35,16 +35,9 @@ import tif.MetadataTIF;
  * <li>WebP (in pipeline)</li>
  * </ul>
  *
- * <p>
- * Version History:
- * </p>
- *
- * <ul>
- * <li>First Release (v1.0) - Launched by Trevor Maggs on 30 April 2025</li>
- * </ul>
- *
  * @author Trevor Maggs
- * @since 30 April 2025
+ * @version 1.0
+ * @since 13 August 2025
  */
 public final class TestScanner
 {

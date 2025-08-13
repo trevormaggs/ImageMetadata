@@ -14,20 +14,13 @@ import common.SequentialByteReader;
  * For technical details, refer to ISO/IEC 14496-12:2015, Page 7 (File Type Box).
  *
  * <p>
- * Version History:
- * </p>
- *
- * <ul>
- * <li>1.0 - Initial release by Trevor Maggs on 31 May 2025</li>
- * </ul>
- * 
- * <p>
  * <strong>API Note:</strong> Additional testing is required to validate the reliability and
  * robustness of this implementation.
  * </p>
  *
  * @author Trevor Maggs
- * @since 31 May 2025
+ * @version 1.0
+ * @since 13 August 2025
  */
 public class FileTypeBox extends Box
 {

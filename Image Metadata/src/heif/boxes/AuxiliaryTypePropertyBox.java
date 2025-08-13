@@ -16,15 +16,9 @@ import common.SequentialByteReader;
  * Specification Reference: ISO/IEC 23008-12:2017 on Page 14
  * </p>
  * 
- * <p>
- * Version History:
- * </p>
- * <ul>
- * <li>1.0 – Initial release by Trevor Maggs on 2 June 2025</li>
- * </ul>
- *
  * @author Trevor Maggs
- * @since 2 June 2025
+ * @version 1.0
+ * @since 13 August 2025
  */
 public class AuxiliaryTypePropertyBox extends FullBox
 {

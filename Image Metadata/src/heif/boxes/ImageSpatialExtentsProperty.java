@@ -12,20 +12,13 @@ import common.SequentialByteReader;
  * association of all transformative properties.
  * 
  * <p>
- * Version History:
- * </p>
- *
- * <ul>
- * <li>1.0 - Initial release by Trevor Maggs on 2 June 2025</li>
- * </ul>
- * 
- * <p>
  * <strong>API Note:</strong> Additional testing is required to validate the reliability and
  * robustness of this implementation.
  * </p>
  *
  * @author Trevor Maggs
- * @since 2 June 2025
+ * @version 1.0
+ * @since 13 August 2025
  */
 public class ImageSpatialExtentsProperty extends FullBox
 {

@@ -6,6 +6,6 @@
  * </p>
  * 
  * @author Trevor Maggs
- * @since July 2025
+ * @since 1 August 2025
  */
 package tif;

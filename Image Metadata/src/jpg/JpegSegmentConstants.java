@@ -10,9 +10,9 @@ package jpg;
  * http://www.sno.phy.queensu.ca/~phil/exiftool/TagNames/JPEG.html
  * https://docs.fileformat.com/image/jpeg/
  * 
- * @version 0.1
- * @author Trevor Maggs, trevmaggs@tpg.com.au
- * @since 21 June 2025 
+ * @author Trevor Maggs
+ * @version 1.0
+ * @since 13 August 2025
  */
 public enum JpegSegmentConstants
 {

@@ -23,7 +23,7 @@ import java.util.Objects;
  * @version 1.0
  * @since 13 August 2025
  */
-public class ImageFileInputStream implements AutoCloseable
+public class ImageFileInputStream2 implements AutoCloseable
 {
     private final BufferedInputStream stream;
     private ByteOrder byteOrder;
@@ -35,7 +35,7 @@ public class ImageFileInputStream implements AutoCloseable
      * @param fis
      *        the input stream to wrap. Must not be null
      */
-    public ImageFileInputStream(InputStream fis)
+    public ImageFileInputStream2(InputStream fis)
     {
         this(fis, ByteOrder.BIG_ENDIAN);
     }
@@ -51,7 +51,7 @@ public class ImageFileInputStream implements AutoCloseable
      * @throws NullPointerException
      *         if either input stream or byte order is null
      */
-    public ImageFileInputStream(InputStream fis, ByteOrder order)
+    public ImageFileInputStream2(InputStream fis, ByteOrder order)
     {
         if (fis == null)
         {
@@ -312,7 +312,7 @@ public class ImageFileInputStream implements AutoCloseable
      * @throws IOException
      *         if an I/O error occurs or mark/reset is not supported
      */
-    public int peek() throws IOException
+    public int peekByte() throws IOException
     {
         // Mark the current position in the buffered stream.
         // The readlimit of 1 is sufficient since we only want to peek one byte.
@@ -343,7 +343,7 @@ public class ImageFileInputStream implements AutoCloseable
      *         if an I/O error occurs, the stream ends prematurely, or the mark/reset operation is
      *         not supported
      */
-    public byte[] peek(int offset, int length) throws IOException
+    public byte[] peekBytes(int offset, int length) throws IOException
     {
         if (stream == null)
         {

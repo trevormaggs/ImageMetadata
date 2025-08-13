@@ -10,17 +10,9 @@ import java.nio.ByteOrder;
  * configurable byte order (big-endian or little-endian).
  * </p>
  * 
- * <p>
- * Change History:
- * </p>
- * 
- * <ul>
- * <li>Version 1.0 – Initial release by Trevor Maggs on 21 June 2025</li>
- * </ul>
- * 
- * @version 1.0
  * @author Trevor Maggs
- * @since 21 June 2025
+ * @version 1.0
+ * @since 13 August 2025
  */
 public class RandomAccessByteReader extends AbstractByteReader
 {

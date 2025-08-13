@@ -10,20 +10,13 @@ import common.SequentialByteReader;
  * item’s data extents are stored within this box.
  * 
  * <p>
- * Version History:
- * </p>
- *
- * <ul>
- * <li>1.0 - Initial release by Trevor Maggs on 2 June 2025</li>
- * </ul>
- * 
- * <p>
  * <strong>API Note:</strong> This implementation assumes a flat byte array. No item parsing is
  * performed beyond raw byte extraction. Further testing is needed for edge cases and compatibility.
  * </p>
  *
  * @author Trevor Maggs
- * @since 2 June 2025
+ * @version 1.0
+ * @since 13 August 2025
  */
 public class ItemDataBox extends Box
 {

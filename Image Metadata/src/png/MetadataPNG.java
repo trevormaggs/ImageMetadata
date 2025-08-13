@@ -21,7 +21,7 @@ import tif.TagEntries.Taggable;
  *
  * @author Trevor Maggs
  * @version 1.0
- * @since 21 June 2025
+ * @since 13 August 2025
  */
 public class MetadataPNG<T extends BaseMetadata> implements Metadata<T>
 {

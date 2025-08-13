@@ -47,16 +47,9 @@ import logger.LogFactory;
  * in an ascending (default) or descending chronological order.
  * </p>
  *
- * <p>
- * Change History:
- * </p>
- *
- * <ul>
- * <li>Version 1.0 - Initial release by Trevor Maggs on 16 July 2024</li>
- * </ul>
- *
  * @author Trevor Maggs
- * @since 16 July 2024
+ * @version 1.0
+ * @since 13 August 2025
  */
 public final class BatchConsole2 extends BatchExecutor
 {

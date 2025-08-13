@@ -7,16 +7,9 @@ import common.SequentialByteReader;
  * This derived Box class handles the Box identified as {@code ipro} - Item Protection Box. For
  * technical details, refer to the Specification document - ISO/IEC 14496-12:2015, on page 80.
  * 
- * <p>
- * Version History:
- * </p>
- * 
- * <ul>
- * <li>1.0 - Initial release by Trevor Maggs on 28 May 2025</li>
- * </ul>
- *
  * @author Trevor Maggs
- * @since 28 May 2025
+ * @version 1.0
+ * @since 13 August 2025
  */
 public class ItemProtectionBox extends FullBox
 {

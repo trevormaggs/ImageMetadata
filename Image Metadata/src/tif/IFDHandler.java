@@ -39,7 +39,8 @@ import tif.TagEntries.Taggable;
  *
  * @author Trevor Maggs
  * @version 1.0
- * @since 25 June 2025
+ * @since 13 August 2025
+ * 
  * @see <a href="https://partners.adobe.com/public/developer/en/tiff/TIFF6.pdf">TIFF 6.0
  *      Specification (Adobe) for in-depth technical information</a>
  */
@@ -115,6 +116,18 @@ public class IFDHandler implements ImageHandler
     public boolean isBigTiffVersion()
     {
         return isTiffBig;
+    }
+
+    /**
+     * Returns the length of the image file associated with the current InputStream resource.
+     *
+     * @return the length of the file in bytes, or 0 if the size cannot be determined
+     */
+    @Override
+    public long getSafeFileLength()
+    {
+        // At this stage, its not needed
+        return 0;
     }
 
     /**
@@ -248,7 +261,7 @@ public class IFDHandler implements ImageHandler
      *        the directory type being processed
      * @param startOffset
      *        the file offset (from header base) where the IFD begins
-     * 
+     *
      * @throws IllegalStateException
      *         if there is a problem during reading the stream data
      */

@@ -29,16 +29,9 @@ import webp.WebpParser;
  * instantiation of the correct parser implementation.
  * </p>
  *
- * <p>
- * <strong>Change History:</strong>
- * </p>
- * <ul>
- * <li>Version 1.0 – Initial release by Trevor Maggs on 9 July 2025</li>
- * </ul>
- *
- * @version 1.0
- * @since 9 July 2025
  * @author Trevor Maggs
+ * @version 1.0
+ * @since 13 August 2025
  */
 public final class ImageParserFactory
 {

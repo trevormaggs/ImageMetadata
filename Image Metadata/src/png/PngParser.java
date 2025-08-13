@@ -1,7 +1,9 @@
 package png;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteOrder;
+import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -11,9 +13,9 @@ import java.util.Optional;
 import common.AbstractImageParser;
 import common.BaseMetadata;
 import common.DigitalSignature;
+import common.ImageFileInputStream;
 import common.ImageReadErrorException;
 import common.Metadata;
-import common.SequentialByteReader;
 import logger.LogFactory;
 import png.ChunkType.Category;
 import tif.TifParser;
@@ -80,20 +82,12 @@ import tif.TifParser;
  * <li>A null list results in all data being copied from the source stream</li>
  * </ul>
  *
- * <p>
- * Change History:
- * </p>
- *
- * <ul>
- * <li>Version 1.0 - First release by Trevor Maggs on 20 July 2025</li>
- * </ul>
- *
  * @see <a href="https://www.w3.org/TR/png">See this link for more technical background
  *      information.</a>
  *
+ * @author Trevor Maggs
  * @version 1.0
- * @author Trevor Maggs, trevmaggs@tpg.com.au
- * @since 20 July 2025
+ * @since 13 August 2025
  */
 public class PngParser extends AbstractImageParser
 {
@@ -161,10 +155,10 @@ public class PngParser extends AbstractImageParser
         // For full metadata parsing (image properties + text), include IHDR, sRGB, etc.
         EnumSet<ChunkType> chunkSet = EnumSet.of(ChunkType.tEXt, ChunkType.zTXt, ChunkType.iTXt, ChunkType.eXIf);
 
-        try
+        try (InputStream fis = Files.newInputStream(getImageFile()))
         {
             // Use big-endian byte order as per Specifications
-            SequentialByteReader pngReader = new SequentialByteReader(readAllBytes(), PNG_BYTE_ORDER);
+            ImageFileInputStream pngReader = new ImageFileInputStream(fis, PNG_BYTE_ORDER);
             Metadata<BaseMetadata> png = new MetadataPNG<>();
             ChunkHandler handler = new ChunkHandler(getImageFile(), pngReader, chunkSet);
 

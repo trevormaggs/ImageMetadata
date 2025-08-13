@@ -17,8 +17,9 @@ import logger.LogFactory;
  * <a href="https://developers.google.com/speed/webp/docs/riff_container">Google Developer site</a>
  * </p>
  *
+ * @author Trevor Maggs
  * @version 1.0
- * @since 1 August 2025
+ * @since 13 August 2025
  */
 public class WebpChunk
 {

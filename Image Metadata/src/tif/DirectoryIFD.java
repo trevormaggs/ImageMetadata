@@ -30,17 +30,9 @@ import tif.TagEntries.Taggable;
  * convenient methods for retrieving values in common data formats.
  * </p>
  *
- * <p>
- * <strong>Change History</strong>
- * </p>
- *
- * <ul>
- * <li>v1.0 — Initial release by Trevor Maggs, 10 July 2025</li>
- * </ul>
- *
- * @version 1.0
- * @since 10 July 2025
  * @author Trevor Maggs
+ * @version 1.0
+ * @since 13 August 2025
  * @see EntryIFD
  */
 public class DirectoryIFD implements Directory<EntryIFD>

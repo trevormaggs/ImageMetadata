@@ -3,17 +3,9 @@ package tif;
 /**
  * An enumeration class of data format types defined in the TIFF specification 6.0 document.
  * 
- * <p>
- * Change History:
- * </p>
- * 
- * <ul>
- * <li>Version 1.0 - Initial release by Trevor Maggs on 21 June 2025</li>
- * </ul>
- * 
- * @version 0.1
- * @author Trevor Maggs, trevmaggs@tpg.com.au
- * @since 21 June 2025
+ * @author Trevor Maggs
+ * @version 1.0
+ * @since 13 August 2025
  */
 public enum TifFieldType
 {

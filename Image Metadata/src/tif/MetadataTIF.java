@@ -18,7 +18,7 @@ import tif.DirectoryIFD.EntryIFD;
  *
  * @author Trevor Maggs
  * @version 1.0
- * @since 9 July 2025
+ * @since 13 August 2025
  */
 public class MetadataTIF implements Metadata<DirectoryIFD>
 {

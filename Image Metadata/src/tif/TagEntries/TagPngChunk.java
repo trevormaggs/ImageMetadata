@@ -18,8 +18,8 @@ import tif.TagHint;
  * </p>
  *
  * @author Trevor Maggs
- * @version 1.1
- * @since 9 July 2025
+ * @version 1.0
+ * @since 13 August 2025
  */
 public enum TagPngChunk implements Taggable
 {

@@ -24,9 +24,9 @@ import tif.TifParser;
  * metadata by navigating the box structure defined in {@code ISO/IEC 14496-12} and
  * {@code ISO/IEC 23008-12} documents.
  *
- * <ul>
- * <li>Created by Trevor Maggs on 11 July 2025</li>
- * </ul>
+ * @author Trevor Maggs
+ * @version 1.0
+ * @since 13 August 2025
  */
 public class HeifParser extends AbstractImageParser
 {

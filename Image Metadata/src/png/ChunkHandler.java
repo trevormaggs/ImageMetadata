@@ -1,6 +1,8 @@
 package png;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -9,9 +11,9 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import common.DigitalSignature;
+import common.ImageFileInputStream;
 import common.ImageHandler;
 import common.ImageReadErrorException;
-import common.SequentialByteReader;
 import logger.LogFactory;
 import png.ChunkType.Category;
 
@@ -34,7 +36,7 @@ import png.ChunkType.Category;
  *
  * @author Trevor Maggs
  * @version 1.0
- * @since 21 June 2025
+ * @since 13 August 2025
  */
 public class ChunkHandler implements ImageHandler
 {
@@ -42,20 +44,9 @@ public class ChunkHandler implements ImageHandler
     private static final byte[] PNG_SIGNATURE_BYTES = DigitalSignature.PNG.getMagicNumbers(0);
     private final boolean strictmode;
     private final Path imageFile;
-    private final SequentialByteReader reader;
     private final EnumSet<ChunkType> requiredChunks;
     private final List<PngChunk> chunks;
-
-    /**
-     * This default constructor should not be used. It always throws an exception.
-     *
-     * @throws UnsupportedOperationException
-     *         always thrown to prevent misuse
-     */
-    public ChunkHandler()
-    {
-        throw new UnsupportedOperationException("Not intended for instantiation");
-    }
+    private final ImageFileInputStream reader;
 
     /**
      * Constructs a handler to parse selected chunks from a PNG image file, assuming the read mode
@@ -68,7 +59,7 @@ public class ChunkHandler implements ImageHandler
      * @param requiredChunks
      *        an optional set of chunk types to be extracted (null means all chunks are selected)
      */
-    public ChunkHandler(Path fpath, SequentialByteReader reader, EnumSet<ChunkType> requiredChunks)
+    public ChunkHandler(Path fpath, ImageFileInputStream reader, EnumSet<ChunkType> requiredChunks)
     {
         this(fpath, reader, requiredChunks, false);
     }
@@ -85,7 +76,7 @@ public class ChunkHandler implements ImageHandler
      * @param strictmode
      *        true to make it strict, otherwise false for a lenient reading process
      */
-    public ChunkHandler(Path fpath, SequentialByteReader reader, EnumSet<ChunkType> requiredChunks, boolean strictmode)
+    public ChunkHandler(Path fpath, ImageFileInputStream reader, EnumSet<ChunkType> requiredChunks, boolean strictmode)
     {
         this.imageFile = fpath;
         this.reader = reader;
@@ -179,6 +170,25 @@ public class ChunkHandler implements ImageHandler
     }
 
     /**
+     * Returns the length of the image file associated with the current InputStream resource.
+     *
+     * @return the length of the file in bytes, or 0 if the size cannot be determined
+     */
+    @Override
+    public long getSafeFileLength()
+    {
+        try
+        {
+            return Files.size(imageFile);
+        }
+
+        catch (IOException exc)
+        {
+            return 0;
+        }
+    }
+
+    /**
      * Begins metadata processing by parsing the PNG file and extracting chunk data.
      *
      * It also checks if the PNG file contains the expected magic numbers in the first few bytes in
@@ -189,9 +199,10 @@ public class ChunkHandler implements ImageHandler
      *
      * @throws ImageReadErrorException
      *         if an error occurs while parsing the PNG file
+     * @throws IOException
      */
     @Override
-    public boolean parseMetadata() throws ImageReadErrorException
+    public boolean parseMetadata() throws ImageReadErrorException, IOException
     {
         byte[] data = reader.peek(0, PNG_SIGNATURE_BYTES.length);
 
@@ -246,8 +257,10 @@ public class ChunkHandler implements ImageHandler
      * @throws ImageReadErrorException
      *         if invalid structure or duplicate chunks are found, including a CRC calculation
      *         mismatch error
+     * @throws IOException
+     *         if there is an I/O stream error
      */
-    private void parseChunks() throws ImageReadErrorException
+    private void parseChunks() throws ImageReadErrorException, IOException
     {
         int position = 0;
         byte[] typeBytes;
@@ -255,7 +268,7 @@ public class ChunkHandler implements ImageHandler
 
         do
         {
-            if (reader.getCurrentPosition() + 12 > reader.length())
+            if (reader.getCurrentPosition() + 12 > getSafeFileLength())
             {
                 /*
                  * 12 bytes = minimum chunk (length (4) + type (4) + CRC (4),

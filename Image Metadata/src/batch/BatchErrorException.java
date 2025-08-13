@@ -8,7 +8,8 @@ package batch;
  * handling and reporting capabilities.
  * 
  * @author Trevor Maggs
- * @since 11 July 2024
+ * @version 1.0
+ * @since 13 August 2025
  */
 class BatchErrorException extends Exception
 {

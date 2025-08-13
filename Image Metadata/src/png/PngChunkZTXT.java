@@ -18,8 +18,9 @@ import logger.LogFactory;
  * paired with a keyword.
  * </p>
  * 
+ * @author Trevor Maggs
  * @version 1.0
- * @since 28 July 2025
+ * @since 13 August 2025
  */
 public class PngChunkZTXT extends PngChunk
 {

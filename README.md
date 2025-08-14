@@ -28,6 +28,6 @@ git clone https://github.com/trevormaggs/ImageMetadata.git
 
 Import the project into your favourite Java IDE supporting Java 8 or above.
 
-Review the **Javadoc documentation** for detailed API usage.
+Review the **[Javadoc documentation](https://trevormaggs.github.io/ImageMetadata/)** for detailed API usage.
 
 Use the library to parse Exif metadata from supported image files as needed.

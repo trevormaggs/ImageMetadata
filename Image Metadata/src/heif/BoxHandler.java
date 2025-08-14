@@ -385,7 +385,7 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
      * @return the length of the file in bytes, or 0 if the size cannot be determined
      */
     @Override
-    public long getSafeFileLength()
+    public long getSafeFileSize()
     {
         try
         {
@@ -394,7 +394,7 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
 
         catch (IOException exc)
         {
-            return 0;
+            return 0L;
         }
     }
 

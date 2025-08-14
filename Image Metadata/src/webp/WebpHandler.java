@@ -127,7 +127,7 @@ public class WebpHandler implements ImageHandler
      * @return the length of the file in bytes, or 0 if the size cannot be determined
      */
     @Override
-    public long getSafeFileLength()
+    public long getSafeFileSize()
     {
         try
         {
@@ -136,7 +136,7 @@ public class WebpHandler implements ImageHandler
 
         catch (IOException exc)
         {
-            return 0;
+            return 0L;
         }
     }
 

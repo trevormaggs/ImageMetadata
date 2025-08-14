@@ -1,7 +1,5 @@
 package batch;
 
-import java.io.IOException;
-
 /**
  * <p>
  * Implements the Builder design pattern for step-by-step construction of a {@link BatchExecutor}
@@ -24,7 +22,7 @@ import java.io.IOException;
  *         .build();
  * </code>
  * </pre>
- * 
+ *
  * @author Trevor Maggs
  * @version 1.0
  * @since 13 August 2025
@@ -57,7 +55,7 @@ public final class BatchBuilder
 
     /**
      * Sets a prefix to be prepended to each output image file name.
-     * 
+     *
      * @param prefix
      *        the name to be appended to every copied file
      *
@@ -156,7 +154,7 @@ public final class BatchBuilder
     /**
      * Specifies a list of individual image files to copy, instead of copying all files in the
      * source directory.
-     * 
+     *
      * @param files
      *        a string array of file names to be copied
      *
@@ -174,9 +172,8 @@ public final class BatchBuilder
      *
      * @throws BatchErrorException
      *         in case of an error during batch processing
-     * @throws IOException
      */
-    public BatchExecutor build() throws BatchErrorException, IOException
+    public BatchExecutor build() throws BatchErrorException
     {
         return new BatchExecutor(this);
     }

@@ -2,21 +2,26 @@ package common;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.EOFException;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteOrder;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Objects;
 
 /**
- * A utility stream wrapper that simplifies reading binary image data using an {@link InputStream}
- * resource, with support for both {@link ByteOrder#BIG_ENDIAN big-endian} and
- * {@link ByteOrder#LITTLE_ENDIAN little-endian} formats.
+ * Utility for reading binary data from image files with configurable byte order.
  *
  * <p>
- * This class offers an ability to read signed and unsigned values of various primitive types, for
- * example: {@code readShort()}, {@code readUnsignedInteger()}, or {@code readFloat()}), while
- * tracking the current read position.
+ * This class wraps an {@link InputStream} and provides methods to read signed and unsigned values
+ * of various primitive types, for example: {@code readShort()}, {@code readUnsignedInteger()}, or
+ * {@code readFloat()}, while keeping track of the current read position. Both big-endian and
+ * little-endian formats are supported.
+ * </p>
+ * 
+ * <p>
+ * The byte order can be changed at any time via {@link #setByteOrder(ByteOrder)}.
  * </p>
  *
  * @author Trevor Maggs
@@ -25,25 +30,14 @@ import java.util.Objects;
  */
 public class ImageFileInputStream implements AutoCloseable
 {
-    private final BufferedInputStream stream;
+    private final DataInputStream stream;
     private ByteOrder byteOrder;
     private long streamPosition;
 
     /**
-     * Constructs a reader for the specified input stream with big-endian byte order.
-     *
-     * @param fis
-     *        the input stream to wrap. Must not be null
-     */
-    public ImageFileInputStream(InputStream fis)
-    {
-        this(fis, ByteOrder.BIG_ENDIAN);
-    }
-
-    /**
      * Constructs a reader for the specified input stream with byte order provided.
      *
-     * @param fis
+     * @param fin
      *        the input stream to wrap. Must not be null
      * @param order
      *        the byte order to use when interpreting multi-byte values
@@ -51,45 +45,75 @@ public class ImageFileInputStream implements AutoCloseable
      * @throws NullPointerException
      *         if either input stream or byte order is null
      */
-    public ImageFileInputStream(InputStream fis, ByteOrder order)
+    public ImageFileInputStream(InputStream fin, ByteOrder order)
     {
-        if (fis == null)
+        if (fin == null)
         {
             throw new NullPointerException("InputStream cannot be null");
         }
 
-        if (order == null)
-        {
-            throw new NullPointerException("Byte order cannot be null");
-        }
-
-        this.stream = new BufferedInputStream(fis);
-        this.byteOrder = order;
+        /* Note: NullPointerException may be thrown */
+        this.byteOrder = Objects.requireNonNull(order, "Byte order cannot be null");
+        this.stream = new DataInputStream(new BufferedInputStream(fin));
         this.streamPosition = 0L;
+    }
+
+    /**
+     * Constructs a reader for the specified input file with a given byte order.
+     *
+     * @param fpath
+     *        the path to the image file to be read
+     * @param order
+     *        the byte order to use when interpreting multi-byte values
+     * 
+     * @throws IOException
+     *         if an I/O error occurs when opening the file
+     * @throws NullPointerException
+     *         if the file path or byte order is null
+     */
+    public ImageFileInputStream(Path fpath, ByteOrder order) throws IOException
+    {
+        this(Files.newInputStream(Objects.requireNonNull(fpath, "File path cannot be null")), order);
+    }
+
+    /**
+     * Constructs a reader for the specified input stream with big-endian byte order.
+     *
+     * @param fin
+     *        the input stream to wrap. Must not be null
+     * 
+     * @throws NullPointerException
+     *         if {@code fin} is null
+     * @see #ImageFileInputStream(InputStream, ByteOrder)
+     */
+    public ImageFileInputStream(InputStream fin)
+    {
+        this(fin, ByteOrder.BIG_ENDIAN);
     }
 
     /**
      * Sets the byte order used for interpreting multi-byte values.
      *
      * <p>
-     * For instance, when reading the sequence of bytes '0x01 0x02 0x03 0x04' (which represents a
-     * 4-byte integer), it would be interpreted as '0x01020304' in big-endian (network) byte order,
-     * or '0x04030201' in little-endian byte order.
-     * </p>
-     *
-     * <p>
-     * A value of i{@code ByteOrder.BIG_ENDIAN} specifies big-endian or network byte order, where
-     * the high-order byte comes first. Processors like Motorola and Sparc store data in this
-     * format, while Intel processors use little-endian byte reverse order, represented by
-     * {@code ByteOrder.LITTLE_ENDIAN}.
+     * For example, reading the byte sequence {@code 0x01 0x02 0x03 0x04} as a 4-byte integer yields
+     * {@code 0x01020304} in big-endian order, and {@code 0x04030201} in little-endian order.
      * </p>
      *
      * @param order
-     *        either {@code ByteOrder.BIG_ENDIAN} or {@code ByteOrder.LITTLE_ENDIAN}
+     *        the byte order to use, either {@code ByteOrder.BIG_ENDIAN} or
+     *        {@code ByteOrder.LITTLE_ENDIAN}. It must not be null
+     * 
+     * @throws NullPointerException
+     *         if order is null
      */
     public void setByteOrder(ByteOrder order)
     {
-        byteOrder = Objects.requireNonNull(order, "Byte order cannot be null");
+        if (order == null)
+        {
+            throw new NullPointerException("Byte order cannot be null");
+        }
+
+        byteOrder = order;
     }
 
     /**
@@ -122,16 +146,11 @@ public class ImageFileInputStream implements AutoCloseable
      */
     public byte readByte() throws IOException
     {
-        int ch = stream.read();
-
-        if (ch < 0)
-        {
-            throw new EOFException();
-        }
+        byte b = stream.readByte();
 
         streamPosition++;
 
-        return (byte) ch;
+        return b;
     }
 
     /**
@@ -144,46 +163,27 @@ public class ImageFileInputStream implements AutoCloseable
      */
     public int readUnsignedByte() throws IOException
     {
-        int ch = stream.read();
-
-        if (ch < 0)
-        {
-            throw new EOFException();
-        }
+        int b = stream.readUnsignedByte();
 
         streamPosition++;
 
-        return ch;
+        return b;
     }
 
     /**
      * Reads a sequence of bytes from the stream.
      *
      * @param length
-     *        The number of bytes to read
-     * 
-     * @return A new byte array containing the read bytes
-     * 
+     *        The number of bytes to read.
+     * @return A new byte array containing the read bytes.
      * @throws IOException
-     *         if an I/O error occurs or the stream ends prematurely
+     *         if an I/O error occurs or the stream ends prematurely.
      */
     public byte[] readBytes(int length) throws IOException
     {
-        int bytesRead = 0;
         byte[] bytes = new byte[length];
 
-        while (bytesRead < length)
-        {
-            int value = stream.read(bytes, bytesRead, length - bytesRead);
-
-            if (value < 0)
-            {
-                throw new EOFException();
-            }
-
-            bytesRead += value;
-        }
-
+        stream.readFully(bytes);
         streamPosition += length;
 
         return bytes;
@@ -199,7 +199,16 @@ public class ImageFileInputStream implements AutoCloseable
      */
     public short readShort() throws IOException
     {
-        return ByteValueConverter.toShort(readBytes(2), byteOrder);
+        short value = stream.readShort();
+
+        if (byteOrder == ByteOrder.LITTLE_ENDIAN)
+        {
+            value = Short.reverseBytes(value);
+        }
+
+        streamPosition += 2;
+
+        return value;
     }
 
     /**
@@ -225,7 +234,16 @@ public class ImageFileInputStream implements AutoCloseable
      */
     public int readInteger() throws IOException
     {
-        return ByteValueConverter.toInteger(readBytes(4), byteOrder);
+        int value = stream.readInt();
+
+        if (byteOrder == ByteOrder.LITTLE_ENDIAN)
+        {
+            value = Integer.reverseBytes(value);
+        }
+
+        streamPosition += 4;
+
+        return value;
     }
 
     /**
@@ -251,7 +269,16 @@ public class ImageFileInputStream implements AutoCloseable
      */
     public long readLong() throws IOException
     {
-        return ByteValueConverter.toLong(readBytes(8), byteOrder);
+        long value = stream.readLong();
+
+        if (byteOrder == ByteOrder.LITTLE_ENDIAN)
+        {
+            value = Long.reverseBytes(value);
+        }
+
+        streamPosition += 8;
+
+        return value;
     }
 
     /**
@@ -304,122 +331,38 @@ public class ImageFileInputStream implements AutoCloseable
     }
 
     /**
-     * Peeks at the next byte in the stream without advancing the stream's position. The method
-     * reads a single byte and then resets the stream to its original position.
-     *
-     * @return The next byte as an integer (0-255), or -1 if the end of the stream is reached
-     * 
-     * @throws IOException
-     *         if an I/O error occurs or mark/reset is not supported
-     */
-    public int peek() throws IOException
-    {
-        // Mark the current position in the buffered stream.
-        // The readlimit of 1 is sufficient since we only want to peek one byte.
-        this.stream.mark(1);
-
-        // Read the next byte. This is the "peek" operation.
-        int peekedByte = this.stream.read();
-
-        // Reset the stream to the marked position.
-        // This effectively "un-reads" the byte, so the next read operation will get the same byte.
-        this.stream.reset();
-
-        return peekedByte;
-    }
-
-    /**
-     * Peeks at a sequence of bytes at a specified offset from the current stream position, without
-     * advancing the stream's position.
-     *
-     * @param offset
-     *        The number of bytes to skip from the current position before peeking
-     * @param length
-     *        The number of bytes to read
-     * 
-     * @return A new byte array containing the peeked bytes
-     * 
-     * @throws IOException
-     *         if an I/O error occurs, the stream ends prematurely, or the mark/reset operation is
-     *         not supported
-     */
-    public byte[] peek(int offset, int length) throws IOException
-    {
-        if (stream == null)
-        {
-            throw new IOException("Stream is not initialized.");
-        }
-
-        // The readlimit for the mark must be large enough to skip the offset and read the length.
-        int readlimit = offset + length;
-
-        if (readlimit < 0)
-        {
-            throw new IllegalArgumentException("Offset and length combined exceed integer max value.");
-        }
-
-        // Mark the current position.
-        stream.mark(readlimit);
-
-        // Skip to the desired offset.
-        long skipped = stream.skip(offset);
-
-        if (skipped < offset)
-        {
-            stream.reset(); // Always reset before throwing an exception to maintain state
-            throw new IOException("Could not skip to the specified offset. Reached end of stream prematurely");
-        }
-
-        byte[] bytes = new byte[length];
-        int bytesRead = stream.read(bytes, 0, length);
-
-        // Reset the stream to the original marked position.
-        stream.reset();
-
-        if (bytesRead < length)
-        {
-            throw new IOException("Could not read all [" + length + "] bytes. Reached end of stream prematurely");
-        }
-
-        return bytes;
-    }
-
-    /**
-     * Skips {@code n} bytes in the stream.
+     * Skips {@code n} bytes in the stream, guaranteeing that the stream position is advanced by
+     * exactly that amount, unless the end of the stream is reached.
      *
      * @param n
-     *        the number of bytes to skip
-     * 
-     * @return the actual number of bytes skipped
-     * 
+     *        the number of bytes to skip. Must be non-negative
      * @throws IOException
-     *         if an I/O error occurs
+     *         if an I/O error occurs or the stream ends prematurely
      */
-    public long skip(long n) throws IOException
+    public void skip(long n) throws IOException
     {
-        long totalSkipped = 0;
-
-        while (totalSkipped < n)
+        if (n < 0)
         {
-            long skipped = stream.skip(n - totalSkipped);
-
-            if (skipped == 0)
-            {
-                if (stream.read() == -1)
-                {
-                    // EOF
-                    break;
-                }
-
-                skipped = 1;
-            }
-
-            totalSkipped += skipped;
+            throw new IllegalArgumentException("Number of bytes to skip cannot be negative");
         }
 
-        streamPosition += totalSkipped;
+        long bytesSkipped = 0;
+        byte[] buffer = new byte[1024];
 
-        return totalSkipped;
+        while (bytesSkipped < n)
+        {
+            int len = (int) Math.min(n - bytesSkipped, buffer.length);
+            int result = stream.read(buffer, 0, len);
+
+            if (result == -1) // EOF
+            {
+                throw new IOException("Premature end of stream encountered while skipping [" + n + "] bytes");
+            }
+
+            bytesSkipped += result;
+        }
+
+        streamPosition += n;
     }
 
     /**
@@ -432,5 +375,34 @@ public class ImageFileInputStream implements AutoCloseable
     public void close() throws IOException
     {
         stream.close();
+    }
+
+    // TEST IT
+
+    /**
+     * Seeks to a specific position in the stream.
+     *
+     * @param n
+     *        the position to seek to
+     * 
+     * @throws IOException
+     *         if an I/O error occurs, or if the stream does not support seeking
+     */
+    public void seek(long n) throws IOException
+    {
+        if (n < 0)
+        {
+            throw new IllegalArgumentException("Position cannot be negative");
+        }
+
+        if (n == streamPosition)
+        {
+            return;
+        }
+
+        else if (n > streamPosition)
+        {
+            skip(n - streamPosition);
+        }
     }
 }

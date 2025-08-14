@@ -8,6 +8,7 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import batch.BatchMetadataUtils;
 import common.AbstractImageParser;
 import common.BaseMetadata;
 import common.DigitalSignature;
@@ -52,7 +53,7 @@ public class JpgParser extends AbstractImageParser
 
         LOGGER.info("Image file [" + getImageFile() + "] loaded");
 
-        String ext = getFileExtension();
+        String ext = BatchMetadataUtils.getFileExtension(getImageFile());
 
         if (!ext.equalsIgnoreCase("jpg"))
         {

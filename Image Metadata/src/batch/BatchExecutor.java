@@ -59,7 +59,6 @@ public class BatchExecutor implements Batchable, Iterable<MetaMedia>
     public static final String DEFAULT_SOURCE_DIRECTORY = ".";
     public static final String DEFAULT_TARGET_DIRECTORY = "IMAGEDIR";
     public static final String DEFAULT_IMAGE_PREFIX = "image";
-
     private final String prefix;
     private final Path sourceDir;
     private final Path targetDir;
@@ -521,7 +520,7 @@ public class BatchExecutor implements Batchable, Iterable<MetaMedia>
      *        the path to the image file
      * @param attr
      *        the file's basic attributes, used for the fallback last modified time
-     * @param userDateTaken
+     * @param userDateTime
      *        a user-defined date string that takes precedence over other sources
      * @param dateOffset
      *        an offset value to create unique time-stamps for user-provided dates
@@ -570,7 +569,7 @@ public class BatchExecutor implements Batchable, Iterable<MetaMedia>
      * </p>
      */
     @Override
-    public void copyToTarget() throws FileNotFoundException, IOException
+    public void updateAndCopyFiles() throws FileNotFoundException, IOException
     {
         this.forEach(System.out::println);
     }

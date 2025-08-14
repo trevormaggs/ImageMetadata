@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
+import batch.BatchMetadataUtils;
 import common.AbstractImageParser;
 import common.BaseMetadata;
 import common.DigitalSignature;
@@ -34,7 +35,8 @@ import logger.LogFactory;
  * both TIFF and JPEG files.
  * </p>
  *
- * @see <a href="https://partners.adobe.com/public/developer/en/tiff/TIFF6.pdf">TIFF 6.0 Specification</a>
+ * @see <a href="https://partners.adobe.com/public/developer/en/tiff/TIFF6.pdf">TIFF 6.0
+ *      Specification</a>
  *
  * @author Trevor Maggs
  * @version 1.0
@@ -73,7 +75,7 @@ public class TifParser extends AbstractImageParser
 
         LOGGER.info("Image file [" + getImageFile() + "] loaded");
 
-        String ext = getFileExtension();
+        String ext = BatchMetadataUtils.getFileExtension(getImageFile());
 
         if (!ext.equalsIgnoreCase("tif") && !ext.equalsIgnoreCase("tiff"))
         {

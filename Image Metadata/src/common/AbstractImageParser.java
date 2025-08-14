@@ -6,7 +6,7 @@ import java.nio.file.Path;
 
 /**
  * An abstract superclass for implementing image file parsers. Subclasses are responsible for
- * decoding specific image formats (for example, JPEG, PNG, TIFF) and extracting metadata
+ * decoding specific image formats, for example: JPEG, PNG, TIFF, etc and extracting metadata
  * structures.
  *
  * <p>
@@ -46,9 +46,17 @@ public abstract class AbstractImageParser
      * 
      * @param fpath
      *        the path to the image file to be parsed
+     * 
+     * @throws IllegalStateException
+     *         if the specified file is null
      */
     public AbstractImageParser(Path fpath)
     {
+        if (fpath == null)
+        {
+            throw new IllegalStateException("Image file cannot be null");
+        }
+
         this.imageFile = fpath;
     }
 
@@ -60,29 +68,6 @@ public abstract class AbstractImageParser
     public Path getImageFile()
     {
         return imageFile;
-    }
-
-    /**
-     * Returns the extension of the image file name, excluding the dot.
-     *
-     * <p>
-     * If the file name does not contain an extension, an empty string is returned.
-     * </p>
-     *
-     * @return the file extension, for example: {@code "jpg"} or {@code "png"} etc, or an empty
-     *         string if none
-     */
-    protected String getFileExtension()
-    {
-        String filename = imageFile.getFileName().toString();
-        int pos = filename.lastIndexOf('.');
-
-        if (pos > 0 && pos < filename.length() - 1)
-        {
-            return filename.substring(pos + 1);
-        }
-
-        return "";
     }
 
     /**

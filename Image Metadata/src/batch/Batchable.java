@@ -5,5 +5,5 @@ import java.io.IOException;
 
 public interface Batchable
 {
-    public void copyToTarget() throws FileNotFoundException, IOException;
+    public void updateAndCopyFiles() throws FileNotFoundException, IOException;
 }

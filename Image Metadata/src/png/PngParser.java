@@ -1,15 +1,14 @@
 package png;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteOrder;
-import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
+import batch.BatchMetadataUtils;
 import common.AbstractImageParser;
 import common.BaseMetadata;
 import common.DigitalSignature;
@@ -109,7 +108,7 @@ public class PngParser extends AbstractImageParser
 
         LOGGER.info("Image file [" + getImageFile() + "] loaded");
 
-        String ext = getFileExtension();
+        String ext = BatchMetadataUtils.getFileExtension(getImageFile());
 
         if (!ext.equalsIgnoreCase("png"))
         {
@@ -154,12 +153,10 @@ public class PngParser extends AbstractImageParser
     {
         // For full metadata parsing (image properties + text), include IHDR, sRGB, etc.
         EnumSet<ChunkType> chunkSet = EnumSet.of(ChunkType.tEXt, ChunkType.zTXt, ChunkType.iTXt, ChunkType.eXIf);
+        Metadata<BaseMetadata> png = new MetadataPNG<>();
 
-        try (InputStream fis = Files.newInputStream(getImageFile()))
+        try (ImageFileInputStream pngReader = new ImageFileInputStream(getImageFile(), PNG_BYTE_ORDER))
         {
-            // Use big-endian byte order as per Specifications
-            ImageFileInputStream pngReader = new ImageFileInputStream(fis, PNG_BYTE_ORDER);
-            Metadata<BaseMetadata> png = new MetadataPNG<>();
             ChunkHandler handler = new ChunkHandler(getImageFile(), pngReader, chunkSet);
 
             handler.parseMetadata();
@@ -207,7 +204,7 @@ public class PngParser extends AbstractImageParser
 
         catch (IOException exc)
         {
-            throw new ImageReadErrorException("Problem while reading the stream in file [" + getImageFile() + "]", exc);
+            throw new ImageReadErrorException("Problem reading data stream: [" + exc.getMessage() + "]", exc);
         }
 
         return metadata;

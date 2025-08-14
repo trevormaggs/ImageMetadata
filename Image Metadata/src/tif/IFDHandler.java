@@ -124,10 +124,10 @@ public class IFDHandler implements ImageHandler
      * @return the length of the file in bytes, or 0 if the size cannot be determined
      */
     @Override
-    public long getSafeFileLength()
+    public long getSafeFileSize()
     {
         // At this stage, its not needed
-        return 0;
+        return 0L;
     }
 
     /**

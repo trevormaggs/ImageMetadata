@@ -1,22 +1,9 @@
 package batch;
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import org.apache.commons.imaging.Imaging;
-import org.apache.commons.imaging.common.ImageMetadata;
-import org.apache.commons.imaging.formats.jpeg.JpegImageMetadata;
-import org.apache.commons.imaging.formats.jpeg.exif.ExifRewriter;
-import org.apache.commons.imaging.formats.tiff.TiffImageMetadata;
-import org.apache.commons.imaging.formats.tiff.constants.ExifTagConstants;
-import org.apache.commons.imaging.formats.tiff.write.TiffOutputDirectory;
-import org.apache.commons.imaging.formats.tiff.write.TiffOutputSet;
 import common.CommandLineParser;
 import common.ProjectBuildInfo;
 import common.cli.CommandLineReader;
@@ -24,13 +11,13 @@ import logger.LogFactory;
 
 /**
  * <p>
- * This class creates a console interface utility designed to read arguments from the command-line.
- * These arguments are then processed to copy image media files to a target directory, sorting them
- * by their {@code Date Taken} metadata property.
+ * This is the main console batch executor used for copying media files and updating metadata.
+ * Command line arguments are read and processed, aiming to write copied files to a target directory
+ * and sorting them by their {@code Date Taken} metadata attribute.
  * </p>
  *
  * <p>
- * During the process, it updates each file's creation date, last modification time, and last access
+ * Specifically, it updates each file's creation date, last modification time, and last access
  * time to align with the corresponding {@code Date Taken} property. The sorted list can be either
  * in an ascending (default) or descending chronological order.
  * </p>
@@ -44,28 +31,35 @@ public final class BatchConsole extends BatchExecutor
     private static final LogFactory LOGGER = LogFactory.getLogger(BatchConsole.class);
 
     /**
-     * Constructs a new instance of this class, employing a Builder design pattern to process the
-     * specified parameters and update the copied image files. The actual Builder implementation
-     * exists in the superclass, {@link BatchImageEngine}.
+     * Constructs a console interface, using a Builder design pattern to process the parameters and
+     * update the copied image files. The actual Builder implementation exists in the
+     * {@link BatchBuilder} class.
      *
      * @param builder
-     *        the Builder object containing parameters for constructing this instance.
+     *        the Builder object containing parameters for constructing this instance
      *
      * @throws BatchErrorException
-     *         in case of an error during batch processing
+     *         if an I/O or metadata-related error occurs
      * @throws IOException
-     * @throws FileNotFoundException
+     *         if an I/O error occurs during reading or writing the image
      */
-    public BatchConsole(BatchBuilder builder) throws BatchErrorException, FileNotFoundException, IOException
+    public BatchConsole(BatchBuilder builder) throws BatchErrorException, IOException
     {
         super(builder);
 
         scan();
-        copyToTarget();
+        updateAndCopyFiles();
     }
 
+    /**
+     * Iterates through media files and copies them to the target directory.
+     * Updates metadata for JPEG and PNG files and logs skipped or empty files.
+     *
+     * @throws IOException
+     *         if an I/O error occurs during reading or writing the image
+     */
     @Override
-    public void copyToTarget() throws FileNotFoundException, IOException
+    public void updateAndCopyFiles() throws IOException
     {
         int k = 0;
         Path copied;
@@ -74,13 +68,13 @@ public final class BatchConsole extends BatchExecutor
 
         for (MetaMedia media : this)
         {
-            // ConsoleBar.updateProgressBar(k, getImageCount());
-
             String originalFileName = media.getPath().getFileName().toString();
-            String fileExtension = getFileExtension(originalFileName);
+            String fileExtension = BatchMetadataUtils.getFileExtension(media.getPath());
             String fname;
 
             k++;
+
+            // ConsoleBar.updateProgressBar(k, getImageCount());
 
             if (media.isVideoFormat())
             {
@@ -91,7 +85,6 @@ public final class BatchConsole extends BatchExecutor
                 }
 
                 fname = originalFileName.toLowerCase();
-
                 LOGGER.info("File [" + media.getPath() + "] is a video media type. Copied only");
             }
 
@@ -105,89 +98,24 @@ public final class BatchConsole extends BatchExecutor
 
             if (media.isMetadataEmpty())
             {
+                System.err.printf("%s\t%s\n", copied, media.getPath());
             }
 
             else if (media.isTIF())
-            {}
-            
+            {
+                // TODO: implement TIF support
+            }
+
             else if (media.isJPG())
             {
-                System.err.printf("%s\t%s\n", copied, media.getPath());
-                
-                changeDateTimeMetadata(media.getPath().toFile(), copied.toFile(), captureTime);
+                BatchMetadataUtils.updateDateTakenMetadataJPG(media.getPath().toFile(), copied.toFile(), captureTime);
             }
 
-            else if (media.isPNG() && !media.isMetadataEmpty())
+            else if (media.isPNG())
             {
+                BatchMetadataUtils.updateDateTakenTextualPNG(media.getPath().toFile(), copied.toFile(), captureTime);
             }
-
-            else
-            {
-            }
-
-            // System.err.printf("%s\n", media);
         }
-    }
-
-    /**
-     * Copies the specified original image file to the target file, and updates the
-     * {@code Date Taken} property in the image metadata with the provided date-time parameter.
-     *
-     * @param sourceFile
-     *        the original image file to be copied
-     * @param targetFile
-     *        the new target file, a copy of the specified source file
-     * @param datetime
-     *        The captured date-time to be updated
-     *
-     * @throws FileNotFoundException
-     *         if the target file cannot be found
-     * @throws IOException
-     *         if an error occurs during processing
-     */
-    protected static void changeDateTimeMetadata(File sourceFile, File targetFile, FileTime datetime) throws FileNotFoundException, IOException
-    {
-        try (FileOutputStream fos = new FileOutputStream(targetFile); BufferedOutputStream os = new BufferedOutputStream(fos))
-        {
-            TiffOutputSet outputSet = null;
-            ImageMetadata metadata = Imaging.getMetadata(sourceFile);
-            JpegImageMetadata jpegMetadata = (JpegImageMetadata) metadata;
-            String dateTaken = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss").format(datetime.toMillis());
-
-            if (jpegMetadata != null)
-            {
-                TiffImageMetadata exif = jpegMetadata.getExif();
-
-                if (exif != null)
-                {
-                    outputSet = exif.getOutputSet();
-                }
-            }
-
-            if (outputSet == null)
-            {
-                outputSet = new TiffOutputSet();
-            }
-
-            TiffOutputDirectory exifDirectory = outputSet.getOrCreateExifDirectory();
-
-            // Recreate the 'Date Taken' field
-            exifDirectory.removeField(ExifTagConstants.EXIF_TAG_DATE_TIME_ORIGINAL);
-            exifDirectory.add(ExifTagConstants.EXIF_TAG_DATE_TIME_ORIGINAL, dateTaken);
-
-            // Recreate the 'Digitized Date' field
-            exifDirectory.removeField(ExifTagConstants.EXIF_TAG_DATE_TIME_DIGITIZED);
-            exifDirectory.add(ExifTagConstants.EXIF_TAG_DATE_TIME_DIGITIZED, dateTaken);
-
-            new ExifRewriter().updateExifMetadataLossless(sourceFile, os, outputSet);
-        }
-    }
-
-    private String getFileExtension(String fileName)
-    {
-        int lastDot = fileName.lastIndexOf('.');
-
-        return (lastDot == -1) ? "" : fileName.substring(lastDot + 1).toLowerCase();
     }
 
     /**
@@ -204,22 +132,17 @@ public final class BatchConsole extends BatchExecutor
 
         try
         {
-            // Define command argument rules
             cli.addRule("-p", CommandLineParser.ARG_OPTIONAL);
             cli.addRule("-t", CommandLineParser.ARG_OPTIONAL);
             cli.addRule("-e", CommandLineParser.ARG_BLANK);
             cli.addRule("-k", CommandLineParser.ARG_BLANK);
-
             cli.addRule("--desc", CommandLineParser.ARG_BLANK);
             cli.addRule("-m", CommandLineParser.ARG_OPTIONAL);
             cli.addRule("-f", CommandLineParser.SEP_OPTIONAL);
-
             cli.addRule("-v", CommandLineParser.ARG_BLANK);
             cli.addRule("--version", CommandLineParser.ARG_BLANK);
-
             cli.addRule("-d", CommandLineParser.ARG_BLANK);
             cli.addRule("--debug", CommandLineParser.ARG_BLANK);
-
             cli.addRule("-h", CommandLineParser.ARG_BLANK);
             cli.addRule("--help", CommandLineParser.ARG_BLANK);
 
@@ -244,9 +167,10 @@ public final class BatchConsole extends BatchExecutor
             }
         }
 
-        catch (ParseException exc)
+        catch (Exception exc)
         {
             System.err.println(exc.getMessage());
+
             showUsage();
             System.exit(1);
         }
@@ -269,34 +193,17 @@ public final class BatchConsole extends BatchExecutor
     private static void showHelp()
     {
         showUsage();
-
         System.out.println("\nOptions:");
-
-        // Naming & Output
         System.out.println("  -p <prefix>        Prepend copied files with specified prefix");
         System.out.println("  -t <directory>     Target directory where copied files are saved");
         System.out.println("  -e                 Embed date and time in copied file names");
-
-        // Metadata & Processing
         System.out.println("  -m <date>          Modify file's 'Date Taken' metadata property if empty");
         System.out.println("  -f <files...>      Comma-separated list of specific file names to process");
         System.out.println("  -k                 Skip media files (videos, etc)");
         System.out.println("  --desc             Sort the images in descending order");
-
-        // General & Info
         System.out.println("  -v                 Display last build date");
         System.out.println("  -h                 Display this help message and exit");
         System.out.println("  -d                 Enable debugging");
-        System.out.println("  --debug            Same as -d");
-        System.out.println("  --version          Same as -v");
-        System.out.println("  --help             Same as -h");
-
-        System.out.println("\nExamples:");
-        System.out.printf("  %s -p tahiti -t newdir C:\\Photos\\holidays%n", ProjectBuildInfo.getInstance(BatchConsole.class).getShortFileName());
-        System.out.println("      Copies images from 'C:\\Photos\\holidays' to 'newdir', renaming them with prefix 'tahiti'\n");
-
-        System.out.printf("  %s -m \"26 4 2006\" -f=img1.jpg,img2.jpg C:\\Photos%n", ProjectBuildInfo.getInstance(BatchConsole.class).getShortFileName());
-        System.out.println("      Updates 'Date Taken' metadata for specific files if missing\n");
     }
 
     /**
@@ -304,12 +211,15 @@ public final class BatchConsole extends BatchExecutor
      *
      * @param arguments
      *        an array of strings containing the command line arguments
+     *        
+     * @return an instance of BatchConsole
      *
      * @throws BatchErrorException
      *         in case of an error during batch processing
      * @throws IOException
+     *         if an I/O error occurs during reading or writing the image
      */
-    private static BatchConsole readCommand(String[] arguments) throws BatchErrorException, IOException
+    static BatchConsole readCommand(String[] arguments) throws BatchErrorException, IOException
     {
         CommandLineReader cli = scanArguments(arguments);
 
@@ -325,12 +235,10 @@ public final class BatchConsole extends BatchExecutor
         if (cli.existsOption("-f"))
         {
             String[] files = new String[cli.getValueLength("-f")];
-
             for (int k = 0; k < cli.getValueLength("-f"); k++)
             {
                 files[k] = cli.getValueByOption("-f", k);
             }
-
             batch.fileSet(files);
         }
 
@@ -341,11 +249,6 @@ public final class BatchConsole extends BatchExecutor
 
     public static void main(String[] args) throws Exception
     {
-        // String source = "/home/tmaggs/MyJava/TestBatch";
-        // -l trev -m "26 4 2006" -i=image2.jpg, image3.jpg "D:\KDR Project\Milestones\TestBatch"
-        // -p trev "D:\KDR Project\Milestones\TestBatch" -f=pool1.jpg, pool2.jpg,pool7.jpg
-        // -l misty -m "7 10 2012" img
-
         BatchConsole.readCommand(args);
     }
 }

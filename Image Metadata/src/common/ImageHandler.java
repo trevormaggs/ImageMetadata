@@ -3,13 +3,13 @@ package common;
 import java.io.IOException;
 
 /**
- * Defines the contract for a handler that is responsible for processing image files and extracting
- * metadata structures. Implementations of this interface are expected to parse binary image data
- * and produce structured metadata in the form of a {@link Metadata}.
+ * Defines the contract for a handler that processes image files and extracts structured metadata.
+ * Implementations are responsible for parsing binary image data and producing metadata in the form
+ * of a {@link Metadata} instance.
  *
  * <p>
- * This abstraction allows for extensibility to support different image formats (For example, TIFF,
- * PNG, JPEG), each with its own parsing and metadata representation logic.
+ * This interface allows for extensibility to support different image formats, for example: TIFF,
+ * PNG, JPEG, etc, each with its own parsing and metadata representation logic.
  * </p>
  *
  * @author Trevor Maggs
@@ -19,31 +19,32 @@ import java.io.IOException;
 public interface ImageHandler
 {
     /**
-     * Returns the length of the image file associated with the current InputStream resource.
+     * Returns the size of the image file being processed, in bytes.
      * 
      * <p>
      * Any {@link IOException} that occurs while determining the size will be handled internally,
      * and the method will return {@code 0} if the size cannot be determined.
      * </p>
      *
-     * @return the length of the file in bytes, or 0 if the size cannot be determined
+     * @return the file size in bytes, or 0 if it cannot be determined
      */
-    public long getSafeFileLength();
+    long getSafeFileSize();
 
     /**
-     * Parses the image data stream and attempts to extract metadata.
+     * Parses the image data and attempts to extract metadata.
      * 
      * <p>
-     * Implementations should read the appropriate sections of the image file and collect any
-     * available metadata into their internal structures.
+     * Implementations should read the relevant sections of the image file and populate their
+     * internal metadata structures.
      * </p>
      *
      * @return true if metadata was successfully extracted, otherwise false
      *
      * @throws ImageReadErrorException
-     *         if the file format is invalid or the data cannot be interpreted as valid metadata
+     *         if the file format is invalid or the data cannot be interpreted
+     *         as valid metadata
      * @throws IOException
-     *         if there is a low-level I/O problem reading the image file
+     *         if a low-level I/O error occurs while reading the image file
      */
-    public boolean parseMetadata() throws ImageReadErrorException, IOException;
+    boolean parseMetadata() throws ImageReadErrorException, IOException;
 }

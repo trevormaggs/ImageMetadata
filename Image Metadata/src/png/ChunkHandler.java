@@ -42,7 +42,7 @@ public class ChunkHandler implements ImageHandler
 {
     private static final LogFactory LOGGER = LogFactory.getLogger(ChunkHandler.class);
     private static final byte[] PNG_SIGNATURE_BYTES = DigitalSignature.PNG.getMagicNumbers(0);
-    private final boolean strictmode;
+    private final boolean strictMode;
     private final Path imageFile;
     private final EnumSet<ChunkType> requiredChunks;
     private final List<PngChunk> chunks;
@@ -73,15 +73,15 @@ public class ChunkHandler implements ImageHandler
      *        byte reader for raw PNG stream
      * @param requiredChunks
      *        an optional set of chunk types to be extracted (null means all chunks are selected)
-     * @param strictmode
+     * @param strict
      *        true to make it strict, otherwise false for a lenient reading process
      */
-    public ChunkHandler(Path fpath, ImageFileInputStream reader, EnumSet<ChunkType> requiredChunks, boolean strictmode)
+    public ChunkHandler(Path fpath, ImageFileInputStream reader, EnumSet<ChunkType> requiredChunks, boolean strict)
     {
         this.imageFile = fpath;
         this.reader = reader;
         this.requiredChunks = requiredChunks;
-        this.strictmode = strictmode;
+        this.strictMode = strict;
         this.chunks = new ArrayList<>();
     }
 
@@ -133,8 +133,8 @@ public class ChunkHandler implements ImageHandler
      * @return an {@link Optional} containing the EXIF data as a byte array if found, or
      *         {@link Optional#empty()} if absent
      * 
-     * @throws throws
-     *         ImageReadErrorException if multiple chunks, that are disallowed, are detected
+     * @throws ImageReadErrorException
+     *         if multiple chunks, that are disallowed, are detected
      */
     public Optional<byte[]> getExifData() throws ImageReadErrorException
     {
@@ -144,7 +144,7 @@ public class ChunkHandler implements ImageHandler
         {
             if (chunk.getType() == ChunkType.eXIf)
             {
-                if (data != null && strictmode)
+                if (data != null && strictMode)
                 {
                     throw new ImageReadErrorException("Multiple eXIf chunks found. PNG is invalid");
                 }
@@ -170,12 +170,17 @@ public class ChunkHandler implements ImageHandler
     }
 
     /**
-     * Returns the length of the image file associated with the current InputStream resource.
+     * Returns the size of the image file being processed, in bytes.
+     * 
+     * <p>
+     * Any {@link IOException} that occurs while determining the size will be handled internally,
+     * and the method will return {@code 0} if the size cannot be determined.
+     * </p>
      *
-     * @return the length of the file in bytes, or 0 if the size cannot be determined
+     * @return the file size in bytes, or 0 if it cannot be determined
      */
     @Override
-    public long getSafeFileLength()
+    public long getSafeFileSize()
     {
         try
         {
@@ -184,7 +189,7 @@ public class ChunkHandler implements ImageHandler
 
         catch (IOException exc)
         {
-            return 0;
+            return 0L;
         }
     }
 
@@ -200,13 +205,14 @@ public class ChunkHandler implements ImageHandler
      * @throws ImageReadErrorException
      *         if an error occurs while parsing the PNG file
      * @throws IOException
+     *         if there is an I/O stream error
      */
     @Override
-    public boolean parseMetadata() throws ImageReadErrorException, IOException
+    public boolean parseMetadata() throws IOException, ImageReadErrorException
     {
-        byte[] data = reader.peek(0, PNG_SIGNATURE_BYTES.length);
+        byte[] signature = reader.readBytes(PNG_SIGNATURE_BYTES.length);
 
-        if (data.length < PNG_SIGNATURE_BYTES.length)
+        if (signature.length < PNG_SIGNATURE_BYTES.length)
         {
             LOGGER.warn("Data is too short in file [" + imageFile + "]");
             return false;
@@ -216,10 +222,9 @@ public class ChunkHandler implements ImageHandler
          * Note: PNG_SIGNATURE_BYTES (magic numbers) are mapped to
          * {0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'}
          */
-        if (Arrays.equals(Arrays.copyOf(data, PNG_SIGNATURE_BYTES.length), PNG_SIGNATURE_BYTES))
+        if (!Arrays.equals(signature, PNG_SIGNATURE_BYTES))
         {
-            // Skip the actual PNG magic bytes safely
-            reader.skip(PNG_SIGNATURE_BYTES.length);
+            throw new ImageReadErrorException("PNG file [" + imageFile + "] has an invalid signature. File may be corrupted.");
         }
 
         parseChunks();
@@ -265,10 +270,11 @@ public class ChunkHandler implements ImageHandler
         int position = 0;
         byte[] typeBytes;
         ChunkType chunkType;
+        long fileSize = getSafeFileSize();
 
         do
         {
-            if (reader.getCurrentPosition() + 12 > getSafeFileLength())
+            if (fileSize == 0 || reader.getCurrentPosition() + 12 > fileSize)
             {
                 /*
                  * 12 bytes = minimum chunk (length (4) + type (4) + CRC (4),
@@ -318,7 +324,7 @@ public class ChunkHandler implements ImageHandler
                     {
                         String msg = String.format("CRC mismatch for chunk [%s] in file [%s]. Calculated: 0x%08X, Expected: 0x%08X. File may be corrupt.", chunkType, imageFile, expectedCrc, crc32);
 
-                        if (strictmode)
+                        if (strictMode)
                         {
                             throw new ImageReadErrorException(msg);
                         }
@@ -338,6 +344,7 @@ public class ChunkHandler implements ImageHandler
                 /* Skipped the full data length plus 4 bytes for CRC length */
                 reader.skip(length + 4);
                 LOGGER.warn("Unknown chunk type [" + new String(typeBytes, StandardCharsets.US_ASCII) + "] skipped");
+                LOGGER.debug("Data skipped by length [" + (length + 4) + "] in file [" + imageFile + "] due to an unknown chunk");
             }
 
             position++;
@@ -360,7 +367,7 @@ public class ChunkHandler implements ImageHandler
      * @param data
      *        raw chunk data
      */
-    private PngChunk addChunk(ChunkType chunkType, long length, byte[] typeBytes, int crc32, byte[] data) throws ImageReadErrorException
+    private PngChunk addChunk(ChunkType chunkType, long length, byte[] typeBytes, int crc32, byte[] data)
     {
         PngChunk newChunk;
 

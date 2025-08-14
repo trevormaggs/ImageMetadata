@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
 import java.util.Optional;
+import batch.BatchMetadataUtils;
 import common.AbstractImageParser;
 import common.BaseMetadata;
 import common.DigitalSignature;
@@ -49,7 +50,7 @@ public class HeifParser extends AbstractImageParser
 
         LOGGER.info("Image file [" + getImageFile() + "] loaded");
 
-        String ext = getFileExtension();
+        String ext = BatchMetadataUtils.getFileExtension(getImageFile());
 
         if (!ext.equalsIgnoreCase("heic"))
         {

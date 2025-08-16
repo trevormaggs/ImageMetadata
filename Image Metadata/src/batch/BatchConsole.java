@@ -1,7 +1,9 @@
 package batch;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.FileTime;
 import java.text.SimpleDateFormat;
 import common.CommandLineParser;
@@ -98,12 +100,23 @@ public final class BatchConsole extends BatchExecutor
 
             if (media.isMetadataEmpty())
             {
-                System.err.printf("%s\t%s\n", copied, media.getPath());
+                if (media.isJPG())
+                {
+                    BatchMetadataUtils.updateDateTakenMetadataJPG(media.getPath().toFile(), copied.toFile(), captureTime);
+                }
+
+                else if (media.isPNG())
+                {
+                    System.err.printf("%s\t%s\n", copied, media.getPath());
+                    BatchMetadataUtils.updateDateTakenTextualPNG(media.getPath().toFile(), copied.toFile(), captureTime);
+                }
+
+                else Files.copy(media.getPath(), copied, StandardCopyOption.COPY_ATTRIBUTES);
             }
 
             else if (media.isTIF())
             {
-                // TODO: implement TIF support
+                BatchMetadataUtils.updateDateTakenMetadataTIF(media.getPath().toFile(), copied.toFile(), captureTime);
             }
 
             else if (media.isJPG())
@@ -115,6 +128,14 @@ public final class BatchConsole extends BatchExecutor
             {
                 BatchMetadataUtils.updateDateTakenTextualPNG(media.getPath().toFile(), copied.toFile(), captureTime);
             }
+
+            else
+            {
+                // System.err.println(media.getPath());
+                Files.copy(media.getPath(), copied, StandardCopyOption.COPY_ATTRIBUTES);
+            }
+
+            BatchMetadataUtils.changeFileTimeProperties(copied, captureTime);
         }
     }
 
@@ -211,7 +232,7 @@ public final class BatchConsole extends BatchExecutor
      *
      * @param arguments
      *        an array of strings containing the command line arguments
-     *        
+     *
      * @return an instance of BatchConsole
      *
      * @throws BatchErrorException

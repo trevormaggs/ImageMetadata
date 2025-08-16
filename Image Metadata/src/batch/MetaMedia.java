@@ -161,6 +161,16 @@ public final class MetaMedia
     }
 
     /**
+     * Returns whether this media file is in isWebP format.
+     *
+     * @return true if isWebP, otherwise false
+     */
+    public boolean isWebP()
+    {
+        return mediaFormat == DigitalSignature.WEBP;
+    }
+
+    /**
      * Returns whether this media file is a known video format, for example: MP4, MOV, AVI, etc.
      *
      * @return true if the media is a video, otherwise false

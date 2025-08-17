@@ -12,8 +12,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.FileTime;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import org.apache.commons.imaging.Imaging;
 import org.apache.commons.imaging.ImagingException;
@@ -111,7 +114,7 @@ public final class BatchMetadataUtils
         }
 
         TiffOutputDirectory exif = outputSet.getOrCreateExifDirectory();
-        
+
         exif.removeField(ExifTagConstants.EXIF_TAG_DATE_TIME_ORIGINAL);
         exif.add(ExifTagConstants.EXIF_TAG_DATE_TIME_ORIGINAL, dt);
         exif.removeField(ExifTagConstants.EXIF_TAG_DATE_TIME_DIGITIZED);
@@ -188,10 +191,10 @@ public final class BatchMetadataUtils
             }
 
             TiffOutputDirectory exifDirectory = outputSet.getOrCreateExifDirectory();
-            
+
             exifDirectory.removeField(ExifTagConstants.EXIF_TAG_DATE_TIME_ORIGINAL);
             exifDirectory.add(ExifTagConstants.EXIF_TAG_DATE_TIME_ORIGINAL, dateTaken);
-            
+
             exifDirectory.removeField(ExifTagConstants.EXIF_TAG_DATE_TIME_DIGITIZED);
             exifDirectory.add(ExifTagConstants.EXIF_TAG_DATE_TIME_DIGITIZED, dateTaken);
 
@@ -219,21 +222,21 @@ public final class BatchMetadataUtils
         File webpImageFile = sourceFile;
         ImageMetadata metadata2 = Imaging.getMetadata(webpImageFile);
         WebPImageMetadata webpMetadata = (WebPImageMetadata) metadata2;
-        
+
         TiffImageMetadata exif = null;
-        
+
         if (webpMetadata != null && webpMetadata.getExif() != null)
         {
             exif = webpMetadata.getExif();
         }
 
         TiffOutputSet outputSet2;
-        
+
         if (exif != null)
         {
             outputSet2 = exif.getOutputSet();
         }
-        
+
         else
         {
             outputSet2 = new TiffOutputSet(); // Create a new TiffOutputSet if no existing EXIF
@@ -252,7 +255,7 @@ public final class BatchMetadataUtils
         exifDirectory.add(ExifTagConstants.EXIF_TAG_DATE_TIME_ORIGINAL, dateTaken);
 
         File outputFile = new File("output.webp");
-        
+
         try (OutputStream os = new FileOutputStream(outputFile))
         {
             new ExifRewriter().updateExifMetadataLossless(webpImageFile, os, outputSet2);
@@ -304,5 +307,63 @@ public final class BatchMetadataUtils
                 os.write(baos.toByteArray());
             }
         }
+    }
+
+    /**
+     * Converts the input date string to a Date object by attempting to parse it against a predefined set of common date and time formats.
+     *
+     * @param input
+     *        the input date string
+     *        
+     * @return the converted Date object
+     * 
+     * @throws NullPointerException
+     *         if the input is null
+     * @throws IllegalArgumentException
+     *         if the date format is invalid or not supported
+     */
+    public static Date convertToDate2(String input)
+    {
+        // Fail-fast for null input
+        if (input == null)
+        {
+            throw new NullPointerException("Date input is null");
+        }
+
+        // Define a comprehensive list of date-time formats to try
+        // Prioritize common formats first for efficiency
+        List<String> validFormats = Arrays.asList(
+                "yyyy:MM:dd HH:mm:ss",
+                "yyyy-MM-dd HH:mm:ss",
+                "yyyy/MM/dd HH:mm:ss",
+                "dd/MM/yyyy HH:mm:ss",
+                "dd-MM-yyyy HH:mm:ss",
+                "MM/dd/yyyy HH:mm:ss",
+                "MM-dd-yyyy HH:mm:ss",
+                "yyyy:MM:dd",
+                "yyyy-MM-dd",
+                "yyyy/MM/dd",
+                "dd/MM/yyyy",
+                "dd-MM-yyyy");
+
+        for (String format : validFormats)
+        {
+            try
+            {
+                // Use a non-lenient parser for strict format matching
+                SimpleDateFormat simpleDateFormat = new SimpleDateFormat(format);
+                simpleDateFormat.setLenient(false);
+                
+                return simpleDateFormat.parse(input.trim());
+            }
+            
+            catch (ParseException exc)
+            {
+                // Ignore and try the next format
+            }
+        }
+
+        // If no format matched, throw an exception
+        throw new IllegalArgumentException("Date [" + input + "] is in an invalid or unsupported format");
     }
 }

@@ -13,7 +13,7 @@ import common.DigitalSignature;
  * @version 1.0
  * @since 13 August 2025
  */
-public final class MetaMedia
+public final class MediaFile
 {
     private final Path mediaFile;
     private final FileTime dateTaken;
@@ -21,7 +21,7 @@ public final class MetaMedia
     private final DigitalSignature mediaFormat;
 
     /**
-     * Constructs a MetaMedia instance with the specified file path, capture date, and format
+     * Constructs a MediaFile instance with the specified file path, capture date, and format
      * signature.
      *
      * @param fpath
@@ -31,14 +31,14 @@ public final class MetaMedia
      * @param sig
      *        the media format signature
      */
-    public MetaMedia(Path fpath, FileTime date, DigitalSignature sig)
+    public MediaFile(Path fpath, FileTime date, DigitalSignature sig)
     {
         this(fpath, date, sig, false);
     }
 
     /**
-     * Constructs a MetaMedia instance with the specified path, date, format, and metadata status.
-     *
+     * Constructs a MediaFile instance with the specified path, date, format, and metadata status.
+     * 
      * @param fpath
      *        the path to the media file
      * @param date
@@ -48,7 +48,7 @@ public final class MetaMedia
      * @param emptymeta
      *        true if the media file has missing or empty metadata
      */
-    public MetaMedia(Path fpath, FileTime date, DigitalSignature sig, boolean emptymeta)
+    public MediaFile(Path fpath, FileTime date, DigitalSignature sig, boolean emptymeta)
     {
         this.mediaFile = fpath;
         this.dateTaken = date;
@@ -57,13 +57,13 @@ public final class MetaMedia
     }
 
     /**
-     * Copy constructor. Creates a new MetaMedia instance by copying the values from another
+     * Copy constructor. Creates a new MediaFile instance by copying the values from another
      * instance.
      *
      * @param obj
-     *        the MetaMedia object to copy
+     *        the MediaFile object to copy
      */
-    public MetaMedia(MetaMedia obj)
+    public MediaFile(MediaFile obj)
     {
         this(obj.getPath(), obj.getDateTaken(), obj.getMediaFormat(), obj.isMetadataEmpty());
     }
@@ -181,7 +181,7 @@ public final class MetaMedia
     }
 
     /**
-     * Compares this MetaMedia instance with another for equality.
+     * Compares this MediaFile instance with another for equality.
      *
      * @param other
      *        the object to compare
@@ -196,12 +196,12 @@ public final class MetaMedia
             return true;
         }
 
-        if (!(other instanceof MetaMedia))
+        if (!(other instanceof MediaFile))
         {
             return false;
         }
 
-        MetaMedia meta = (MetaMedia) other;
+        MediaFile meta = (MediaFile) other;
 
         return hasEmptyMetadata == meta.hasEmptyMetadata && mediaFormat == meta.mediaFormat
                 && Objects.equals(dateTaken, meta.dateTaken) && Objects.equals(mediaFile, meta.mediaFile);
@@ -226,7 +226,7 @@ public final class MetaMedia
     }
 
     /**
-     * Returns a multi-line string representation of this {@code MetaMedia} instance, listing its
+     * Returns a multi-line string representation of this {@code MediaFile} instance, listing its
      * fields for debugging or logging.
      *
      * @return the formatted string representation

@@ -31,7 +31,8 @@ import logger.LogFactory;
 public final class BatchConsole extends BatchExecutor
 {
     private static final LogFactory LOGGER = LogFactory.getLogger(BatchConsole.class);
-
+    private static final SimpleDateFormat DF = new SimpleDateFormat("_ddMMMyyyy");
+    
     /**
      * Constructs a console interface, using a Builder design pattern to process the parameters and
      * update the copied image files. The actual Builder implementation exists in the
@@ -49,7 +50,7 @@ public final class BatchConsole extends BatchExecutor
     {
         super(builder);
 
-        scan();
+        start();
         updateAndCopyFiles();
     }
 
@@ -66,17 +67,16 @@ public final class BatchConsole extends BatchExecutor
         int k = 0;
         Path copied;
         FileTime captureTime;
-        SimpleDateFormat df = new SimpleDateFormat("_ddMMMyyyy");
 
-        for (MetaMedia media : this)
+        for (MediaFile media : this)
         {
             String originalFileName = media.getPath().getFileName().toString();
-            String fileExtension = BatchMetadataUtils.getFileExtension(media.getPath());
+            String fileExtension = media.getMediaFormat().getFileExtensionName();
             String fname;
 
             k++;
 
-            // ConsoleBar.updateProgressBar(k, getImageCount());
+//            ConsoleBar.updateProgressBar(k, getImageCount());
 
             if (media.isVideoFormat())
             {
@@ -92,7 +92,7 @@ public final class BatchConsole extends BatchExecutor
 
             else
             {
-                fname = String.format("%s%d%s.%s", getPrefix(), k, (embedDateTime() ? df.format(media.getTimestamp()) : ""), fileExtension);
+                fname = String.format("%s%d%s.%s", getPrefix(), k, (embedDateTime() ? DF.format(media.getTimestamp()) : ""), fileExtension);
             }
 
             copied = getTargetDirectory().resolve(fname);
@@ -105,35 +105,25 @@ public final class BatchConsole extends BatchExecutor
                     BatchMetadataUtils.updateDateTakenMetadataJPG(media.getPath().toFile(), copied.toFile(), captureTime);
                 }
 
+                else if (media.isTIF())
+                {
+                    BatchMetadataUtils.updateDateTakenMetadataTIF(media.getPath().toFile(), copied.toFile(), captureTime);
+                }
+
                 else if (media.isPNG())
                 {
-                    System.err.printf("%s\t%s\n", copied, media.getPath());
                     BatchMetadataUtils.updateDateTakenTextualPNG(media.getPath().toFile(), copied.toFile(), captureTime);
                 }
 
                 else Files.copy(media.getPath(), copied, StandardCopyOption.COPY_ATTRIBUTES);
             }
 
-            else if (media.isTIF())
-            {
-                BatchMetadataUtils.updateDateTakenMetadataTIF(media.getPath().toFile(), copied.toFile(), captureTime);
-            }
-
-            else if (media.isJPG())
-            {
-                BatchMetadataUtils.updateDateTakenMetadataJPG(media.getPath().toFile(), copied.toFile(), captureTime);
-            }
-
-            else if (media.isPNG())
-            {
-                BatchMetadataUtils.updateDateTakenTextualPNG(media.getPath().toFile(), copied.toFile(), captureTime);
-            }
-
             else
             {
-                // System.err.println(media.getPath());
                 Files.copy(media.getPath(), copied, StandardCopyOption.COPY_ATTRIBUTES);
             }
+            
+            System.err.printf("%s\t%s\n", media.getPath(), copied);
 
             BatchMetadataUtils.changeFileTimeProperties(copied, captureTime);
         }

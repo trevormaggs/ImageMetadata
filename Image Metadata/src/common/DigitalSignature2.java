@@ -16,40 +16,23 @@ import java.util.EnumSet;
  * @version 1.0
  * @since 13 August 2025
  */
-public enum DigitalSignature
+public enum DigitalSignature2
 {
-    JPG("jpg", new int[][]{{0xFF, 0xD8}}),
-    TIF("tif", new int[][]{{0x4D, 0x4D}, {0x49, 0x49}}),
-    PNG("png", new int[][]{{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}}),
-    HEIF("heic", new int[][]{{0x66, 0x74, 0x79, 0x70, 0x68, 0x65, 0x69, 0x63}}),
-    WEBP("webp", new int[][]{{0x57, 0x45, 0x42, 0x50}}),
-    MOV("mov", new int[][]{{0x66, 0x74, 0x79, 0x70, 0x71, 0x74}, {0x6D, 0x6F, 0x6F, 0x76}}),
-    AVI("avi", new int[][]{{0x52, 0x49, 0x46, 0x46}}),
-    MP4("mp4", new int[][]{{0x66, 0x74, 0x79, 0x70, 0x6D, 0x70, 0x34, 0x32}}),
-    UNKNOWN("", new int[][]{{0x00, 0x00}});
+    JPG(new int[][]{{0xFF, 0xD8}}),
+    TIF(new int[][]{{0x4D, 0x4D}, {0x49, 0x49}}),
+    PNG(new int[][]{{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}}),
+    HEIF(new int[][]{{0x66, 0x74, 0x79, 0x70, 0x68, 0x65, 0x69, 0x63}}),
+    WEBP(new int[][]{{0x57, 0x45, 0x42, 0x50}}),
+    MOV(new int[][]{{0x66, 0x74, 0x79, 0x70, 0x71, 0x74}, {0x6D, 0x6F, 0x6F, 0x76}}),
+    AVI(new int[][]{{0x52, 0x49, 0x46, 0x46}}),
+    MP4(new int[][]{{0x66, 0x74, 0x79, 0x70, 0x6D, 0x70, 0x34, 0x32}}),
+    UNKNOWN(new int[][]{{0x00, 0x00}});
 
-    private final String extension;
     private final int[][] magicNumbers;
 
-    DigitalSignature(String extension, int[][] magicNumbers)
+    DigitalSignature2(int[][] magicNumbers)
     {
-        this.extension = extension;
         this.magicNumbers = magicNumbers;
-    }
-
-    /**
-     * Returns the extension of the image file name without the dot.
-     *
-     * <p>
-     * If the file name is unknown, an empty string is returned.
-     * </p>
-     *
-     * @return the file extension, for example: {@code "jpg"} or {@code "png"} etc, or an empty
-     *         string if none
-     */
-    public String getFileExtensionName()
-    {
-        return extension;
     }
 
     /**
@@ -109,7 +92,7 @@ public enum DigitalSignature
      * @throws IOException
      *         if the file is unreadable or missing
      */
-    public static DigitalSignature detectFormat(String file) throws IOException
+    public static DigitalSignature2 detectFormat(String file) throws IOException
     {
         return detectFormat(Paths.get(file));
     }
@@ -123,12 +106,12 @@ public enum DigitalSignature
      * @throws IOException
      *         if the file is unreadable or missing
      */
-    public static DigitalSignature detectFormat(Path path) throws IOException
+    public static DigitalSignature2 detectFormat(Path path) throws IOException
     {
         int maxLength = 0;
 
         /* Determine the longest magic number sequence (for buffer size) */
-        for (DigitalSignature sig : EnumSet.complementOf(EnumSet.of(UNKNOWN)))
+        for (DigitalSignature2 sig : EnumSet.complementOf(EnumSet.of(UNKNOWN)))
         {
             for (int[] magic : sig.magicNumbers)
             {
@@ -162,7 +145,7 @@ public enum DigitalSignature
                 totalRead += bytesRead;
             }
 
-            for (DigitalSignature sig : EnumSet.complementOf(EnumSet.of(UNKNOWN)))
+            for (DigitalSignature2 sig : EnumSet.complementOf(EnumSet.of(UNKNOWN)))
             {
                 for (int[] magic : sig.magicNumbers)
                 {

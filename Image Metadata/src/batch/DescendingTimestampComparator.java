@@ -4,14 +4,14 @@ import java.nio.file.Path;
 import java.util.Comparator;
 
 /**
- * Comparator that sorts MetaMedia objects by timestamp in descending order. If time-stamps are
- * equal, it falls back to comparing file paths to ensure uniqueness in sorted collections like
+ * Comparator that sorts {@code MediaFile} objects by timestamp in descending order. If time-stamps
+ * are equal, it falls back to comparing file paths to ensure uniqueness in sorted collections like
  * TreeSet.
  */
-class DescendingTimestampComparator implements Comparator<MetaMedia>
+class DescendingTimestampComparator implements Comparator<MediaFile>
 {
     @Override
-    public int compare(MetaMedia o1, MetaMedia o2)
+    public int compare(MediaFile o1, MediaFile o2)
     {
         int cmp = Long.compare(o2.getTimestamp(), o1.getTimestamp());
 

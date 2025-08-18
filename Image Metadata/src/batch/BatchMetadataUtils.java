@@ -199,6 +199,8 @@ public final class BatchMetadataUtils
             exifDirectory.add(ExifTagConstants.EXIF_TAG_DATE_TIME_DIGITIZED, dateTaken);
 
             new ExifRewriter().updateExifMetadataLossless(sourceFile, os, outputSet);
+            
+            //System.err.printf("%s\t%s\t%s%n", sourceFile, targetFile, datetime);
         }
     }
 

@@ -3,8 +3,8 @@ package batch;
 /**
  * <p>
  * Implements the Builder design pattern for step-by-step construction of a {@link BatchExecutor}
- * instance. This abstract base class provides setter methods to configure batch parameters, which
- * can then be used to create a new {@code BatchExecutor} using the {@link #build()} method.
+ * instance. This base class provides setter methods to configure batch parameters, which can then
+ * be used to create a new {@code BatchExecutor} using the {@link #build()} method.
  * </p>
  *
  * <p>
@@ -18,7 +18,7 @@ package batch;
  *         .target("local\\images")
  *         .name("image")
  *         .descending(true)
- *         .datetime("26 4 2006")
+ *         .userDate("26 4 2006")
  *         .build();
  * </code>
  * </pre>
@@ -32,7 +32,7 @@ public final class BatchBuilder
     protected String bd_sourceDir = BatchExecutor.DEFAULT_SOURCE_DIRECTORY;
     protected String bd_prefix = BatchExecutor.DEFAULT_IMAGE_PREFIX;
     protected String bd_target = BatchExecutor.DEFAULT_TARGET_DIRECTORY;
-    protected String bd_datetime = "";
+    protected String bd_userDate = "";
     protected boolean bd_descending = false;
     protected boolean bd_embedDateTime = false;
     protected boolean bd_skipVideoFiles = false;
@@ -89,9 +89,9 @@ public final class BatchBuilder
      *
      * @return this object to allow method chaining
      */
-    public BatchBuilder datetime(final String dt)
+    public BatchBuilder userDate(final String dt)
     {
-        bd_datetime = dt;
+        bd_userDate = dt;
         return this;
     }
 

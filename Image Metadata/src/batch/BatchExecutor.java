@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import common.AbstractImageParser;
@@ -53,7 +54,7 @@ import tif.MetadataTIF;
 public class BatchExecutor implements Batchable, Iterable<MediaFile>
 {
     private static final LogFactory LOGGER = LogFactory.getLogger(BatchExecutor.class);
-    private static final long DATE_OFFSET_MILLIS = 10_000L;
+    private static final long TEN_SECOND_OFFSET_MS = 10_000L;
     private static final FileVisitor<Path> DELETE_VISITOR;
     public static final String DEFAULT_SOURCE_DIRECTORY = ".";
     public static final String DEFAULT_TARGET_DIRECTORY = "IMAGEDIR";
@@ -65,7 +66,7 @@ public class BatchExecutor implements Batchable, Iterable<MediaFile>
     private final boolean embedDateTime;
     private final boolean skipVideoFiles;
     private final boolean debug;
-    private final String datetime;
+    private final String userDate;
     private final String[] fileSet;
     private long dateOffsetUpdate;
 
@@ -117,7 +118,7 @@ public class BatchExecutor implements Batchable, Iterable<MediaFile>
         this.embedDateTime = builder.bd_embedDateTime;
         this.skipVideoFiles = builder.bd_skipVideoFiles;
         this.debug = builder.bd_debug;
-        this.datetime = builder.bd_datetime;
+        this.userDate = builder.bd_userDate;
         this.fileSet = Arrays.copyOf(builder.bd_files, builder.bd_files.length);
         this.dateOffsetUpdate = 0L;
 
@@ -180,8 +181,7 @@ public class BatchExecutor implements Batchable, Iterable<MediaFile>
 
                     else
                     {
-                        LOGGER.warn("Skipping non-regular file [" + fpath + "]");
-                        continue;
+                        LOGGER.info("Skipping non-regular file [" + fpath + "]");
                     }
                 }
             }
@@ -201,7 +201,7 @@ public class BatchExecutor implements Batchable, Iterable<MediaFile>
     /**
      * Retrieves the source directory where the original files are located.
      *
-     * @return the {@code Path} instance of the source directory
+     * @return the Path instance of the source directory
      */
     protected Path getSourceDirectory()
     {
@@ -211,7 +211,7 @@ public class BatchExecutor implements Batchable, Iterable<MediaFile>
     /**
      * Retrieves the target directory where the processed files will be saved.
      *
-     * @return the {@code Path} instance of the target directory
+     * @return the Path instance of the target directory
      */
     protected Path getTargetDirectory()
     {
@@ -299,22 +299,22 @@ public class BatchExecutor implements Batchable, Iterable<MediaFile>
             @Override
             public FileVisitResult visitFile(Path fpath, BasicFileAttributes attr) throws IOException
             {
+                boolean forcedTest = false;
+                
                 try
                 {
                     AbstractImageParser parser = ImageParserFactory.getParser(fpath);
                     Date metadataDate = findDateTaken(parser, fpath);
-                    FileTime modifiedTime = selectDateTaken(metadataDate, fpath, attr.lastModifiedTime(), datetime, dateOffsetUpdate, false);
-                    MediaFile media = new MediaFile(fpath, modifiedTime, parser.getImageFormat(), (metadataDate == null));
+                    FileTime modifiedTime = selectDateTaken(metadataDate, fpath, attr.lastModifiedTime(), userDate, dateOffsetUpdate, forcedTest);
+                    MediaFile media = new MediaFile(fpath, modifiedTime, parser.getImageFormat(), (metadataDate == null), forcedTest);
 
-                    if (media != null)
-                    {
-                        imageSet.add(media);
-                    }
+                    imageSet.add(media);
+
                 }
 
-                catch (ImageReadErrorException exc)
+                catch (Exception exc)
                 {
-                    LOGGER.error("Failed to read image metadata from [" + fpath + "]", exc);
+                    LOGGER.error("Unexpected error while processing [" + fpath + "]", exc);
                 }
 
                 return FileVisitResult.CONTINUE;
@@ -363,19 +363,13 @@ public class BatchExecutor implements Batchable, Iterable<MediaFile>
             }
 
             /**
-             * Resolves the effective {@code Date Taken} time-stamp for an image file by selecting
-             * from a prioritised set of sources.
-             *
-             * <p>
-             * The precedence of sources is:
-             * </p>
+             * Determines the {@code Date Taken} time-stamp for a file, based on priority rules:
              *
              * <ol>
-             * <li>Image metadata, for example: EXIF or PNG textual data, unless overridden by
-             * {@code force}</li>
-             * <li>User-specified date (parsed from a string). A unique offset of 10 seconds per
-             * file is applied to avoid duplicates</li>
-             * <li>File's last modified time-stamp</li>
+             * <li>User-provided date (if {@code force} is true)</li>
+             * <li>Metadata date (if available)</li>
+             * <li>User-provided date (if metadata missing)</li>
+             * <li>Last modified time (fallback)</li>
              * </ol>
              *
              * @param metadataDate
@@ -398,38 +392,63 @@ public class BatchExecutor implements Batchable, Iterable<MediaFile>
              */
             private FileTime selectDateTaken(Date metadataDate, Path fpath, FileTime modifiedTime, String userDateTime, long dateOffset, boolean force)
             {
-                // 1. Prefer metadata date if available and not overridden
-                if (metadataDate != null && !force)
+                // 1. User-provided date takes precedence if forced
+                if (force)
+                {
+                    Optional<FileTime> forced = parseUserDate(userDateTime, fpath, dateOffset, true);
+
+                    if (forced.isPresent())
+                    {
+                        return forced.get();
+                    }
+                }
+
+                // 2. Use metadata date if available
+                if (metadataDate != null)
                 {
                     LOGGER.info("Date Taken for [" + fpath + "] using metadata date [" + metadataDate + "]");
                     return FileTime.fromMillis(metadataDate.getTime());
                 }
 
-                // 2. Try user-provided date
-                if (userDateTime != null && !userDateTime.isEmpty())
+                // 3. Otherwise, fallback to user-provided date
+                Optional<FileTime> userDate = parseUserDate(userDateTime, fpath, dateOffset, false);
+
+                if (userDate.isPresent())
                 {
-                    Date userDate = DateParser.convertToDate(userDateTime);
-
-                    if (userDate != null)
-                    {
-                        long newTime = userDate.getTime() + (dateOffset * DATE_OFFSET_MILLIS);
-                        LOGGER.info("Date Taken for [" + fpath + "] set to user-defined date [" + userDate + "] with offset [" + dateOffset + "]");
-
-                        // TODO: Beware it might not be thread-safe if used concurrently?
-                        // Maybe take it outside the Visitor code?
-                        dateOffsetUpdate++;
-
-                        return FileTime.fromMillis(newTime);
-                    }
-
-                    LOGGER.warn("Invalid user date format [" + userDateTime + "]. Falling back to metadata or file timestamp");
+                    return userDate.get();
                 }
 
-                // 3. Fallback to last modified time
+                // 4. Final fallback: file's last modified time
                 LOGGER.info("No valid date found for [" + fpath + "]. Using file's last modified date [" + modifiedTime + "]");
 
                 return modifiedTime;
             }
+
+            /**
+             * Attempts to parse and offset a user-provided date string.
+             */
+            private Optional<FileTime> parseUserDate(String userDateTime, Path fpath, long dateOffset, boolean forced)
+            {
+                if (userDateTime == null || userDateTime.isEmpty())
+                {
+                    return Optional.empty();
+                }
+
+                Date parsed = DateParser.convertToDate(userDateTime);
+
+                if (parsed == null)
+                {
+                    LOGGER.warn("Invalid user date format [" + userDateTime + "] for [" + fpath + "]. [" + (forced ? "Falling back to metadata or file timestamp" : "Ignoring") + "]");
+                    return Optional.empty();
+                }
+
+                long newTime = parsed.getTime() + (dateOffset * TEN_SECOND_OFFSET_MS);
+
+                LOGGER.info("Date Taken for [" + fpath + "] set to user-defined date [" + parsed + "] with offset [" + dateOffset + "]");
+
+                return Optional.of(FileTime.fromMillis(newTime));
+            }
+
         };
     }
 

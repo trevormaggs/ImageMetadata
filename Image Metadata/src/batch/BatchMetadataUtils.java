@@ -199,8 +199,6 @@ public final class BatchMetadataUtils
             exifDirectory.add(ExifTagConstants.EXIF_TAG_DATE_TIME_DIGITIZED, dateTaken);
 
             new ExifRewriter().updateExifMetadataLossless(sourceFile, os, outputSet);
-            
-            //System.err.printf("%s\t%s\t%s%n", sourceFile, targetFile, datetime);
         }
     }
 
@@ -312,11 +310,12 @@ public final class BatchMetadataUtils
     }
 
     /**
-     * Converts the input date string to a Date object by attempting to parse it against a predefined set of common date and time formats.
+     * Converts the input date string to a Date object by attempting to parse it against a
+     * predefined set of common date and time formats.
      *
      * @param input
      *        the input date string
-     *        
+     * 
      * @return the converted Date object
      * 
      * @throws NullPointerException
@@ -355,10 +354,10 @@ public final class BatchMetadataUtils
                 // Use a non-lenient parser for strict format matching
                 SimpleDateFormat simpleDateFormat = new SimpleDateFormat(format);
                 simpleDateFormat.setLenient(false);
-                
+
                 return simpleDateFormat.parse(input.trim());
             }
-            
+
             catch (ParseException exc)
             {
                 // Ignore and try the next format

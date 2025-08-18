@@ -122,7 +122,6 @@ public final class TestScanner
                     MetadataPNG<?> png = (MetadataPNG<?>) meta;
 
                     // System.out.printf("%s\n", png);
-                    // System.out.printf("%s\n", png.toDebugString());
 
                     if (png.hasTextualData())
                     {

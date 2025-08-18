@@ -114,7 +114,7 @@ public final class BatchConsole extends BatchExecutor
 
             else
             {
-                System.err.printf("%s\t%s\n", media.getPath(), copied);
+                //System.err.printf("%s\t%s\n", media.getPath(), copied);
                 Files.copy(media.getPath(), copied, StandardCopyOption.COPY_ATTRIBUTES);
             }
 

@@ -300,7 +300,7 @@ public class BatchExecutor implements Batchable, Iterable<MediaFile>
             public FileVisitResult visitFile(Path fpath, BasicFileAttributes attr) throws IOException
             {
                 boolean forcedTest = false;
-                
+
                 try
                 {
                     AbstractImageParser parser = ImageParserFactory.getParser(fpath);

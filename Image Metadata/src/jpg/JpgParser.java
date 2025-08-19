@@ -216,6 +216,7 @@ public class JpgParser extends AbstractImageParser
         return DigitalSignature.JPG;
     }
 
+    // TESTING
     /**
      * Prints diagnostic information including file attributes and metadata content.
      *
@@ -229,6 +230,7 @@ public class JpgParser extends AbstractImageParser
     {
         String fmt = "%-20s:\t%s%n";
         String divider = "--------------------------------------------------";
+        Metadata<?> meta = getSafeMetadata();
         StringBuilder sb = new StringBuilder();
         SimpleDateFormat df = new SimpleDateFormat("dd MMM yyyy HH:mm:ss");
 
@@ -238,32 +240,30 @@ public class JpgParser extends AbstractImageParser
             sb.append(System.lineSeparator());
         }
 
+        sb.append("File Attributes").append(System.lineSeparator());
+        sb.append(divider).append(System.lineSeparator());
+
         try
         {
-            Metadata<?> meta = getSafeMetadata();
+            BasicFileAttributeView attr = BatchMetadataUtils.getFileAttributeView(getImageFile());
 
-            sb.append("File Attributes").append(System.lineSeparator());
-            sb.append(divider).append(System.lineSeparator());
+            sb.append(String.format(fmt, "File", getImageFile()));
+            sb.append(String.format(fmt, "Creation Time", df.format(new Date(attr.readAttributes().creationTime().toMillis()))));
+            sb.append(String.format(fmt, "Last Access Time", df.format(new Date(attr.readAttributes().lastAccessTime().toMillis()))));
+            sb.append(String.format(fmt, "Last Modified Time", df.format(new Date(attr.readAttributes().lastModifiedTime().toMillis()))));
+            sb.append(String.format(fmt, "Image Format Type", getImageFormat().getFileExtensionName()));
+        }
 
-            try
-            {
-                BasicFileAttributeView attr = BatchMetadataUtils.getFileAttributeView(getImageFile());
-
-                sb.append(String.format(fmt, "File", getImageFile()));
-                sb.append(String.format(fmt, "Creation Time", df.format(new Date(attr.readAttributes().creationTime().toMillis()))));
-                sb.append(String.format(fmt, "Last Access Time", df.format(new Date(attr.readAttributes().lastAccessTime().toMillis()))));
-                sb.append(String.format(fmt, "Last Modified Time", df.format(new Date(attr.readAttributes().lastModifiedTime().toMillis()))));
-                sb.append(String.format(fmt, "Image Format Type", getImageFormat().name()));
-            }
-
-            catch (IOException exc)
-            {
-                sb.append("Unable to read file attributes: ").append(exc.getMessage());
-                sb.append(System.lineSeparator());
-            }
-
+        catch (IOException exc)
+        {
+            sb.append("Unable to read file attributes: ").append(exc.getMessage());
             sb.append(System.lineSeparator());
+        }
 
+        sb.append(System.lineSeparator());
+
+        try
+        {
             if (meta.hasMetadata() && meta.hasExifData())
             {
                 if (meta instanceof MetadataTIF)
@@ -272,11 +272,20 @@ public class JpgParser extends AbstractImageParser
 
                     for (DirectoryIFD ifd : tif)
                     {
-                        System.out.printf("TESTING: %s (%d)\n", ifd.getDirectoryType().getDescription(), ifd.length());
-                        
+                        sb.append("Directory Type - ");
+                        sb.append(ifd.getDirectoryType().getDescription());
+                        sb.append(" (" + ifd.length() + " entries)");
+                        sb.append(System.lineSeparator());
+                        sb.append(divider).append(System.lineSeparator());
+
                         for (EntryIFD entry : ifd)
                         {
-                            sb.append(entry);
+                            String value = ifd.getStringValue(entry);
+
+                            sb.append(String.format(fmt, "Tag Name", entry.getTag() + " (Tag ID: 0x" + Integer.toHexString(entry.getTagID()).toUpperCase() + ")"));
+                            sb.append(String.format(fmt, "Field Type", entry.getFieldType() + " (count: " + entry.getCount() + ")"));
+                            // sb.append(String.format(fmt, "Count", entry.getCount()));
+                            sb.append(String.format(fmt, "Value", (value.isEmpty() ? "Empty" : value)));
                             sb.append(System.lineSeparator());
                         }
                     }

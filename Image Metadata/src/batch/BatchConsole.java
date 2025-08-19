@@ -51,9 +51,16 @@ public final class BatchConsole extends BatchExecutor
         super(builder);
 
         start();
-        updateAndCopyFiles();
+        //updateAndCopyFiles();
     }
 
+    /**
+     * Iterates through media files and copies them to the target directory.
+     * Updates metadata for JPEG and PNG files and logs skipped or empty files.
+     *
+     * @throws IOException
+     *         if an I/O error occurs during reading or writing the image
+     */
     @Override
     public void updateAndCopyFiles() throws IOException
     {
@@ -68,6 +75,7 @@ public final class BatchConsole extends BatchExecutor
             String fname;
 
             k++;
+            // ConsoleBar.updateProgressBar(k, getImageCount());
 
             if (media.isVideoFormat())
             {
@@ -114,21 +122,13 @@ public final class BatchConsole extends BatchExecutor
 
             else
             {
-                //System.err.printf("%s\t%s\n", media.getPath(), copied);
+                // System.err.printf("%s\t%s\n", media.getPath(), copied);
                 Files.copy(media.getPath(), copied, StandardCopyOption.COPY_ATTRIBUTES);
             }
 
             BatchMetadataUtils.changeFileTimeProperties(copied, captureTime);
         }
     }
-
-    /**
-     * Iterates through media files and copies them to the target directory.
-     * Updates metadata for JPEG and PNG files and logs skipped or empty files.
-     *
-     * @throws IOException
-     *         if an I/O error occurs during reading or writing the image
-     */
 
     public void updateAndCopyFiles2() throws IOException
     {
@@ -318,6 +318,7 @@ public final class BatchConsole extends BatchExecutor
             {
                 files[k] = cli.getValueByOption("-f", k);
             }
+            
             batch.fileSet(files);
         }
 

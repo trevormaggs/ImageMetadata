@@ -70,15 +70,4 @@ public interface Metadata<T> extends BaseMetadata, Iterable<T>
      * @return true if Exif data is available, otherwise false
      */
     public boolean hasExifData();
-
-    /**
-     * Produces a human-readable debug string summarising the contents of all directories and their
-     * metadata entries. Useful for logging or diagnostic output.
-     *
-     * @param prefix
-     *        an optional string to prepend as a heading or label. It can be null
-     *
-     * @return a formatted string suitable for debugging, inspection, or textual analysis
-     */
-    public String toString(String prefix);
 }

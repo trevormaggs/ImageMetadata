@@ -308,8 +308,13 @@ public class BatchExecutor implements Batchable, Iterable<MediaFile>
                     FileTime modifiedTime = selectDateTaken(metadataDate, fpath, attr.lastModifiedTime(), userDate, dateOffsetUpdate, forcedTest);
                     MediaFile media = new MediaFile(fpath, modifiedTime, parser.getImageFormat(), (metadataDate == null), forcedTest);
 
-                    imageSet.add(media);
-
+                    if (media != null)
+                    {
+                        imageSet.add(media);
+                    }
+                    
+                    // TESTING
+                    System.out.printf("%s\n", parser.toString("              Metadata Summary"));
                 }
 
                 catch (Exception exc)

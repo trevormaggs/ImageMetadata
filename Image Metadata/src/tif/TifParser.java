@@ -3,6 +3,7 @@ package tif;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Optional;
 import batch.BatchMetadataUtils;
@@ -210,5 +211,24 @@ public class TifParser extends AbstractImageParser
         }
 
         return tif;
+    }
+
+    /**
+     * Prints diagnostic information including file attributes and metadata content.
+     *
+     * @param prefix
+     *        optional label or heading, can be null
+     *
+     * @return formatted string suitable for diagnostics
+     */
+    @Override
+    public String toString(String prefix)
+    {
+        String fmt = "%-20s:\t%s%n";
+        String divider = "--------------------------------------------------";
+        StringBuilder sb = new StringBuilder();
+        SimpleDateFormat df = new SimpleDateFormat("dd MMM yyyy HH:mm:ss");
+        
+        return sb.toString();
     }
 }

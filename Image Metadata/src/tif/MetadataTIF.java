@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import common.Metadata;
-import tif.DirectoryIFD.EntryIFD;
 
 /**
  * A composite leaf component of the Composite design pattern that encapsulates Exif metadata stored
@@ -179,60 +178,5 @@ public class MetadataTIF implements Metadata<DirectoryIFD>
         }
 
         return result.toString();
-    }
-
-    /**
-     * Produces a human-readable debug string summarising the contents of all directories and their
-     * metadata entries. Useful for logging or diagnostic output.
-     *
-     * @param prefix
-     *        an optional string to prepend as a heading or label. It can be null
-     *
-     * @return a formatted string suitable for debugging, inspection, or textual analysis
-     */
-    @Override
-    public String toString(String prefix)
-    {
-        String fmt = "%-12s:\t%s%n";
-        String divider = "--------------------------------------------------";
-        StringBuilder sb = new StringBuilder();
-
-        if (prefix != null)
-        {
-            sb.append(prefix).append(System.lineSeparator());
-            sb.append(System.lineSeparator());
-        }
-
-        if (hasExifData())
-        {
-            sb.append("EXIF Metadata").append(System.lineSeparator());
-            sb.append(divider).append(System.lineSeparator());
-
-            for (DirectoryIFD ifd : this)
-            {
-                String label = ifd.getDirectoryType().getDescription();
-
-                sb.append("\t\tDirectory - ");
-                sb.append(label);
-                sb.append(System.lineSeparator()).append(System.lineSeparator());
-
-                for (EntryIFD entry : ifd)
-                {
-                    sb.append(String.format(fmt, "Tag Type", entry.getTag()));
-                    sb.append(String.format("%-12s:\t0x%04X%n", "Tag ID", entry.getTagID()));
-                    sb.append(String.format(fmt, "Field Type", entry.getFieldType()));
-                    sb.append(String.format(fmt, "Count", entry.getCount()));
-                    sb.append(String.format(fmt, "Value", ifd.getStringValue(entry)));
-                    sb.append(System.lineSeparator());
-                }
-            }
-        }
-
-        else
-        {
-            sb.append("No metadata found.").append(System.lineSeparator());
-        }
-
-        return sb.toString();
     }
 }

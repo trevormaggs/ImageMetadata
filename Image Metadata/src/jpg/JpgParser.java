@@ -7,6 +7,9 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributeView;
+import java.sql.Date;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import batch.BatchMetadataUtils;
 import common.AbstractImageParser;
@@ -16,6 +19,8 @@ import common.ImageFileInputStream;
 import common.ImageReadErrorException;
 import common.Metadata;
 import logger.LogFactory;
+import tif.DirectoryIFD;
+import tif.DirectoryIFD.EntryIFD;
 import tif.MetadataTIF;
 import tif.TifParser;
 
@@ -43,7 +48,7 @@ public class JpgParser extends AbstractImageParser
      *
      * @param fpath
      *        the path to the JPG file to be parsed
-     * 
+     *
      * @throws IOException
      *         if the file cannot be opened or read
      */
@@ -66,7 +71,7 @@ public class JpgParser extends AbstractImageParser
      *
      * @param file
      *        the path to the JPG file as a string
-     * 
+     *
      * @throws IOException
      *         if the file cannot be opened or read
      */
@@ -82,7 +87,7 @@ public class JpgParser extends AbstractImageParser
      *        the image stream to read from
      * @param segment
      *        the JPEG segment to search for (ie. APP1)
-     * 
+     *
      * @return a byte array containing the EXIF payload, if found
      * @throws IOException
      *         if an error occurs while reading the specified stream
@@ -145,7 +150,7 @@ public class JpgParser extends AbstractImageParser
      * Reads the metadata from a JPG file, if present, using the APP1 EXIF segment.
      *
      * @return a populated {@link Metadata} object containing the metadata
-     * 
+     *
      * @throws ImageReadErrorException
      *         if the file is unreadable
      */
@@ -209,5 +214,81 @@ public class JpgParser extends AbstractImageParser
     public DigitalSignature getImageFormat()
     {
         return DigitalSignature.JPG;
+    }
+
+    /**
+     * Prints diagnostic information including file attributes and metadata content.
+     *
+     * @param prefix
+     *        optional label or heading, can be null
+     *
+     * @return formatted string suitable for diagnostics
+     */
+    @Override
+    public String toString(String prefix)
+    {
+        String fmt = "%-20s:\t%s%n";
+        String divider = "--------------------------------------------------";
+        StringBuilder sb = new StringBuilder();
+        SimpleDateFormat df = new SimpleDateFormat("dd MMM yyyy HH:mm:ss");
+
+        if (prefix != null)
+        {
+            sb.append(prefix).append(System.lineSeparator());
+            sb.append(System.lineSeparator());
+        }
+
+        try
+        {
+            Metadata<?> meta = getSafeMetadata();
+
+            sb.append("File Attributes").append(System.lineSeparator());
+            sb.append(divider).append(System.lineSeparator());
+
+            try
+            {
+                BasicFileAttributeView attr = BatchMetadataUtils.getFileAttributeView(getImageFile());
+
+                sb.append(String.format(fmt, "File", getImageFile()));
+                sb.append(String.format(fmt, "Creation Time", df.format(new Date(attr.readAttributes().creationTime().toMillis()))));
+                sb.append(String.format(fmt, "Last Access Time", df.format(new Date(attr.readAttributes().lastAccessTime().toMillis()))));
+                sb.append(String.format(fmt, "Last Modified Time", df.format(new Date(attr.readAttributes().lastModifiedTime().toMillis()))));
+                sb.append(String.format(fmt, "Image Format Type", getImageFormat().name()));
+            }
+
+            catch (IOException exc)
+            {
+                sb.append("Unable to read file attributes: ").append(exc.getMessage());
+                sb.append(System.lineSeparator());
+            }
+
+            sb.append(System.lineSeparator());
+
+            if (meta.hasMetadata() && meta.hasExifData())
+            {
+                if (meta instanceof MetadataTIF)
+                {
+                    MetadataTIF tif = (MetadataTIF) meta;
+
+                    for (DirectoryIFD ifd : tif)
+                    {
+                        System.out.printf("TESTING: %s (%d)\n", ifd.getDirectoryType().getDescription(), ifd.length());
+                        
+                        for (EntryIFD entry : ifd)
+                        {
+                            sb.append(entry);
+                            sb.append(System.lineSeparator());
+                        }
+                    }
+                }
+            }
+        }
+
+        catch (Exception exc)
+        {
+            LOGGER.error("Diagnostics failed for file [" + getImageFile() + "]", exc);
+        }
+
+        return sb.toString();
     }
 }

@@ -6,8 +6,6 @@ import java.util.List;
 import common.BaseMetadata;
 import common.Metadata;
 import png.ChunkType.Category;
-import tif.DirectoryIFD;
-import tif.DirectoryIFD.EntryIFD;
 import tif.MetadataTIF;
 import tif.TagEntries.Taggable;
 
@@ -239,98 +237,6 @@ public class MetadataPNG<T extends BaseMetadata> implements Metadata<T>
                     sb.append(chunk).append(System.lineSeparator());
                 }
             }
-        }
-
-        return sb.toString();
-    }
-
-    /**
-     * Produces a human-readable debug string summarising the contents of all directories and their
-     * metadata entries. Useful for logging or diagnostic output.
-     *
-     * @param prefix
-     *        an optional string to prepend as a heading or label. It can be null
-     *
-     * @return a formatted string suitable for debugging, inspection, or textual analysis
-     */
-    @Override
-    public String toString(String prefix)
-    {
-        String fmt = "%-12s:\t%s%n";
-        String divider = "--------------------------------------------------";
-        StringBuilder sb = new StringBuilder();
-
-        if (prefix != null)
-        {
-            sb.append(prefix).append(System.lineSeparator());
-            sb.append(System.lineSeparator());
-        }
-
-        if (hasTextualData())
-        {
-            for (T dir : components)
-            {
-                if (dir instanceof ChunkDirectory)
-                {
-                    ChunkDirectory cd = (ChunkDirectory) dir;
-
-                    if (cd.getDirectoryCategory() == Category.TEXTUAL)
-                    {
-                        sb.append("Textual Chunks").append(System.lineSeparator());
-                        sb.append(divider).append(System.lineSeparator());
-
-                        for (PngChunk chunk : cd)
-                        {
-                            String keywordValue = (chunk.getKeywordPair().isPresent() ? chunk.getKeywordPair().get().getKeyword() : "N/A");
-                            String textValue = (chunk.getKeywordPair().isPresent() ? chunk.getKeywordPair().get().getValue() : "N/A");
-
-                            sb.append(String.format(fmt, "Tag Type", chunk.getTag()));
-                            sb.append(String.format(fmt, "Chunk Type", chunk.getType()));
-                            sb.append(String.format(fmt, "Chunk Bytes", chunk.getLength()));
-                            sb.append(String.format(fmt, "Keyword", keywordValue));
-                            sb.append(String.format(fmt, "Text", textValue));
-                            sb.append(System.lineSeparator());
-                        }
-
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (hasExifData())
-        {
-            Object obj = getDirectory(MetadataTIF.class);
-
-            if (obj.getClass() == MetadataTIF.class)
-            {
-                MetadataTIF exifDir = (MetadataTIF) obj;
-
-                sb.append("EXIF Metadata").append(System.lineSeparator());
-                sb.append(divider).append(System.lineSeparator());
-
-                for (DirectoryIFD ifd : exifDir)
-                {
-                    sb.append("\t\tDirectory - ");
-                    sb.append(ifd.getDirectoryType().getDescription());
-                    sb.append(System.lineSeparator()).append(System.lineSeparator());
-
-                    for (EntryIFD entry : ifd)
-                    {
-                        sb.append(String.format(fmt, "Tag Type", entry.getTag()));
-                        sb.append(String.format("%-12s:\t0x%04X%n", "Tag ID", entry.getTagID()));
-                        sb.append(String.format(fmt, "Field Type", entry.getFieldType()));
-                        sb.append(String.format(fmt, "Count", entry.getCount()));
-                        sb.append(String.format(fmt, "Value", ifd.getStringValue(entry)));
-                        sb.append(System.lineSeparator());
-                    }
-                }
-            }
-        }
-
-        if (!hasTextualData() && !hasExifData())
-        {
-            sb.append("No metadata found.").append(System.lineSeparator());
         }
 
         return sb.toString();

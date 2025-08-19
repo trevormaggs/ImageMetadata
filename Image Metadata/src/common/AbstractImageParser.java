@@ -109,4 +109,15 @@ public abstract class AbstractImageParser
      * @return a {@link DigitalSignature} enum constant representing the image format
      */
     public abstract DigitalSignature getImageFormat();
+
+    /**
+     * Produces a human-readable debug string summarising the contents of all directories and their
+     * metadata entries. Useful for logging or diagnostic output.
+     *
+     * @param prefix
+     *        an optional string to prepend as a heading or label. It can be null
+     *
+     * @return a formatted string suitable for debugging, inspection, or textual analysis
+     */
+    public abstract String toString(String prefix);
 }

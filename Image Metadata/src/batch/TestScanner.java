@@ -105,7 +105,7 @@ public final class TestScanner
                     MetadataTIF tif = (MetadataTIF) meta;
                     DirectoryIFD dir = tif.getDirectory(DirectoryIdentifier.EXIF_DIRECTORY_SUBIFD);
 
-                    System.out.printf("%s\n", tif.toString("TIFF METADATA SUMMARY LIST"));
+                    //System.out.printf("%s\n", tif.toString("TIFF METADATA SUMMARY LIST"));
 
                     System.out.printf("dir date %s\n", dir.getString(EXIF_TAG_DATE_TIME_ORIGINAL));
                     System.out.printf("EXIF_DIRECTORY_SUBIFD - %s\n", tif.hasExifData());

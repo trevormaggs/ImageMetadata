@@ -34,6 +34,12 @@ import png.ChunkType.Category;
  * responsibilities to appropriate chunk or Exif handlers.
  * </p>
  *
+ * <p>
+ * <b>Note:</b> In Windows Explorer, the {@code Date Taken} attribute is often resolved from the
+ * {@code Creation Time} textual keyword rather than the embedded EXIF block. This behaviour can
+ * affect the chronological ordering of PNG files when viewed or processed on Windows systems.
+ * </p>
+ * 
  * @author Trevor Maggs
  * @version 1.0
  * @since 13 August 2025

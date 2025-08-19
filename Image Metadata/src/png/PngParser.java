@@ -5,6 +5,9 @@ import java.nio.ByteOrder;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributeView;
+import java.sql.Date;
+import java.text.SimpleDateFormat;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
@@ -17,6 +20,9 @@ import common.ImageReadErrorException;
 import common.Metadata;
 import logger.LogFactory;
 import png.ChunkType.Category;
+import tif.DirectoryIFD;
+import tif.DirectoryIFD.EntryIFD;
+import tif.MetadataTIF;
 import tif.TifParser;
 
 /**
@@ -237,5 +243,148 @@ public class PngParser extends AbstractImageParser
     public DigitalSignature getImageFormat()
     {
         return DigitalSignature.PNG;
+    }
+
+    /**
+     * Prints diagnostic information including file attributes and metadata content.
+     *
+     * @param prefix
+     *        optional label or heading, can be null
+     *
+     * @return formatted string suitable for diagnostics
+     */
+    @Override
+    public String toString(String prefix)
+    {
+        String fmt = "%-20s:\t%s%n";
+        String divider = "--------------------------------------------------";
+        StringBuilder sb = new StringBuilder();
+        SimpleDateFormat df = new SimpleDateFormat("dd MMM yyyy HH:mm:ss");
+
+        if (prefix != null)
+        {
+            sb.append(prefix).append(System.lineSeparator());
+            sb.append(System.lineSeparator());
+        }
+
+        try
+        {
+            Metadata<?> meta = getSafeMetadata();
+
+            sb.append("File Attributes").append(System.lineSeparator());
+            sb.append(divider).append(System.lineSeparator());
+
+            try
+            {
+                BasicFileAttributeView attr = BatchMetadataUtils.getFileAttributeView(getImageFile());
+
+                sb.append(String.format(fmt, "File", getImageFile()));
+                sb.append(String.format(fmt, "Creation Time", df.format(new Date(attr.readAttributes().creationTime().toMillis()))));
+                sb.append(String.format(fmt, "Last Access Time", df.format(new Date(attr.readAttributes().lastAccessTime().toMillis()))));
+                sb.append(String.format(fmt, "Last Modified Time", df.format(new Date(attr.readAttributes().lastModifiedTime().toMillis()))));
+                sb.append(String.format(fmt, "Image Format Type", getImageFormat().getFileExtensionName()));
+            }
+
+            catch (IOException exc)
+            {
+                sb.append("Unable to read file attributes: ").append(exc.getMessage());
+                sb.append(System.lineSeparator());
+            }
+
+            sb.append(System.lineSeparator());
+
+            if (meta.hasMetadata())
+            {
+                if (meta instanceof MetadataPNG<?>)
+                {
+                    MetadataPNG<?> png = (MetadataPNG<?>) meta;
+
+                    if (png.hasTextualData())
+                    {
+                        for (Object obj : png)
+                        {
+                            if (obj instanceof ChunkDirectory)
+                            {
+                                ChunkDirectory dir = (ChunkDirectory) obj;
+
+                                if (dir.getDirectoryCategory() == Category.TEXTUAL)
+                                {
+                                    sb.append("Textual Chunks").append(System.lineSeparator());
+                                    sb.append(divider).append(System.lineSeparator());
+
+                                    for (PngChunk chunk : dir)
+                                    {
+                                        String keywordValue = (chunk.getKeywordPair().isPresent() ? chunk.getKeywordPair().get().getKeyword() : "N/A");
+                                        String textValue = (chunk.getKeywordPair().isPresent() ? chunk.getKeywordPair().get().getValue() : "N/A");
+
+                                        sb.append(String.format(fmt, "Tag Type", chunk.getTag()));
+                                        sb.append(String.format(fmt, "Chunk Type", chunk.getType()));
+                                        sb.append(String.format(fmt, "Chunk Bytes", chunk.getLength()));
+                                        sb.append(String.format(fmt, "Keyword", keywordValue));
+                                        sb.append(String.format(fmt, "Text", textValue));
+                                        sb.append(System.lineSeparator());
+                                    }
+
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    else
+                    {
+                        sb.append("No textual metadata found.").append(System.lineSeparator());
+                    }
+
+                    if (png.hasExifData())
+                    {
+                        Object obj = png.getDirectory(MetadataTIF.class);
+
+                        if (obj instanceof MetadataTIF)
+                        {
+                            MetadataTIF exifDir = (MetadataTIF) obj;
+
+                            sb.append("EXIF Metadata").append(System.lineSeparator());
+                            sb.append(divider).append(System.lineSeparator());
+
+                            for (DirectoryIFD ifd : exifDir)
+                            {
+                                sb.append("\tDirectory - ").append(ifd.getDirectoryType().getDescription());
+                                sb.append(System.lineSeparator()).append(System.lineSeparator());
+
+                                for (EntryIFD entry : ifd)
+                                {
+                                    sb.append(String.format(fmt, "Tag Type", entry.getTag()));
+                                    sb.append(String.format("%-20s:\t0x%04X%n", "Tag ID", entry.getTagID()));
+                                    sb.append(String.format(fmt, "Field Type", entry.getFieldType()));
+                                    sb.append(String.format(fmt, "Count", entry.getCount()));
+                                    sb.append(String.format(fmt, "Value", ifd.getStringValue(entry)));
+                                    sb.append(System.lineSeparator());
+                                }
+                            }
+                        }
+                    }
+
+                    else
+                    {
+                        sb.append("No EXIF metadata found.").append(System.lineSeparator());
+                    }
+                }
+            }
+
+            else
+            {
+                sb.append("No metadata found...").append(System.lineSeparator());
+            }
+
+            sb.append(System.lineSeparator());
+        }
+
+        catch (Exception exc)
+        {
+            LOGGER.error("Diagnostics failed for file [" + getImageFile() + "]", exc);
+        }
+
+        return sb.toString();
     }
 }

@@ -314,7 +314,7 @@ public class BatchExecutor implements Batchable, Iterable<MediaFile>
                     }
                     
                     // TESTING
-                    System.out.printf("%s\n", parser.toString("              Metadata Summary"));
+                    System.out.printf("%s\n", parser.formatDiagnosticString());
                 }
 
                 catch (Exception exc)

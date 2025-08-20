@@ -3,6 +3,10 @@ package common;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import batch.BatchMetadataUtils;
 
 /**
  * An abstract superclass for implementing image file parsers. Subclasses are responsible for
@@ -39,6 +43,7 @@ import java.nio.file.Path;
 public abstract class AbstractImageParser
 {
     private final Path imageFile;
+    protected static final String FMT = "%-20s:\t%s%n";
     protected Metadata<? extends BaseMetadata> metadata;
 
     /**
@@ -68,6 +73,45 @@ public abstract class AbstractImageParser
     public Path getImageFile()
     {
         return imageFile;
+    }
+
+    /**
+     * Produces a human-readable debug string summarising the basic file attributes. Useful for
+     * logging or diagnostic output.
+     *
+     * @return A formatted string containing file path, creation time, last access time, last
+     *         modified time, and image format
+     * 
+     * @throws IOException
+     *         if a file system error occurs while reading the attributes
+     */
+    public String formatDiagnosticString()
+    {
+        String divider = "--------------------------------------------------";
+        StringBuilder sb = new StringBuilder();
+        SimpleDateFormat df = new SimpleDateFormat("dd MMM yyyy HH:mm:ss");
+
+        sb.append("File Attributes").append(System.lineSeparator());
+        sb.append(divider).append(System.lineSeparator());
+
+        try
+        {
+            BasicFileAttributes attr = BatchMetadataUtils.getFileAttributeView(getImageFile()).readAttributes();
+
+            sb.append(String.format(FMT, "File", getImageFile()));
+            sb.append(String.format(FMT, "Creation Time", df.format(new Date(attr.creationTime().toMillis()))));
+            sb.append(String.format(FMT, "Last Access Time", df.format(new Date(attr.lastAccessTime().toMillis()))));
+            sb.append(String.format(FMT, "Last Modified Time", df.format(new Date(attr.lastModifiedTime().toMillis()))));
+            sb.append(String.format(FMT, "Image Format Type", getImageFormat().getFileExtensionName()));
+        }
+
+        catch (IOException exc)
+        {
+            sb.append("Unable to read file attributes: ").append(exc.getMessage());
+            sb.append(System.lineSeparator());
+        }
+
+        return sb.toString();
     }
 
     /**
@@ -109,15 +153,4 @@ public abstract class AbstractImageParser
      * @return a {@link DigitalSignature} enum constant representing the image format
      */
     public abstract DigitalSignature getImageFormat();
-
-    /**
-     * Produces a human-readable debug string summarising the contents of all directories and their
-     * metadata entries. Useful for logging or diagnostic output.
-     *
-     * @param prefix
-     *        an optional string to prepend as a heading or label. It can be null
-     *
-     * @return a formatted string suitable for debugging, inspection, or textual analysis
-     */
-    public abstract String toString(String prefix);
 }

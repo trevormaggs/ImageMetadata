@@ -92,6 +92,22 @@ public class ImageFileInputStream implements AutoCloseable
     }
 
     /**
+     * Constructs a reader for the specified input file with big-endian byte order.
+     *
+     * @param fpath
+     *        the path to the image file to be read
+     * 
+     * @throws IOException
+     *         if an I/O error occurs when opening the file
+     * @throws NullPointerException
+     *         if the file path or byte order is null
+     */
+    public ImageFileInputStream(Path fpath) throws IOException
+    {
+        this(fpath, ByteOrder.BIG_ENDIAN);
+    }
+
+    /**
      * Sets the byte order used for interpreting multi-byte values.
      *
      * <p>

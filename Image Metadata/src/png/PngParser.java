@@ -5,9 +5,6 @@ import java.nio.ByteOrder;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.BasicFileAttributeView;
-import java.sql.Date;
-import java.text.SimpleDateFormat;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
@@ -254,45 +251,18 @@ public class PngParser extends AbstractImageParser
      * @return formatted string suitable for diagnostics
      */
     @Override
-    public String toString(String prefix)
+    public String formatDiagnosticString()
     {
-        String fmt = "%-20s:\t%s%n";
         String divider = "--------------------------------------------------";
+        Metadata<?> meta = getSafeMetadata();
         StringBuilder sb = new StringBuilder();
-        SimpleDateFormat df = new SimpleDateFormat("dd MMM yyyy HH:mm:ss");
 
-        if (prefix != null)
-        {
-            sb.append(prefix).append(System.lineSeparator());
-            sb.append(System.lineSeparator());
-        }
+        sb.append("              Metadata Summary").append(System.lineSeparator());
+        sb.append(System.lineSeparator());
+        sb.append(super.formatDiagnosticString()).append(System.lineSeparator());
 
         try
         {
-            Metadata<?> meta = getSafeMetadata();
-
-            sb.append("File Attributes").append(System.lineSeparator());
-            sb.append(divider).append(System.lineSeparator());
-
-            try
-            {
-                BasicFileAttributeView attr = BatchMetadataUtils.getFileAttributeView(getImageFile());
-
-                sb.append(String.format(fmt, "File", getImageFile()));
-                sb.append(String.format(fmt, "Creation Time", df.format(new Date(attr.readAttributes().creationTime().toMillis()))));
-                sb.append(String.format(fmt, "Last Access Time", df.format(new Date(attr.readAttributes().lastAccessTime().toMillis()))));
-                sb.append(String.format(fmt, "Last Modified Time", df.format(new Date(attr.readAttributes().lastModifiedTime().toMillis()))));
-                sb.append(String.format(fmt, "Image Format Type", getImageFormat().getFileExtensionName()));
-            }
-
-            catch (IOException exc)
-            {
-                sb.append("Unable to read file attributes: ").append(exc.getMessage());
-                sb.append(System.lineSeparator());
-            }
-
-            sb.append(System.lineSeparator());
-
             if (meta.hasMetadata())
             {
                 if (meta instanceof MetadataPNG<?>)
@@ -317,11 +287,11 @@ public class PngParser extends AbstractImageParser
                                         String keywordValue = (chunk.getKeywordPair().isPresent() ? chunk.getKeywordPair().get().getKeyword() : "N/A");
                                         String textValue = (chunk.getKeywordPair().isPresent() ? chunk.getKeywordPair().get().getValue() : "N/A");
 
-                                        sb.append(String.format(fmt, "Tag Type", chunk.getTag()));
-                                        sb.append(String.format(fmt, "Chunk Type", chunk.getType()));
-                                        sb.append(String.format(fmt, "Chunk Bytes", chunk.getLength()));
-                                        sb.append(String.format(fmt, "Keyword", keywordValue));
-                                        sb.append(String.format(fmt, "Text", textValue));
+                                        sb.append(String.format(FMT, "Tag Type", chunk.getTag()));
+                                        sb.append(String.format(FMT, "Chunk Type", chunk.getType()));
+                                        sb.append(String.format(FMT, "Chunk Bytes", chunk.getLength()));
+                                        sb.append(String.format(FMT, "Keyword", keywordValue));
+                                        sb.append(String.format(FMT, "Text", textValue));
                                         sb.append(System.lineSeparator());
                                     }
 
@@ -354,11 +324,11 @@ public class PngParser extends AbstractImageParser
 
                                 for (EntryIFD entry : ifd)
                                 {
-                                    sb.append(String.format(fmt, "Tag Type", entry.getTag()));
+                                    sb.append(String.format(FMT, "Tag Type", entry.getTag()));
                                     sb.append(String.format("%-20s:\t0x%04X%n", "Tag ID", entry.getTagID()));
-                                    sb.append(String.format(fmt, "Field Type", entry.getFieldType()));
-                                    sb.append(String.format(fmt, "Count", entry.getCount()));
-                                    sb.append(String.format(fmt, "Value", ifd.getStringValue(entry)));
+                                    sb.append(String.format(FMT, "Field Type", entry.getFieldType()));
+                                    sb.append(String.format(FMT, "Count", entry.getCount()));
+                                    sb.append(String.format(FMT, "Value", ifd.getStringValue(entry)));
                                     sb.append(System.lineSeparator());
                                 }
                             }

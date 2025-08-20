@@ -5,6 +5,9 @@ import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributeView;
+import java.sql.Date;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import batch.BatchMetadataUtils;
 import common.AbstractImageParser;
@@ -33,9 +36,9 @@ import tif.TifParser;
  * @version 1.2
  * @since 20 August 2025
  */
-public class JpgParser extends AbstractImageParser
+public class JpgParser2 extends AbstractImageParser
 {
-    private static final LogFactory LOGGER = LogFactory.getLogger(JpgParser.class);
+    private static final LogFactory LOGGER = LogFactory.getLogger(JpgParser2.class);
     public static final byte[] JPG_EXIF_IDENTIFIER = "Exif\0\0".getBytes();
 
     /**
@@ -47,7 +50,7 @@ public class JpgParser extends AbstractImageParser
      * @throws IOException
      *         if the file cannot be opened or read
      */
-    public JpgParser(Path fpath) throws IOException
+    public JpgParser2(Path fpath) throws IOException
     {
         super(fpath);
 
@@ -70,7 +73,7 @@ public class JpgParser extends AbstractImageParser
      * @throws IOException
      *         if the file cannot be opened or read
      */
-    public JpgParser(String file) throws IOException
+    public JpgParser2(String file) throws IOException
     {
         this(Paths.get(file));
     }
@@ -218,15 +221,41 @@ public class JpgParser extends AbstractImageParser
      * @return formatted string suitable for diagnostics
      */
     @Override
-    public String formatDiagnosticString()
+    public String toString(String prefix)
     {
+        String fmt = "%-20s:\t%s%n";
         String divider = "--------------------------------------------------";
         Metadata<?> meta = getSafeMetadata();
         StringBuilder sb = new StringBuilder();
+        SimpleDateFormat df = new SimpleDateFormat("dd MMM yyyy HH:mm:ss");
 
-        sb.append("              Metadata Summary").append(System.lineSeparator());
+        if (prefix != null)
+        {
+            sb.append(prefix).append(System.lineSeparator());
+            sb.append(System.lineSeparator());
+        }
+
+        sb.append("File Attributes").append(System.lineSeparator());
+        sb.append(divider).append(System.lineSeparator());
+
+        try
+        {
+            BasicFileAttributeView attr = BatchMetadataUtils.getFileAttributeView(getImageFile());
+
+            sb.append(String.format(fmt, "File", getImageFile()));
+            sb.append(String.format(fmt, "Creation Time", df.format(new Date(attr.readAttributes().creationTime().toMillis()))));
+            sb.append(String.format(fmt, "Last Access Time", df.format(new Date(attr.readAttributes().lastAccessTime().toMillis()))));
+            sb.append(String.format(fmt, "Last Modified Time", df.format(new Date(attr.readAttributes().lastModifiedTime().toMillis()))));
+            sb.append(String.format(fmt, "Image Format Type", getImageFormat().getFileExtensionName()));
+        }
+
+        catch (IOException exc)
+        {
+            sb.append("Unable to read file attributes: ").append(exc.getMessage());
+            sb.append(System.lineSeparator());
+        }
+
         sb.append(System.lineSeparator());
-
 
         try
         {
@@ -248,10 +277,10 @@ public class JpgParser extends AbstractImageParser
                         {
                             String value = ifd.getStringValue(entry);
 
-                            sb.append(String.format(FMT, "Tag Name", entry.getTag() + " (Tag ID: 0x" + Integer.toHexString(entry.getTagID()).toUpperCase() + ")"));
-                            sb.append(String.format(FMT, "Field Type", entry.getFieldType() + " (count: " + entry.getCount() + ")"));
-                            // sb.append(String.format(FMT, "Count", entry.getCount()));
-                            sb.append(String.format(FMT, "Value", (value.isEmpty() ? "Empty" : value)));
+                            sb.append(String.format(fmt, "Tag Name", entry.getTag() + " (Tag ID: 0x" + Integer.toHexString(entry.getTagID()).toUpperCase() + ")"));
+                            sb.append(String.format(fmt, "Field Type", entry.getFieldType() + " (count: " + entry.getCount() + ")"));
+                            // sb.append(String.format(fmt, "Count", entry.getCount()));
+                            sb.append(String.format(fmt, "Value", (value.isEmpty() ? "Empty" : value)));
                             sb.append(System.lineSeparator());
                         }
                     }

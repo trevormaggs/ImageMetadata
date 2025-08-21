@@ -3,7 +3,6 @@ package tif;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Optional;
 import batch.BatchMetadataUtils;
@@ -14,6 +13,7 @@ import common.ImageReadErrorException;
 import common.Metadata;
 import common.SequentialByteReader;
 import logger.LogFactory;
+import tif.DirectoryIFD.EntryIFD;
 
 /**
  * This program aims to read TIF image files and retrieve data structured in a series of Image File
@@ -173,6 +173,66 @@ public class TifParser extends AbstractImageParser
     }
 
     /**
+     * Generates a human-readable diagnostic string containing metadata details.
+     * 
+     * <p>
+     * Currently this includes EXIF directory types, entry tags, field types, counts, and values.
+     * </p>
+     *
+     * @return a formatted string suitable for diagnostics, logging, or inspection
+     */
+    @Override
+    public String formatDiagnosticString()
+    {
+        Metadata<?> meta = getSafeMetadata();
+        StringBuilder sb = new StringBuilder();
+
+        try
+        {
+            sb.append("\t\t\tTIF Metadata Summary").append(System.lineSeparator()).append(System.lineSeparator());
+            sb.append(super.formatDiagnosticString());
+
+            if (meta instanceof MetadataTIF && meta.hasExifData())
+            {
+                MetadataTIF tif = (MetadataTIF) meta;
+
+                for (DirectoryIFD ifd : tif)
+                {
+                    sb.append("Directory Type - ")
+                            .append(ifd.getDirectoryType().getDescription())
+                            .append(" (")
+                            .append(ifd.length())
+                            .append(" entries)")
+                            .append(System.lineSeparator())
+                            .append(DIVIDER)
+                            .append(System.lineSeparator());
+
+                    for (EntryIFD entry : ifd)
+                    {
+                        String value = ifd.getStringValue(entry);
+                        sb.append(String.format(FMT, "Tag Name", entry.getTag() + " (Tag ID: " + String.format("0x%04X", entry.getTagID()) + ")"));
+                        sb.append(String.format(FMT, "Field Type", entry.getFieldType() + " (count: " + entry.getCount() + ")"));
+                        sb.append(String.format(FMT, "Value", (value == null || value.isEmpty() ? "Empty" : value)));
+                        sb.append(System.lineSeparator());
+                    }
+                }
+            }
+
+            else
+            {
+                sb.append("No EXIF metadata found").append(System.lineSeparator());
+            }
+        }
+
+        catch (Exception exc)
+        {
+            LOGGER.error("Diagnostics failed for file [" + getImageFile() + "]", exc);
+        }
+
+        return sb.toString();
+    }
+
+    /**
      * Parses TIFF metadata from a byte array, providing information on extracted TIFF directories.
      *
      * <p>
@@ -190,7 +250,7 @@ public class TifParser extends AbstractImageParser
      *        byte array containing TIFF-formatted data
      *
      * @return parsed metadata
-     * 
+     *
      * @throws IllegalStateException
      *         if the TIFF header is invalid or the stream data cannot be read correctly
      */
@@ -211,24 +271,5 @@ public class TifParser extends AbstractImageParser
         }
 
         return tif;
-    }
-
-    /**
-     * Prints diagnostic information including file attributes and metadata content.
-     *
-     * @param prefix
-     *        optional label or heading, can be null
-     *
-     * @return formatted string suitable for diagnostics
-     */
-    @Override
-    public String toString(String prefix)
-    {
-        String fmt = "%-20s:\t%s%n";
-        String divider = "--------------------------------------------------";
-        StringBuilder sb = new StringBuilder();
-        SimpleDateFormat df = new SimpleDateFormat("dd MMM yyyy HH:mm:ss");
-        
-        return sb.toString();
     }
 }

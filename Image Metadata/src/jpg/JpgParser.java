@@ -208,54 +208,55 @@ public class JpgParser extends AbstractImageParser
         return DigitalSignature.JPG;
     }
 
-    // TESTING
     /**
-     * Prints diagnostic information including file attributes and metadata content.
+     * Generates a human-readable diagnostic string containing metadata details.
+     * 
+     * <p>
+     * Currently this includes EXIF directory types, entry tags, field types, counts, and values.
+     * </p>
      *
-     * @param prefix
-     *        optional label or heading, can be null
-     *
-     * @return formatted string suitable for diagnostics
+     * @return a formatted string suitable for diagnostics, logging, or inspection
      */
     @Override
     public String formatDiagnosticString()
     {
-        String divider = "--------------------------------------------------";
         Metadata<?> meta = getSafeMetadata();
         StringBuilder sb = new StringBuilder();
 
-        sb.append("              Metadata Summary").append(System.lineSeparator());
-        sb.append(System.lineSeparator());
-
-
         try
         {
-            if (meta.hasMetadata() && meta.hasExifData())
+            sb.append("\t\t\tJPG Metadata Summary").append(System.lineSeparator()).append(System.lineSeparator());
+            sb.append(super.formatDiagnosticString());
+
+            if (meta instanceof MetadataTIF && meta.hasExifData())
             {
-                if (meta instanceof MetadataTIF)
+                MetadataTIF tif = (MetadataTIF) meta;
+
+                for (DirectoryIFD ifd : tif)
                 {
-                    MetadataTIF tif = (MetadataTIF) meta;
+                    sb.append("Directory Type - ")
+                            .append(ifd.getDirectoryType().getDescription())
+                            .append(" (")
+                            .append(ifd.length())
+                            .append(" entries)")
+                            .append(System.lineSeparator())
+                            .append(DIVIDER)
+                            .append(System.lineSeparator());
 
-                    for (DirectoryIFD ifd : tif)
+                    for (EntryIFD entry : ifd)
                     {
-                        sb.append("Directory Type - ");
-                        sb.append(ifd.getDirectoryType().getDescription());
-                        sb.append(" (" + ifd.length() + " entries)");
+                        String value = ifd.getStringValue(entry);
+                        sb.append(String.format(FMT, "Tag Name", entry.getTag() + " (Tag ID: " + String.format("0x%04X", entry.getTagID()) + ")"));
+                        sb.append(String.format(FMT, "Field Type", entry.getFieldType() + " (count: " + entry.getCount() + ")"));
+                        sb.append(String.format(FMT, "Value", (value == null || value.isEmpty() ? "Empty" : value)));
                         sb.append(System.lineSeparator());
-                        sb.append(divider).append(System.lineSeparator());
-
-                        for (EntryIFD entry : ifd)
-                        {
-                            String value = ifd.getStringValue(entry);
-
-                            sb.append(String.format(FMT, "Tag Name", entry.getTag() + " (Tag ID: 0x" + Integer.toHexString(entry.getTagID()).toUpperCase() + ")"));
-                            sb.append(String.format(FMT, "Field Type", entry.getFieldType() + " (count: " + entry.getCount() + ")"));
-                            // sb.append(String.format(FMT, "Count", entry.getCount()));
-                            sb.append(String.format(FMT, "Value", (value.isEmpty() ? "Empty" : value)));
-                            sb.append(System.lineSeparator());
-                        }
                     }
                 }
+            }
+
+            else
+            {
+                sb.append("No EXIF metadata found").append(System.lineSeparator());
             }
         }
 

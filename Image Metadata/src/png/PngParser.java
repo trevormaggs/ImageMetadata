@@ -243,111 +243,112 @@ public class PngParser extends AbstractImageParser
     }
 
     /**
-     * Prints diagnostic information including file attributes and metadata content.
+     * Generates a human-readable diagnostic string for PNG metadata.
+     * 
+     * <p>
+     * This includes textual chunks (tEXt, iTXt, zTXt) and optional EXIF data (from the eXIf chunk
+     * if present).
+     * </p>
      *
-     * @param prefix
-     *        optional label or heading, can be null
-     *
-     * @return formatted string suitable for diagnostics
+     * @return a formatted string suitable for diagnostics, logging, or inspection
      */
     @Override
     public String formatDiagnosticString()
     {
-        String divider = "--------------------------------------------------";
         Metadata<?> meta = getSafeMetadata();
         StringBuilder sb = new StringBuilder();
 
-        sb.append("              Metadata Summary").append(System.lineSeparator());
-        sb.append(System.lineSeparator());
-        sb.append(super.formatDiagnosticString()).append(System.lineSeparator());
-
         try
         {
-            if (meta.hasMetadata())
+            sb.append("\t\t\tPNG Metadata Summary").append(System.lineSeparator()).append(System.lineSeparator());
+            sb.append(super.formatDiagnosticString());
+
+            if (meta instanceof MetadataPNG<?>)
             {
-                if (meta instanceof MetadataPNG<?>)
+                MetadataPNG<?> png = (MetadataPNG<?>) meta;
+
+                // --- Textual chunks ---
+                if (png.hasTextualData())
                 {
-                    MetadataPNG<?> png = (MetadataPNG<?>) meta;
+                    sb.append("Textual Chunks").append(System.lineSeparator());
+                    sb.append(DIVIDER).append(System.lineSeparator());
 
-                    if (png.hasTextualData())
+                    for (Object obj : png)
                     {
-                        for (Object obj : png)
+                        if (obj instanceof ChunkDirectory)
                         {
-                            if (obj instanceof ChunkDirectory)
+                            ChunkDirectory cd = (ChunkDirectory) obj;
+
+                            if (cd.getDirectoryCategory() == Category.TEXTUAL)
                             {
-                                ChunkDirectory dir = (ChunkDirectory) obj;
-
-                                if (dir.getDirectoryCategory() == Category.TEXTUAL)
+                                for (PngChunk chunk : cd)
                                 {
-                                    sb.append("Textual Chunks").append(System.lineSeparator());
-                                    sb.append(divider).append(System.lineSeparator());
+                                    String keywordValue = (chunk.getKeywordPair().isPresent() ? chunk.getKeywordPair().get().getKeyword() : "N/A");
+                                    String textValue = (chunk.getKeywordPair().isPresent() ? chunk.getKeywordPair().get().getValue() : "N/A");
 
-                                    for (PngChunk chunk : dir)
-                                    {
-                                        String keywordValue = (chunk.getKeywordPair().isPresent() ? chunk.getKeywordPair().get().getKeyword() : "N/A");
-                                        String textValue = (chunk.getKeywordPair().isPresent() ? chunk.getKeywordPair().get().getValue() : "N/A");
-
-                                        sb.append(String.format(FMT, "Tag Type", chunk.getTag()));
-                                        sb.append(String.format(FMT, "Chunk Type", chunk.getType()));
-                                        sb.append(String.format(FMT, "Chunk Bytes", chunk.getLength()));
-                                        sb.append(String.format(FMT, "Keyword", keywordValue));
-                                        sb.append(String.format(FMT, "Text", textValue));
-                                        sb.append(System.lineSeparator());
-                                    }
-
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    else
-                    {
-                        sb.append("No textual metadata found.").append(System.lineSeparator());
-                    }
-
-                    if (png.hasExifData())
-                    {
-                        Object obj = png.getDirectory(MetadataTIF.class);
-
-                        if (obj instanceof MetadataTIF)
-                        {
-                            MetadataTIF exifDir = (MetadataTIF) obj;
-
-                            sb.append("EXIF Metadata").append(System.lineSeparator());
-                            sb.append(divider).append(System.lineSeparator());
-
-                            for (DirectoryIFD ifd : exifDir)
-                            {
-                                sb.append("\tDirectory - ").append(ifd.getDirectoryType().getDescription());
-                                sb.append(System.lineSeparator()).append(System.lineSeparator());
-
-                                for (EntryIFD entry : ifd)
-                                {
-                                    sb.append(String.format(FMT, "Tag Type", entry.getTag()));
-                                    sb.append(String.format("%-20s:\t0x%04X%n", "Tag ID", entry.getTagID()));
-                                    sb.append(String.format(FMT, "Field Type", entry.getFieldType()));
-                                    sb.append(String.format(FMT, "Count", entry.getCount()));
-                                    sb.append(String.format(FMT, "Value", ifd.getStringValue(entry)));
+                                    sb.append(String.format(FMT, "Tag Type", chunk.getTag()));
+                                    sb.append(String.format(FMT, "Chunk Type", chunk.getType()));
+                                    sb.append(String.format(FMT, "Chunk Bytes", chunk.getLength()));
+                                    sb.append(String.format(FMT, "Keyword", keywordValue));
+                                    sb.append(String.format(FMT, "Text", textValue));
                                     sb.append(System.lineSeparator());
                                 }
                             }
                         }
                     }
+                }
 
-                    else
+                else
+                {
+                    sb.append("No textual metadata found").append(System.lineSeparator());
+                }
+
+                sb.append(System.lineSeparator());
+
+                // --- Exif chunks ---
+                if (png.hasExifData())
+                {
+                    Object obj = png.getDirectory(MetadataTIF.class);
+
+                    if (obj instanceof MetadataTIF)
                     {
-                        sb.append("No EXIF metadata found.").append(System.lineSeparator());
+                        MetadataTIF exifDir = (MetadataTIF) obj;
+
+                        sb.append("EXIF Metadata").append(System.lineSeparator());
+                        sb.append(DIVIDER).append(System.lineSeparator());
+
+                        for (DirectoryIFD ifd : exifDir)
+                        {
+                            sb.append("Directory Type - ")
+                                    .append(ifd.getDirectoryType().getDescription())
+                                    .append(System.lineSeparator())
+                                    .append(System.lineSeparator());
+
+                            for (EntryIFD entry : ifd)
+                            {
+                                String value = ifd.getStringValue(entry);
+
+                                sb.append(String.format(FMT, "Tag Type", entry.getTag()));
+                                sb.append(String.format("%-20s:\t0x%04X%n", "Tag ID", entry.getTagID()));
+                                sb.append(String.format(FMT, "Field Type", entry.getFieldType()));
+                                sb.append(String.format(FMT, "Count", entry.getCount()));
+                                sb.append(String.format(FMT, "Value", (value == null || value.isEmpty() ? "Empty" : value)));
+                                sb.append(System.lineSeparator());
+                            }
+                        }
                     }
+                }
+
+                else
+                {
+                    sb.append("No EXIF metadata found").append(System.lineSeparator());
                 }
             }
 
             else
             {
-                sb.append("No metadata found...").append(System.lineSeparator());
+                sb.append("No PNG metadata available").append(System.lineSeparator());
             }
-
-            sb.append(System.lineSeparator());
         }
 
         catch (Exception exc)

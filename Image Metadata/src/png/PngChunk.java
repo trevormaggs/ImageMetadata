@@ -72,7 +72,7 @@ public class PngChunk
      * @param value
      *        the integer representation of the 4-byte chunk type
      *
-     * @return boolean array of flags, including [ancillary, private, reserved and safeToCopy bits
+     * @return boolean array of flags, including ancillary, private, reserved and safeToCopy bits
      */
     private static boolean[] extractPropertyBits(int value)
     {

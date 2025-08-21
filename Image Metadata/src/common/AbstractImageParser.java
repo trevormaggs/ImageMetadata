@@ -44,6 +44,7 @@ public abstract class AbstractImageParser
 {
     private final Path imageFile;
     protected static final String FMT = "%-20s:\t%s%n";
+    protected static final String DIVIDER = "--------------------------------------------------";
     protected Metadata<? extends BaseMetadata> metadata;
 
     /**
@@ -87,12 +88,11 @@ public abstract class AbstractImageParser
      */
     public String formatDiagnosticString()
     {
-        String divider = "--------------------------------------------------";
         StringBuilder sb = new StringBuilder();
         SimpleDateFormat df = new SimpleDateFormat("dd MMM yyyy HH:mm:ss");
 
         sb.append("File Attributes").append(System.lineSeparator());
-        sb.append(divider).append(System.lineSeparator());
+        sb.append(DIVIDER).append(System.lineSeparator());
 
         try
         {
@@ -103,6 +103,7 @@ public abstract class AbstractImageParser
             sb.append(String.format(FMT, "Last Access Time", df.format(new Date(attr.lastAccessTime().toMillis()))));
             sb.append(String.format(FMT, "Last Modified Time", df.format(new Date(attr.lastModifiedTime().toMillis()))));
             sb.append(String.format(FMT, "Image Format Type", getImageFormat().getFileExtensionName()));
+            sb.append(System.lineSeparator());
         }
 
         catch (IOException exc)

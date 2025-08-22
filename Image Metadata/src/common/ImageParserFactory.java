@@ -57,9 +57,9 @@ public final class ImageParserFactory
      * @throws IOException
      *         if an I/O error occurs while reading the file signature
      * @throws UnsupportedOperationException
-     *         if the image format is not supported
+     *         if the format is unsupported
      */
-    private static AbstractImageParser createParser(Path fpath) throws IOException
+    public static AbstractImageParser getParser(Path fpath) throws IOException
     {
         switch (DigitalSignature.detectFormat(fpath))
         {
@@ -76,22 +76,5 @@ public final class ImageParserFactory
             default:
                 throw new UnsupportedOperationException("Unsupported image format detected [" + fpath.getFileName() + "]");
         }
-    }
-
-    /**
-     * A public static entry point to fetch the appropriate parser for the specified image file.
-     *
-     * @param fpath
-     *        the path to the image file
-     * 
-     * @return an image parser capable of reading the image's format
-     * @throws IOException
-     *         if an I/O error occurs or the format is unsupported
-     * @throws UnsupportedOperationException
-     *         if the format is unsupported
-     */
-    public static AbstractImageParser getParser(Path fpath) throws IOException
-    {
-        return createParser(fpath);
     }
 }

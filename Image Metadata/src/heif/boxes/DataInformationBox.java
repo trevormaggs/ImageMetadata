@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import common.ByteValueConverter;
 import common.SequentialByteReader;
+import logger.LogFactory;
 
 /**
  * This derived Box class handles the Box identified as {@code dinf} - Data Information Box. For
@@ -24,6 +25,7 @@ import common.SequentialByteReader;
  */
 public class DataInformationBox extends Box
 {
+    private static final LogFactory LOGGER = LogFactory.getLogger(DataInformationBox.class);
     private final DataReferenceBox dref;
 
     /**
@@ -61,44 +63,18 @@ public class DataInformationBox extends Box
     }
 
     /**
-     * Returns a string representation of this {@code DataInformationBox}.
+     * Logs a single diagnostic line for this box at the debug level.
      *
-     * @return a formatted string describing the box contents.
+     * <p>
+     * This is useful when traversing the box tree of a HEIF/ISO-BMFF structure for debugging or
+     * inspection purposes.
+     * </p>
      */
     @Override
-    public String toString()
+    public void logBoxInfo()
     {
-        return toString(null);
-    }
-
-    /**
-     * Returns a human-readable debug string, summarising structured references associated with this
-     * HEIF-based file. Useful for logging or diagnostics.
-     *
-     * @param prefix
-     *        Optional heading or label to prepend. Can be null
-     * 
-     * @return a formatted string suitable for debugging, inspection, or textual analysis
-     */
-    @Override
-    public String toString(String prefix)
-    {
-        StringBuilder sb = new StringBuilder();
-
-        if (prefix != null && !prefix.isEmpty())
-        {
-            sb.append(prefix);
-        }
-
-        for (int i = 0; i < getHierarchyDepth(); i++)
-        {
-            sb.append("\t");
-        }
-
-        sb.append(String.format("%s '%s':\t(%s)", this.getClass().getSimpleName(), getTypeAsString(), getHeifType().getBoxCategory()));
-        sb.append(System.lineSeparator());
-
-        return sb.toString();
+        String tab = Box.repeatPrint("\t", getHierarchyDepth());
+        LOGGER.debug(String.format("%s%s '%s':\t(%s)", tab, this.getClass().getSimpleName(), getTypeAsString(), getHeifType().getBoxCategory()));
     }
 
     /**
@@ -123,53 +99,24 @@ public class DataInformationBox extends Box
         }
 
         /**
-         * Returns a string representation of this {@code DataReferenceBox}.
+         * Logs a single diagnostic line for this box at the debug level.
          *
-         * @return a formatted string describing the box contents.
+         * <p>
+         * This is useful when traversing the box tree of a HEIF/ISO-BMFF structure for debugging or
+         * inspection purposes.
+         * </p>
          */
         @Override
-        public String toString()
+        public void logBoxInfo()
         {
-            return toString(null);
-        }
-
-        /**
-         * Returns a human-readable debug string, summarising structured references associated with
-         * this HEIF-based file. Useful for logging or diagnostics.
-         *
-         * @param prefix
-         *        Optional heading or label to prepend. Can be null
-         * 
-         * @return a formatted string suitable for debugging, inspection, or textual analysis
-         */
-        @Override
-        public String toString(String prefix)
-        {
-            StringBuilder sb = new StringBuilder();
-
-            if (prefix != null && !prefix.isEmpty())
-            {
-                sb.append(prefix);
-            }
-
-            for (int i = 0; i < getHierarchyDepth(); i++)
-            {
-                sb.append("\t");
-            }
-
-            sb.append(String.format("%s '%s':\tentryCount=%d%n", this.getClass().getSimpleName(), getTypeAsString(), entryCount));
+            String tab = Box.repeatPrint("\t", getHierarchyDepth());
+            LOGGER.debug(String.format("%s%s '%s':\tentryCount=%d", tab, this.getClass().getSimpleName(), getTypeAsString(), entryCount));
 
             for (int i = 0; i < entryCount; i++)
             {
-                for (int j = 0; j <= getHierarchyDepth(); j++)
-                {
-                    sb.append("\t");
-                }
-
-                sb.append(String.format("Name: '%s'\tLocation: '%s'%n", dataEntry[i].name, dataEntry[i].location));
+                tab = Box.repeatPrint("\t", getHierarchyDepth() + 1);
+                LOGGER.debug(String.format("%sName: '%s'\tLocation: '%s'", tab, dataEntry[i].name, dataEntry[i].location));
             }
-
-            return sb.toString();
         }
     }
 

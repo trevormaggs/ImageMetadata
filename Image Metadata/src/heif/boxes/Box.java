@@ -8,6 +8,7 @@ import java.util.Optional;
 import common.ByteValueConverter;
 import common.SequentialByteReader;
 import heif.HeifBoxType;
+import logger.LogFactory;
 
 /**
  * Represents a generic HEIF Box, according to ISO/IEC 14496-12:2015. Handles both standard boxes
@@ -15,6 +16,7 @@ import heif.HeifBoxType;
  */
 public class Box
 {
+    private static final LogFactory LOGGER = LogFactory.getLogger(Box.class);
     private static final long BOX_SIZE_TO_EOF = Long.MAX_VALUE;
     private final ByteOrder order;
     private final long boxSize;
@@ -216,41 +218,41 @@ public class Box
     }
 
     /**
-     * Returns a concise string representation of this box.
+     * Logs a single diagnostic line for this box at the debug level.
      *
-     * @return formatted string
+     * <p>
+     * This is useful when traversing the box tree of a HEIF/ISO-BMFF structure for debugging or
+     * inspection purposes.
+     * </p>
      */
-    @Override
-    public String toString()
+    public void logBoxInfo()
     {
-        return toString(null);
+        String tab = repeatPrint("\t", getHierarchyDepth());
+        LOGGER.debug(String.format("%s'%s':\t\t\t%s", tab, getTypeAsString(), type.getTypeName()));
     }
 
     /**
-     * Returns a detailed debug string for this box.
-     *
-     * @param prefix
-     *        Optional heading or label to prepend. Can be null
+     * Generates a line of padded characters to n of times.
      * 
-     * @return a formatted string suitable for debugging, inspection, or textual analysis
+     * @param subject
+     *        string to be padded
+     * @param n
+     *        number of times to pad in integer form
+     * 
+     * @return formatted string
      */
-    public String toString(String prefix)
+    protected static String repeatPrint(String ch, int n)
     {
-        StringBuilder sb = new StringBuilder();
-
-        if (prefix != null && !prefix.isEmpty())
+        if (n == 0)
         {
-            sb.append(prefix);
+            return "";
         }
 
-        for (int i = 0; i < getHierarchyDepth(); i++)
+        else if (n > 0)
         {
-            sb.append("\t");
+            ch = ch + repeatPrint(ch, n - 1);
         }
 
-        sb.append(String.format("'%s':\t\t\t%s", getTypeAsString(), type.getTypeName()));
-        sb.append(System.lineSeparator());
-
-        return sb.toString();
+        return ch;
     }
 }

@@ -5,12 +5,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import common.SequentialByteReader;
+import logger.LogFactory;
 
 /**
  * The {@code FileTypeBox} must be the first box in every HEIF-based file, including HEIC still
  * image files. It provides high-level file type information, including the major brand, minor
  * version, and a list of compatible brands.
- * 
+ *
  * For technical details, refer to ISO/IEC 14496-12:2015, Page 7 (File Type Box).
  *
  * <p>
@@ -24,6 +25,7 @@ import common.SequentialByteReader;
  */
 public class FileTypeBox extends Box
 {
+    private static final LogFactory LOGGER = LogFactory.getLogger(FileTypeBox.class);
     private final byte[] majorBrand;
     private final long minorVersion;
     private final List<String> compatibleBrands;
@@ -97,7 +99,7 @@ public class FileTypeBox extends Box
      *
      * @param brand
      *        the brand name to check
-     * 
+     *
      * @return boolean true if the brand is present, otherwise false
      */
     public boolean hasBrand(String brand)
@@ -114,45 +116,23 @@ public class FileTypeBox extends Box
     }
 
     /**
-     * Returns a string representation of this {@code FileTypeBox} resource.
+     * Logs a single diagnostic line for this box at the debug level.
      *
-     * @return a formatted string describing the box contents
+     * <p>
+     * This is useful when traversing the box tree of a HEIF/ISO-BMFF structure for debugging or
+     * inspection purposes.
+     * </p>
      */
     @Override
-    public String toString()
-    {
-        return toString(null);
-    }
-
-    /**
-     * Returns a human-readable debug string, summarising structured references associated with this
-     * HEIF-based file. Useful for logging or diagnostics.
-     *
-     * @param prefix
-     *        Optional heading or label to prepend. Can be null
-     * 
-     * @return a formatted string suitable for debugging, inspection, or textual analysis
-     */
-    @Override
-    public String toString(String prefix)
+    public void logBoxInfo()
     {
         StringBuilder sb = new StringBuilder();
 
-        if (prefix != null && !prefix.isEmpty())
-        {
-            sb.append(prefix);
-        }
-
-        for (int i = 0; i < getHierarchyDepth(); i++)
-        {
-            sb.append("\t");
-        }
-
+        sb.append(Box.repeatPrint("\t", getHierarchyDepth()));
         sb.append(String.format("%s '%s':\t\t\t\t", this.getClass().getSimpleName(), getTypeAsString()));
         sb.append(String.format("'major-brand=%s', ", getMajorBrand()));
         sb.append(String.format("compatible-brands='%s'", Arrays.toString(getCompatibleBrands())));
-        sb.append(System.lineSeparator());
 
-        return sb.toString();
+        LOGGER.debug(sb.toString());
     }
 }

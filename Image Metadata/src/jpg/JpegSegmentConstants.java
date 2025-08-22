@@ -34,9 +34,9 @@ public enum JpegSegmentConstants
     /* Marker for the end of the image data */
     END_OF_IMAGE(0xFF, 0xD9, "End of Image");
 
-    public final byte marker;
-    public final byte flag;
-    public final String description;
+    private final byte marker;
+    private final byte flag;
+    private final String description;
 
     JpegSegmentConstants(int first, int second, String desc)
     {
@@ -45,11 +45,26 @@ public enum JpegSegmentConstants
         description = desc;
     }
 
+    public byte getMarker()
+    {
+        return marker;
+    }
+    
+    public byte getFlag()
+    {
+        return flag;
+    }
+    
+    public String getDescription()
+    {
+        return description;
+    }
+
     public static void displayAllMarkers()
     {
         for (JpegSegmentConstants segment : JpegSegmentConstants.values())
         {
-            System.err.printf("%02X %02X\t%s%n", segment.marker, segment.flag, segment.description);
+            System.out.printf("%02X %02X\t%s%n", segment.marker, segment.flag, segment.description);
         }
     }
 }

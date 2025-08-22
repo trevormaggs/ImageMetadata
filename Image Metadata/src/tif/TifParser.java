@@ -80,7 +80,7 @@ public class TifParser extends AbstractImageParser
 
         if (!ext.equalsIgnoreCase("tif") && !ext.equalsIgnoreCase("tiff"))
         {
-            LOGGER.warn("File [" + getImageFile().getFileName() + "] has an incorrect extension name. Found [" + ext + "], updating to [.tif]");
+            LOGGER.warn("File [" + getImageFile().getFileName() + "] has an incorrect extension name. Should be [tif], but found [" + ext + "]");
         }
     }
 
@@ -97,25 +97,11 @@ public class TifParser extends AbstractImageParser
      *        specifies the TIFF file path, encapsulated as a Path object
      * @param payload
      *        byte array containing Exif TIFF data
-     *
-     * @throws IOException
-     *         if an I/O error occurs
-     * @throws ImageReadErrorException
-     *         if the IFD structures cannot be parsed
      */
-    public TifParser(Path fpath, byte[] payload) throws ImageReadErrorException, IOException
+    public TifParser(Path fpath, byte[] payload)
     {
         super(fpath);
-
-        try
-        {
-            metadata = parseFromSegmentBytes(payload);
-        }
-
-        catch (IllegalStateException exc)
-        {
-            throw new ImageReadErrorException("Failed to parse IFD structures from payload", exc);
-        }
+        metadata = parseFromSegmentBytes(payload);
     }
 
     /**
@@ -123,22 +109,21 @@ public class TifParser extends AbstractImageParser
      *
      * @return metadata extracted from the file
      *
-     * @throws IOException
-     *         if an I/O error occurs
      * @throws ImageReadErrorException
-     *         if the file is not a valid TIFF
+     *         if an I/O error occurs
      */
     @Override
-    public Metadata<? extends BaseMetadata> readMetadata() throws ImageReadErrorException, IOException
+    public Metadata<? extends BaseMetadata> readMetadata() throws ImageReadErrorException
     {
         try
         {
             metadata = parseFromSegmentBytes(readAllBytes());
+
         }
 
-        catch (IllegalStateException exc)
+        catch (IOException exc)
         {
-            throw new ImageReadErrorException("TIFF file appears corrupted or has an invalid structure", exc);
+            throw new ImageReadErrorException("Error reading TIF file [" + getImageFile() + "]", exc);
         }
 
         return getSafeMetadata();
@@ -154,7 +139,7 @@ public class TifParser extends AbstractImageParser
     {
         if (metadata == null)
         {
-            LOGGER.warn("Metadata information has not been parsed yet");
+            LOGGER.warn("No metadata information has been parsed yet");
             return new MetadataTIF();
         }
 
@@ -174,7 +159,7 @@ public class TifParser extends AbstractImageParser
 
     /**
      * Generates a human-readable diagnostic string containing metadata details.
-     * 
+     *
      * <p>
      * Currently this includes EXIF directory types, entry tags, field types, counts, and values.
      * </p>
@@ -224,6 +209,7 @@ public class TifParser extends AbstractImageParser
 
         catch (Exception exc)
         {
+            sb.append("Error generating diagnostics: ").append(exc.getMessage()).append(System.lineSeparator());
             LOGGER.error("Diagnostics failed for file [" + getImageFile() + "]", exc);
         }
 
@@ -248,11 +234,8 @@ public class TifParser extends AbstractImageParser
      *        byte array containing TIFF-formatted data
      *
      * @return parsed metadata
-     *
-     * @throws IllegalStateException
-     *         if the TIFF header is invalid or the stream data cannot be read correctly
      */
-    public static MetadataTIF parseFromSegmentBytes(byte[] payload) throws IllegalStateException
+    public static MetadataTIF parseFromSegmentBytes(byte[] payload)
     {
         MetadataTIF tif = new MetadataTIF();
         IFDHandler handler = new IFDHandler(new SequentialByteReader(payload));

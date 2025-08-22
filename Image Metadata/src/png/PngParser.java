@@ -115,7 +115,7 @@ public class PngParser extends AbstractImageParser
 
         if (!ext.equalsIgnoreCase("png"))
         {
-            LOGGER.warn("File [" + getImageFile().getFileName() + "] has an incorrect extension name. Found [" + ext + "], updating to [png]");
+            LOGGER.warn("File [" + getImageFile().getFileName() + "] has an incorrect extension name. Should be [png], but found [" + ext + "]");
         }
     }
 
@@ -209,7 +209,7 @@ public class PngParser extends AbstractImageParser
             throw new ImageReadErrorException("Problem reading data stream: [" + exc.getMessage() + "]", exc);
         }
 
-        return metadata;
+        return getSafeMetadata();
     }
 
     /**
@@ -222,7 +222,7 @@ public class PngParser extends AbstractImageParser
     {
         if (metadata == null)
         {
-            LOGGER.warn("Metadata information has not been parsed yet");
+            LOGGER.warn("No metadata information has been parsed yet");
             return new MetadataPNG<>();
         }
 
@@ -348,6 +348,7 @@ public class PngParser extends AbstractImageParser
 
         catch (Exception exc)
         {
+            sb.append("Error generating diagnostics: ").append(exc.getMessage()).append(System.lineSeparator());
             LOGGER.error("Diagnostics failed for file [" + getImageFile() + "]", exc);
         }
 

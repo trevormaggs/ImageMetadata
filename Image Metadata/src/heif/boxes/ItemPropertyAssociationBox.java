@@ -1,6 +1,7 @@
 package heif.boxes;
 
 import common.SequentialByteReader;
+import logger.LogFactory;
 
 /**
  * Represents the {@code ipma} (Item Property Association Box) in HEIF/ISOBMFF files.
@@ -27,10 +28,8 @@ import common.SequentialByteReader;
  */
 public class ItemPropertyAssociationBox extends FullBox
 {
-    /** The number of property association entries. */
+    private static final LogFactory LOGGER = LogFactory.getLogger(ItemPropertyAssociationBox.class);
     private final int entryCount;
-
-    /** The array of item property entries, each describing associations for one item. */
     private final ItemPropertyEntry[] entries;
 
     /**
@@ -65,7 +64,7 @@ public class ItemPropertyAssociationBox extends FullBox
 
                 if (getBitFlags().get(0))
                 {
-                    value = (int) reader.readUnsignedShort();
+                    value = reader.readUnsignedShort();
 
                     essential = ((value & 0x8000) != 0);
                     propertyIndex = (value & 0x7FFF);
@@ -105,55 +104,30 @@ public class ItemPropertyAssociationBox extends FullBox
     }
 
     /**
-     * Returns a string representation of this {@code ItemPropertyAssociationBox}.
+     * Logs a single diagnostic line for this box at the debug level.
      *
-     * @return a formatted string describing the box contents.
+     * <p>
+     * This is useful when traversing the box tree of a HEIF/ISO-BMFF structure for debugging or
+     * inspection purposes.
+     * </p>
      */
     @Override
-    public String toString()
+    public void logBoxInfo()
     {
-        return toString(null);
-    }
-
-    /**
-     * Returns a detailed string representation of this box with an optional prefix.
-     *
-     * @param prefix
-     *        an optional label to prepend; may be {@code null}.
-     * 
-     * @return a formatted string suitable for logging or inspection
-     */
-    @Override
-    public String toString(String prefix)
-    {
-        StringBuilder sb = new StringBuilder();
-
-        if (prefix != null && !prefix.isEmpty())
-        {
-            sb.append(prefix);
-        }
-
-        for (int i = 0; i < getHierarchyDepth(); i++)
-        {
-            sb.append("\t");
-        }
-
-        sb.append(String.format("%s '%s': entry_count=%d%n", this.getClass().getSimpleName(), getTypeAsString(), entryCount));
+        String tab = Box.repeatPrint("\t", getHierarchyDepth());
+        LOGGER.debug(String.format("%s%s '%s': entry_count=%d", tab, this.getClass().getSimpleName(), getTypeAsString(), entryCount));
 
         for (int i = 0; i < entries.length; i++)
         {
             ItemPropertyEntry entry = entries[i];
-            sb.append(String.format("\t\t\t%d)\titem_ID=%d, association_count=%d%n", i + 1, entry.getItemID(), entry.getAssociationCount()));
+
+            LOGGER.debug(String.format("\t\t\t%d)\titem_ID=%d, association_count=%d", i + 1, entry.getItemID(), entry.getAssociationCount()));
 
             for (ItemPropertyEntryAssociation assoc : entry.getAssociations())
             {
-                sb.append(String.format("\t\t\t\tessential=%s, property_index=%d%n", assoc.isEssential(), assoc.getPropertyIndex()));
+                LOGGER.debug(String.format("\t\t\t\tessential=%s, property_index=%d", assoc.isEssential(), assoc.getPropertyIndex()));
             }
-
-            sb.append(System.lineSeparator());
         }
-
-        return sb.toString();
     }
 
     /**
@@ -239,7 +213,7 @@ public class ItemPropertyAssociationBox extends FullBox
 
         /**
          * Returns the Essential value as a boolean value.
-         * 
+         *
          * @return {@code true} if the property is essential, otherwise {@code false}
          */
         public boolean isEssential()
@@ -249,7 +223,7 @@ public class ItemPropertyAssociationBox extends FullBox
 
         /**
          * Returns the Property Index.
-         * 
+         *
          * @return the 1-based property index in the {@code ipco} box
          */
         public int getPropertyIndex()

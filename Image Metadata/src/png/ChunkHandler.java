@@ -372,6 +372,8 @@ public class ChunkHandler implements ImageHandler
      *        the CRC value read from the file
      * @param data
      *        raw chunk data
+     * 
+     * @return a populated {@link PngChunk} instance
      */
     private PngChunk addChunk(ChunkType chunkType, long length, byte[] typeBytes, int crc32, byte[] data)
     {

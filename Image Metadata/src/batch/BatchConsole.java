@@ -42,7 +42,7 @@ public final class BatchConsole extends BatchExecutor
      *        the Builder object containing parameters for constructing this instance
      *
      * @throws BatchErrorException
-     *         if an I/O or metadata-related error occurs
+     *         if any metadata-related reading error occurs
      * @throws IOException
      *         if an I/O error occurs during reading or writing the image
      */
@@ -131,12 +131,19 @@ public final class BatchConsole extends BatchExecutor
     }
 
     /**
-     * Processes the command line arguments.
+     * Configures and parses the supported command-line arguments.
+     *
+     * <p>
+     * This method defines the rules for known flags and options. Note that most option handling
+     * logic is delegated to the surrounding Builder-pattern implementation, while this method
+     * primarily registers the supported flags.
+     * </p>
      *
      * @param arguments
-     *        an array of strings containing the command line arguments
+     *        the raw command-line arguments passed to main
      *
-     * @return a CommandLineReader object
+     * @return a CommandLineReader instance, already configured and parsed for the current
+     *         invocation
      */
     private static CommandLineReader scanArguments(String[] arguments)
     {
@@ -171,11 +178,6 @@ public final class BatchConsole extends BatchExecutor
             {
                 System.out.printf("Build date: %s%n", ProjectBuildInfo.getInstance(BatchConsole.class).getBuildDate());
                 System.exit(0);
-            }
-
-            if (cli.existsOption("-d") || cli.existsOption("--debug"))
-            {
-                LOGGER.setDebug(true);
             }
         }
 
@@ -225,13 +227,8 @@ public final class BatchConsole extends BatchExecutor
      *        an array of strings containing the command line arguments
      *
      * @return an instance of BatchConsole
-     *
-     * @throws BatchErrorException
-     *         in case of an error during batch processing
-     * @throws IOException
-     *         if an I/O error occurs during reading or writing the image
      */
-    static BatchConsole readCommand(String[] arguments) throws BatchErrorException, IOException
+    static void readCommand(String[] arguments)
     {
         CommandLineReader cli = scanArguments(arguments);
 
@@ -243,7 +240,7 @@ public final class BatchConsole extends BatchExecutor
                 .userDate(cli.getValueByOption("-m"))
                 .embedDateTime(cli.existsOption("-e"))
                 .skipVideo(cli.existsOption("-k"))
-                .debug(true);
+                .debug(cli.existsOption("-d") || cli.existsOption("--debug"));
 
         if (cli.existsOption("-f"))
         {
@@ -256,12 +253,21 @@ public final class BatchConsole extends BatchExecutor
             batch.fileSet(files);
         }
 
-        batch.build();
+        try
+        {
+            batch.build();
+            new BatchConsole(batch);
+        }
 
-        return new BatchConsole(batch);
+        catch (Exception exc)
+        {
+            // This is crucial to ensure no silent failures are allowed
+            LOGGER.error(exc.getMessage());
+            exc.printStackTrace();
+        }
     }
 
-    public static void main(String[] args) throws Exception
+    public static void main(String[] args)
     {
         BatchConsole.readCommand(args);
     }

@@ -4,32 +4,34 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import common.SequentialByteReader;
+import logger.LogFactory;
 
 /**
  * The {@code ItemLocationBox} class handles the HEIF Box identified as {@code iloc} (Item Location
  * Box).
- * 
+ *
  * <p>
  * This box provides a directory of item resources, either in the same file or in external files.
  * Each entry describes the item's container, offset within that container, and length.
  * </p>
- * 
+ *
  * <p>
  * For technical details, refer to the specification document: {@code ISO/IEC 14496-12:2015}, pages
  * 77–80.
  * </p>
- * 
+ *
  * <p>
  * <strong>API Note:</strong> Additional testing is required to validate the reliability and
  * robustness of this implementation.
  * </p>
- * 
+ *
  * @author Trevor Maggs
  * @version 1.0
  * @since 13 August 2025
  */
 public class ItemLocationBox extends FullBox
 {
+    private static final LogFactory LOGGER = LogFactory.getLogger(ItemLocationBox.class);
     private final int offsetSize;
     private final int lengthSize;
     private final int baseOffsetSize;
@@ -44,7 +46,7 @@ public class ItemLocationBox extends FullBox
      *        the parent {@code Box} containing common box values
      * @param reader
      *        a {@code SequentialByteReader} for sequential access to the box content
-     * 
+     *
      * @throws UnsupportedOperationException
      *         if external data references (dataReferenceIndex != 0) are found
      */
@@ -122,7 +124,7 @@ public class ItemLocationBox extends FullBox
      *
      * @param itemID
      *        the item identifier to search for
-     * 
+     *
      * @return the matching {@code ItemLocationEntry}, or {@code null} if not found
      */
     public ItemLocationEntry findItem(int itemID)
@@ -143,7 +145,7 @@ public class ItemLocationBox extends FullBox
      *
      * @param itemID
      *        the item identifier to search for
-     * 
+     *
      * @return an unmodifiable list of extents for the item, or empty list if none found
      */
     public List<ExtentData> findExtentsForItem(int itemID)
@@ -164,71 +166,46 @@ public class ItemLocationBox extends FullBox
     }
 
     /**
-     * Returns a string representation of this {@code ItemLocationBox} resource.
+     * Logs a single diagnostic line for this box at the debug level.
      *
-     * @return a formatted string describing the box contents
+     * <p>
+     * This is useful when traversing the box tree of a HEIF/ISO-BMFF structure for debugging or
+     * inspection purposes.
+     * </p>
      */
     @Override
-    public String toString()
+    public void logBoxInfo()
     {
-        return toString(null);
-    }
-
-    /**
-     * Returns a human-readable debug string, summarising structured references associated with this
-     * HEIF-based file. Useful for logging or diagnostics.
-     *
-     * @param prefix
-     *        Optional heading or label to prepend. Can be null
-     * 
-     * @return a formatted string suitable for debugging, inspection, or textual analysis
-     */
-    @Override
-    public String toString(String prefix)
-    {
-        StringBuilder sb = new StringBuilder();
-
-        if (prefix != null && !prefix.isEmpty())
-        {
-            sb.append(prefix);
-        }
-
-        for (int i = 0; i < getHierarchyDepth(); i++)
-        {
-            sb.append("\t");
-        }
-
-        sb.append(String.format("%s '%s':\titemCount=%d%n", this.getClass().getSimpleName(), getTypeAsString(), itemCount));
+        String tab = Box.repeatPrint("\t", getHierarchyDepth());
+        LOGGER.debug(String.format("%s%s '%s':\titemCount=%d", tab, this.getClass().getSimpleName(), getTypeAsString(), itemCount));
 
         for (ItemLocationEntry item : items)
         {
-            sb.append(String.format("\t\tItemID=%-10d constructionMethod=%-5d dataRefIdx=%-8d baseOffset=0x%X%n", item.getItemID(), item.getConstructionMethod(), item.getDataReferenceIndex(), item.getBaseOffset()));
+            LOGGER.debug(String.format("\t\tItemID=%-10d constructionMethod=%-5d dataRefIdx=%-8d baseOffset=0x%X", item.getItemID(), item.getConstructionMethod(), item.getDataReferenceIndex(), item.getBaseOffset()));
 
             for (ExtentData extent : item.getExtents())
             {
-                sb.append(String.format("\t\textentIndex=%-5d extentOffset=0x%08X  extentLength=%d%n%n", extent.getExtentIndex(), extent.getExtentOffset(), extent.getExtentLength()));
+                LOGGER.debug(String.format("\t\textentIndex=%-5d extentOffset=0x%08X  extentLength=%d", extent.getExtentIndex(), extent.getExtentOffset(), extent.getExtentLength()));
             }
         }
-
-        return sb.toString();
     }
 
     /**
      * Reads a value from the stream based on the specified size indicator.
-     * 
+     *
      * <ul>
      * <li>{@code 0} – value is always zero (no bytes read)</li>
      * <li>{@code 4} – reads a 4-byte unsigned integer</li>
      * <li>{@code 8} – reads an 8-byte unsigned integer</li>
      * </ul>
-     * 
+     *
      * @param input
      *        the number of bytes to read: {0, 4, 8}
      * @param reader
      *        a {@code SequentialByteReader} for reading the value
-     * 
+     *
      * @return the parsed value as an unsigned {@code long}
-     * 
+     *
      * @throws IllegalArgumentException
      *         if {@code input} is not one of {0, 4, 8}
      */

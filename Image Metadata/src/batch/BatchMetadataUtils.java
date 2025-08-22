@@ -113,11 +113,10 @@ public final class BatchMetadataUtils
      * @param targetFile
      *        the new file to save the updated TIFF
      * @param datetime
+     *        the desired captured date-time to embed in the EXIF metadata
      * 
      * @throws IOException
      *         If an I/O error occurs
-     * @throws ImageReadException
-     *         If the file cannot be read as an image
      */
     public static void updateDateTakenMetadataTIF(File sourceFile, File targetFile, FileTime datetime) throws IOException
     {
@@ -159,12 +158,12 @@ public final class BatchMetadataUtils
      * <p>
      * This method updates the following EXIF fields in a lossless manner (without re-compressing
      * the image data):
+     * </p>
      *
      * <ul>
      * <li>{@link org.apache.commons.imaging.formats.tiff.constants.ExifTagConstants#EXIF_TAG_DATE_TIME_ORIGINAL}</li>
      * <li>{@link org.apache.commons.imaging.formats.tiff.constants.ExifTagConstants#EXIF_TAG_DATE_TIME_DIGITIZED}</li>
      * </ul>
-     * </p>
      *
      * <p>
      * The {@code datetime} parameter is converted internally to the EXIF date-time format
@@ -189,7 +188,7 @@ public final class BatchMetadataUtils
      * @throws IOException
      *         if an I/O error occurs during reading or writing the image
      */
-    public static void updateDateTakenMetadataJPG(File sourceFile, File targetFile, FileTime datetime) throws IOException
+    public static void updateDateTakenMetadataJPG(File sourceFile, File targetFile, FileTime datetime) throws FileNotFoundException, IOException
     {
         try (FileOutputStream fos = new FileOutputStream(targetFile); BufferedOutputStream os = new BufferedOutputStream(fos))
         {
@@ -247,11 +246,13 @@ public final class BatchMetadataUtils
      *        the destination file where the copy will be written
      * @param datetime
      *        the desired captured date-time to embed in the PNG textual chunk
-     *
+     * 
+     * @throws ImagingException
+     *         in the event of a processing error while reading an image
      * @throws IOException
      *         if an error occurs during reading, writing, or processing the image
      */
-    public static void updateDateTakenTextualPNG(File sourceFile, File targetFile, FileTime datetime) throws IOException
+    public static void updateDateTakenTextualPNG(File sourceFile, File targetFile, FileTime datetime) throws ImagingException, IOException
     {
         BufferedImage image = Imaging.getBufferedImage(sourceFile);
         PngImagingParameters writeParams = new PngImagingParameters();
@@ -274,7 +275,6 @@ public final class BatchMetadataUtils
 
     // TESTING
 
-    
     /**
      * Converts the input date string to a Date object by attempting to parse it against a
      * predefined set of common date and time formats.
@@ -332,8 +332,8 @@ public final class BatchMetadataUtils
         // If no format matched, throw an exception
         throw new IllegalArgumentException("Date [" + input + "] is in an invalid or unsupported format");
     }
-    
-        /**
+
+    /**
      * Reads a source WebP file, updates a specific Exif metadata tag, and writes the
      * result to a new destination WebP file.
      *
@@ -341,8 +341,8 @@ public final class BatchMetadataUtils
      *        The original WebP file.
      * @param destFile
      *        The new file to save the updated WebP.
-     * @param newSoftwareValue
-     *        The new value for the TIFF_TAG_SOFTWARE tag.
+     * @param datetime
+     *        the desired captured date-time to embed in the EXIF metadata
      * @throws IOException
      *         If an I/O error occurs.
      * @throws ImagingException

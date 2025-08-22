@@ -7,16 +7,17 @@ import java.util.Map;
 import common.SequentialByteReader;
 import heif.BoxFactory;
 import heif.HeifBoxType;
+import logger.LogFactory;
 
 /**
  * Represents a MetaBox {@code meta} structure in HEIF/ISOBMFF files.
- * 
+ *
  * The MetaBox contains metadata and subordinate boxes such as ItemInfoBox, ItemLocationBox and
  * more. It acts as a container for descriptive and structural metadata relevant to HEIF-based
  * formats.
- * 
+ *
  * For technical details, refer to ISO/IEC 14496-12:2015, Page 76 (Meta Box).
- * 
+ *
  * <p>
  * <strong>API Note:</strong> Additional testing is required to validate the reliability and
  * robustness of this implementation.
@@ -28,6 +29,7 @@ import heif.HeifBoxType;
  */
 public class MetaBox extends FullBox
 {
+    private static final LogFactory LOGGER = LogFactory.getLogger(MetaBox.class);
     private final Map<HeifBoxType, Box> containedBoxes;
 
     /**
@@ -38,7 +40,7 @@ public class MetaBox extends FullBox
      *        the parent {@link Box} object containing size and type information
      * @param reader
      *        the byte reader for parsing box data
-     * 
+     *
      * @throws IllegalStateException
      *         if malformed data is encountered, such as a negative box size and corrupted data
      */
@@ -82,7 +84,7 @@ public class MetaBox extends FullBox
 
     /**
      * Returns a combined list of all boxes contained in this {@code MetaBox}.
-     * 
+     *
      * @return a list of Box objects in reading order
      */
     @Override
@@ -94,43 +96,17 @@ public class MetaBox extends FullBox
     }
 
     /**
-     * Returns a string representation of this {@code FileTypeBox} resource.
+     * Logs a single diagnostic line for this box at the debug level.
      *
-     * @return a formatted string describing the box contents
+     * <p>
+     * This is useful when traversing the box tree of a HEIF/ISO-BMFF structure for debugging or
+     * inspection purposes.
+     * </p>
      */
     @Override
-    public String toString()
+    public void logBoxInfo()
     {
-        return toString(null);
-    }
-
-    /**
-     * Returns a human-readable debug string, summarising structured references associated with this
-     * HEIF-based file. Useful for logging or diagnostics.
-     *
-     * @param prefix
-     *        Optional heading or label to prepend. Can be null
-     * 
-     * @return a formatted string suitable for debugging, inspection, or textual analysis
-     */
-    @Override
-    public String toString(String prefix)
-    {
-        StringBuilder sb = new StringBuilder();
-
-        if (prefix != null && !prefix.isEmpty())
-        {
-            sb.append(prefix);
-        }
-
-        for (int i = 0; i < getHierarchyDepth(); i++)
-        {
-            sb.append("\t");
-        }
-
-        sb.append(String.format("%s '%s':\t(%s)", this.getClass().getSimpleName(), getTypeAsString(), getHeifType().getBoxCategory()));
-        sb.append(System.lineSeparator());
-
-        return sb.toString();
+        String tab = Box.repeatPrint("\t", getHierarchyDepth());
+        LOGGER.debug(String.format("%s%s '%s':\t(%s)", tab, this.getClass().getSimpleName(), getTypeAsString(), getHeifType().getBoxCategory()));
     }
 }

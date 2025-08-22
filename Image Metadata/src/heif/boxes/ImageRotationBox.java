@@ -1,16 +1,17 @@
 package heif.boxes;
 
 import common.SequentialByteReader;
+import logger.LogFactory;
 
 /**
  * This derived Box class handles the Box identified as {@code irot} - Image rotation Box. For
  * technical details, refer to the Specification document -
  * {@code ISO/IEC 23008-12:2017 in Page 15}.
- * 
+ *
  * The image rotation transformative item property of the {@code ImageRotationBox} box rotates the
  * reconstructed image of the associated image item in anti-clockwise direction in units of 90
  * degrees.
- * 
+ *
  * <p>
  * <strong>API Note:</strong> Additional testing is required to validate the reliability and
  * robustness of this implementation.
@@ -22,13 +23,14 @@ import common.SequentialByteReader;
  */
 public class ImageRotationBox extends Box
 {
+    private static final LogFactory LOGGER = LogFactory.getLogger(ImageRotationBox.class);
     private final int angle;
     private final int reserved;
 
     /**
      * This constructor creates a derived Box object whose aim is to retrieve the angle (in
      * anti-clockwise direction) in units of degrees.
-     * 
+     *
      * @param box
      *        the super Box object
      * @param reader
@@ -49,43 +51,17 @@ public class ImageRotationBox extends Box
     }
 
     /**
-     * Returns a string representation of this {@code ImageRotationBox}.
+     * Logs a single diagnostic line for this box at the debug level.
      *
-     * @return a formatted string describing the box contents.
+     * <p>
+     * This is useful when traversing the box tree of a HEIF/ISO-BMFF structure for debugging or
+     * inspection purposes.
+     * </p>
      */
     @Override
-    public String toString()
+    public void logBoxInfo()
     {
-        return toString(null);
-    }
-
-    /**
-     * Returns a human-readable debug string, summarising structured references associated with this
-     * HEIF-based file. Useful for logging or diagnostics.
-     *
-     * @param prefix
-     *        Optional heading or label to prepend. Can be null
-     * 
-     * @return a formatted string suitable for debugging, inspection, or textual analysis
-     */
-    @Override
-    public String toString(String prefix)
-    {
-        StringBuilder sb = new StringBuilder();
-
-        if (prefix != null && !prefix.isEmpty())
-        {
-            sb.append(prefix);
-        }
-
-        for (int i = 0; i < getHierarchyDepth(); i++)
-        {
-            sb.append("\t");
-        }
-
-        sb.append(String.format("%s '%s': angle=%d, reserved=%d", this.getClass().getSimpleName(), getTypeAsString(), angle, reserved));
-        sb.append(System.lineSeparator());
-
-        return sb.toString();
+        String tab = Box.repeatPrint("\t", getHierarchyDepth());
+        LOGGER.debug(String.format("%s%s '%s': angle=%d, reserved=%d", tab, this.getClass().getSimpleName(), getTypeAsString(), angle, reserved));
     }
 }

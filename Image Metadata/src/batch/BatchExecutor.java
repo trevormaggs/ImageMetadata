@@ -105,11 +105,8 @@ public class BatchExecutor implements Batchable, Iterable<MediaFile>
      *
      * @param builder
      *        the builder object containing required parameters
-     *
-     * @throws BatchErrorException
-     *         If the source directory is not a valid directory
      */
-    protected BatchExecutor(BatchBuilder builder) throws BatchErrorException
+    protected BatchExecutor(BatchBuilder builder)
     {
         this.sourceDir = Paths.get(builder.bd_sourceDir);
         this.prefix = builder.bd_prefix;
@@ -120,11 +117,6 @@ public class BatchExecutor implements Batchable, Iterable<MediaFile>
         this.userDate = builder.bd_userDate;
         this.fileSet = Arrays.copyOf(builder.bd_files, builder.bd_files.length);
         this.dateOffsetUpdate = 0L;
-
-        if (!Files.isDirectory(sourceDir))
-        {
-            throw new BatchErrorException("The source directory [" + sourceDir + "] is not a valid directory. Please verify that the path exists and is a directory");
-        }
 
         if (builder.bd_descending)
         {
@@ -146,11 +138,17 @@ public class BatchExecutor implements Batchable, Iterable<MediaFile>
      * and processing the specified source files or directory.
      *
      * @throws BatchErrorException
-     *         if an I/O or metadata-related error occurs
+     *         if an I/O or metadata-related error occurs or the source directory is not a valid
+     *         directory
      */
     protected void start() throws BatchErrorException
     {
         FileVisitor<Path> visitor = createImageVisitor();
+
+        if (!Files.isDirectory(sourceDir))
+        {
+            throw new BatchErrorException("The source directory [" + sourceDir + "] is not a valid directory. Please verify that the path exists and is a directory");
+        }
 
         try
         {
@@ -305,12 +303,6 @@ public class BatchExecutor implements Batchable, Iterable<MediaFile>
                     AbstractImageParser parser = ImageParserFactory.getParser(fpath);
                     Metadata<?> meta = parser.readMetadata();
                     Date metadataDate = findDateTaken(meta);
-
-                    if (metadataDate == null)
-                    {
-                        LOGGER.info("No EXIF/metadata date found for [" + fpath + "]");
-                    }
-
                     FileTime modifiedTime = prioritiseDateTaken(metadataDate, fpath, attr.lastModifiedTime(), userDate, dateOffsetUpdate, forcedTest);
                     MediaFile media = new MediaFile(fpath, modifiedTime, parser.getImageFormat(), (metadataDate == null), forcedTest);
 
@@ -409,7 +401,7 @@ public class BatchExecutor implements Batchable, Iterable<MediaFile>
                 // 2. Use metadata date if available
                 if (metadataDate != null)
                 {
-                    LOGGER.info("Date Taken for [" + fpath + "] using metadata date [" + metadataDate + "]");
+                    LOGGER.info("Attribute - Date Taken found in Exif metadata for [" + fpath + "]");
                     return FileTime.fromMillis(metadataDate.getTime());
                 }
 
@@ -478,7 +470,7 @@ public class BatchExecutor implements Batchable, Iterable<MediaFile>
 
         catch (SecurityException | IOException exc)
         {
-            throw new BatchErrorException("Unable to start logging. Program terminated", exc);
+            throw new BatchErrorException("Unable to enable logging. Program terminated", exc);
         }
     }
 

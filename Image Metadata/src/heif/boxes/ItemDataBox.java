@@ -1,6 +1,7 @@
 package heif.boxes;
 
 import common.SequentialByteReader;
+import logger.LogFactory;
 
 /**
  * This derived Box class handles the Box identified as {@code idat} - Item Data Box. For technical
@@ -8,7 +9,7 @@ import common.SequentialByteReader;
  *
  * This box contains the data of metadata items that use the construction method indicating that an
  * item’s data extents are stored within this box.
- * 
+ *
  * <p>
  * <strong>API Note:</strong> This implementation assumes a flat byte array. No item parsing is
  * performed beyond raw byte extraction. Further testing is needed for edge cases and compatibility.
@@ -20,11 +21,12 @@ import common.SequentialByteReader;
  */
 public class ItemDataBox extends Box
 {
+    private static final LogFactory LOGGER = LogFactory.getLogger(ItemDataBox.class);
     private final byte[] data;
 
     /**
      * This constructor creates a derived Box object, providing additional data of metadata items.
-     * 
+     *
      * @param box
      *        the super Box object
      * @param reader
@@ -53,43 +55,19 @@ public class ItemDataBox extends Box
     }
 
     /**
-     * Returns a string representation of this {@code ItemDataBox} resource.
+     * Logs a single diagnostic line for this box at the debug level.
      *
-     * @return a formatted string describing the box contents.
+     * <p>
+     * This is useful when traversing the box tree of a HEIF/ISO-BMFF structure for debugging or
+     * inspection purposes.
+     * </p>
      */
     @Override
-    public String toString()
-    {
-        return toString(null);
-    }
-
-    /**
-     * Returns a human-readable debug string, summarising the raw data stored in this
-     * {@code ItemDataBox}. Useful for logging or diagnostics.
-     *
-     * @param prefix
-     *        Optional heading or label to prepend. Can be null
-     * 
-     * @return a formatted string suitable for debugging, inspection, or textual analysis
-     */
-
-    @Override
-    public String toString(String prefix)
+    public void logBoxInfo()
     {
         StringBuilder sb = new StringBuilder();
-
-        if (prefix != null && !prefix.isEmpty())
-        {
-            sb.append(prefix);
-        }
-
-        for (int i = 0; i < getHierarchyDepth(); i++)
-        {
-            sb.append("\t");
-        }
-
-        sb.append(String.format("%s '%s':", this.getClass().getSimpleName(), getTypeAsString()));
-        sb.append(System.lineSeparator());
+        String tab = Box.repeatPrint("\t", getHierarchyDepth());
+        LOGGER.debug(String.format("%s%s '%s':", tab, this.getClass().getSimpleName(), getTypeAsString()));
 
         if (data.length < 65)
         {
@@ -106,8 +84,6 @@ public class ItemDataBox extends Box
             sb.append(String.format("\t\tData size: %d bytes (hex dump omitted)", data.length));
         }
 
-        sb.append(System.lineSeparator());
-
-        return sb.toString();
+        LOGGER.debug(sb.toString());
     }
 }

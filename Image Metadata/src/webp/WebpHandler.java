@@ -191,6 +191,8 @@ public class WebpHandler implements ImageHandler
     /**
      * Adds a parsed chunk to the internal chunk collection.
      *
+     * @param type
+     *        the WebP chunk type in enum constant
      * @param fourCC
      *        the 32-bit FourCC chunk identifier (in little-endian integer form)
      * @param length
@@ -198,7 +200,7 @@ public class WebpHandler implements ImageHandler
      * @param data
      *        raw chunk data
      */
-    private void addChunk(WebPChunkType type, int fourCC, int length, byte[] data) throws ImageReadErrorException
+    private void addChunk(WebPChunkType type, int fourCC, int length, byte[] data)
     {
         if (!type.isMultipleAllowed() && existsChunk(type))
         {
@@ -274,6 +276,11 @@ public class WebpHandler implements ImageHandler
      * signature entries within the first few stream bytes. It also determines the full size of this
      * file.
      *
+     * @param reader
+     *        byte reader for raw WebP stream
+     * 
+     * @return the size of the WebP file
+     * 
      * @throws IllegalStateException
      *         if the WebP header information is corrupted
      */

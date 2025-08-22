@@ -4,10 +4,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import common.SequentialByteReader;
+import logger.LogFactory;
 
 /**
  * Represents the {@code iref} (Item Reference Box) in HEIF/ISOBMFF files.
- * 
+ *
  * <p>
  * The Item Reference Box allows one item to reference other items using typed references. Each set
  * of references for a specific type is stored in a {@code SingleItemTypeReferenceBox}. This
@@ -18,7 +19,7 @@ import common.SequentialByteReader;
  * <p>
  * Specification Reference: ISO/IEC 14496-12:2015, Section 8.11.12 (Page 87).
  * </p>
- * 
+ *
  * <p>
  * <strong>API Note:</strong> Additional testing is required to validate the reliability and
  * robustness of this implementation.
@@ -30,6 +31,7 @@ import common.SequentialByteReader;
  */
 public class ItemReferenceBox extends FullBox
 {
+    private static final LogFactory LOGGER = LogFactory.getLogger(ItemReferenceBox.class);
     private final List<Box> references;
 
     /**
@@ -40,7 +42,7 @@ public class ItemReferenceBox extends FullBox
      *        the parent {@link Box} containing size and type information
      * @param reader
      *        the reader for sequential byte parsing
-     * 
+     *
      * @throws IllegalStateException
      *         if malformed data is encountered, such as a negative box size and corrupted data
      */
@@ -90,50 +92,24 @@ public class ItemReferenceBox extends FullBox
     }
 
     /**
-     * Returns a string representation of this {@code ItemReferenceBox} resource.
+     * Logs a single diagnostic line for this box at the debug level.
      *
-     * @return a formatted string describing the box contents
+     * <p>
+     * This is useful when traversing the box tree of a HEIF/ISO-BMFF structure for debugging or
+     * inspection purposes.
+     * </p>
      */
     @Override
-    public String toString()
+    public void logBoxInfo()
     {
-        return toString(null);
-    }
-
-    /**
-     * Returns a human-readable debug string, summarising the {@code ItemReferenceBox} contents
-     * associated with this HEIF-based file. Useful for logging or diagnostics.
-     *
-     * @param prefix
-     *        an optional label or prefix for the output. Can be {@code null}
-     * 
-     * @return a formatted string suitable for logging, inspection, or analysis
-     */
-    @Override
-    public String toString(String prefix)
-    {
-        StringBuilder sb = new StringBuilder();
-
-        if (prefix != null && !prefix.isEmpty())
-        {
-            sb.append(prefix);
-        }
-
-        for (int i = 0; i < getHierarchyDepth(); i++)
-        {
-            sb.append("\t");
-        }
-
-        sb.append(String.format("%s '%s':", this.getClass().getSimpleName(), getTypeAsString()));
-        sb.append(System.lineSeparator());
-
-        return sb.toString();
+        String tab = Box.repeatPrint("\t", getHierarchyDepth());
+        LOGGER.debug(String.format("%s%s '%s':", tab, this.getClass().getSimpleName(), getTypeAsString()));
     }
 
     /**
      * Represents a {@code SingleItemTypeReferenceBox} resource, which stores a group of item
      * references of a specific type.
-     * 
+     *
      * <p>
      * Each reference links a {@code fromItemID} to one or more {@code toItemID} targets. The
      * reference type is identified by the box's name, for example, {@code thmb} for thumbnail.
@@ -171,29 +147,20 @@ public class ItemReferenceBox extends FullBox
         }
 
         /**
-         * Returns a debug-friendly string representation of this reference.
+         * Logs a single diagnostic line for this box at the debug level.
          *
-         * @param prefix
-         *        Optional heading or label to prepend. Can be null
-         * 
-         * @return a formatted string suitable for debugging, inspection, or textual analysis
+         * <p>
+         * This is useful when traversing the box tree of a HEIF/ISO-BMFF structure for debugging or
+         * inspection purposes.
+         * </p>
          */
         @Override
-        public String toString(String prefix)
+        public void logBoxInfo()
         {
             StringBuilder sb = new StringBuilder();
+            String tab = Box.repeatPrint("\t", getHierarchyDepth());
 
-            if (prefix != null && !prefix.isEmpty())
-            {
-                sb.append(prefix);
-            }
-
-            for (int i = 0; i < getHierarchyDepth(); i++)
-            {
-                sb.append("\t");
-            }
-
-            sb.append(String.format("referenceType='%s': from_item_ID=%d, ref_count=%d, to_item_ID=", getTypeAsString(), fromItemID, referenceCount));
+            sb.append(String.format("%sreferenceType='%s': from_item_ID=%d, ref_count=%d, to_item_ID=", tab, getTypeAsString(), fromItemID, referenceCount));
 
             for (int j = 0; j < referenceCount; j++)
             {
@@ -205,9 +172,7 @@ public class ItemReferenceBox extends FullBox
                 }
             }
 
-            sb.append(System.lineSeparator());
-
-            return sb.toString();
+            LOGGER.debug(sb.toString());
         }
     }
 }

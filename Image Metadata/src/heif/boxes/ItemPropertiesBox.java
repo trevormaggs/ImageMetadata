@@ -6,61 +6,63 @@ import java.util.List;
 import common.SequentialByteReader;
 import heif.BoxFactory;
 import heif.HeifBoxType;
+import logger.LogFactory;
 
 /**
  * Represents the {@code iprp} (Item Properties Box) in a HEIF/HEIC file structure.
- * 
+ *
  * <p>
  * The {@code ItemPropertiesBox} allows the definition of properties that describe specific
  * characteristics of media items, such as images or auxiliary data. Each property is stored
  * in the {@code ipco} (ItemPropertyContainerBox), while associations between items and their
  * properties are managed through one or more {@code ipma} (ItemPropertyAssociationBox) entries.
  * </p>
- * 
+ *
  * <p>
  * <b>Box Structure:</b>
  * </p>
- * 
+ *
  * <ul>
  * <li>{@code ipco} – Contains an implicitly indexed list of property boxes</li>
  * <li>{@code ipma} – Maps items to property indices defined in {@code ipco}</li>
  * </ul>
- * 
+ *
  * <p>
  * <b>Specification Reference:</b>
  * </p>
- * 
+ *
  * <ul>
  * <li>ISO/IEC 23008-12:2017 (Page 28)</li>
  * </ul>
- * 
+ *
  * <p>
  * <strong>API Note:</strong>This implementation assumes a flat box hierarchy. Additional testing is
  * recommended for nested or complex structures.
  * </p>
- * 
+ *
  * @author Trevor Maggs
  * @version 1.0
  * @since 13 August 2025
  */
 public class ItemPropertiesBox extends Box
 {
+    private static final LogFactory LOGGER = LogFactory.getLogger(ItemPropertiesBox.class);
     private final ItemPropertyContainerBox ipco;
     private final List<ItemPropertyAssociationBox> associations;
 
     /**
      * Constructs an {@code ItemPropertiesBox} by reading the {@code ipco} (property container) and
      * one or more {@code ipma} (item-property association) boxes.
-     * 
+     *
      * The ItemPropertiesBox consists of two parts: {@code ItemPropertyContainerBox} that contains
      * an implicitly indexed list of item properties, and one or more ItemPropertyAssociation boxes
      * that associate items with item properties.
-     * 
+     *
      * @param box
      *        the parent Box header containing size and type
      * @param reader
      *        a {@code SequentialByteReader} to read the box content
-     * 
+     *
      * @throws IllegalStateException
      *         if malformed data is encountered, such as a negative box size and corrupted data
      */
@@ -96,7 +98,7 @@ public class ItemPropertiesBox extends Box
 
     /**
      * Retrieves the list of property boxes contained within the {@code ipco} section.
-     * 
+     *
      * @return a list of property Box objects
      */
     public List<Box> getProperties()
@@ -106,7 +108,7 @@ public class ItemPropertiesBox extends Box
 
     /**
      * Retrieves the list of item-property associations from the {@code ipma} section.
-     * 
+     *
      * @return a list of ItemPropertyAssociationBox objects
      */
     public List<ItemPropertyAssociationBox> getAssociations()
@@ -117,7 +119,7 @@ public class ItemPropertiesBox extends Box
     /**
      * Returns a combined list of all boxes contained in this {@code ItemPropertiesBox}, including
      * both property container and associations.
-     * 
+     *
      * @return a list of Box objects in reading order
      */
     @Override
@@ -132,54 +134,29 @@ public class ItemPropertiesBox extends Box
     }
 
     /**
-     * Returns a string representation of this {@code ItemPropertiesBox} resource.
+     * Logs a single diagnostic line for this box at the debug level.
      *
-     * @return a formatted string describing the box contents
+     * <p>
+     * This is useful when traversing the box tree of a HEIF/ISO-BMFF structure for debugging or
+     * inspection purposes.
+     * </p>
      */
     @Override
-    public String toString()
+    public void logBoxInfo()
     {
-        return toString(null);
-    }
-
-    /**
-     * Returns a human-readable debug string summarising structured references associated with this
-     * HEIF-based file. Useful for logging or diagnostics.
-     *
-     * @param prefix
-     *        Optional heading or label to prepend. Can be null
-     * 
-     * @return a formatted string suitable for debugging, inspection, or textual analysis
-     */
-    @Override
-    public String toString(String prefix)
-    {
-        StringBuilder sb = new StringBuilder();
-
-        if (prefix != null && !prefix.isEmpty())
-        {
-            sb.append(prefix);
-        }
-
-        for (int i = 0; i < getHierarchyDepth(); i++)
-        {
-            sb.append("\t");
-        }
-
-        sb.append(String.format("%s '%s':%n", this.getClass().getSimpleName(), getTypeAsString()));
-
-        return sb.toString();
+        String tab = Box.repeatPrint("\t", getHierarchyDepth());
+        LOGGER.debug(String.format("%s%s '%s':", tab, this.getClass().getSimpleName(), getTypeAsString()));
     }
 
     /**
      * Represents the {@code ipco} (ItemPropertyContainerBox), a nested container holding an
      * implicitly indexed list of item property boxes.
-     * 
+     *
      * <p>
      * Each property describes an aspect of an image or media item, such as color information, pixel
      * layout, or transformation metadata.
      * </p>
-     * 
+     *
      * <p>
      * Refer to the specification document - {@code ISO/IEC 23008-12:2017} on Page 28 for more
      * information.
@@ -191,17 +168,17 @@ public class ItemPropertiesBox extends Box
 
         /**
          * Constructs an {@code ItemPropertyContainerBox} resource by reading sequential boxes.
-         * 
+         *
          * <p>
          * Each property box is read, added to the property list, and skipped over to handle cases
          * where specific handlers for sub-boxes may not yet be implemented.
          * </p>
-         * 
+         *
          * @param box
          *        the parent Box containing size and header information
          * @param reader
          *        the sequential byte reader for parsing box data
-         * 
+         *
          * @throws IllegalStateException
          *         if any form of data corruption is detected
          */
@@ -248,7 +225,7 @@ public class ItemPropertiesBox extends Box
         /**
          * Returns a list of all boxes contained in this {@code ItemPropertyContainerBox},
          * specifically all properties.
-         * 
+         *
          * @return a list of Box objects in reading order
          */
         @Override
@@ -262,32 +239,18 @@ public class ItemPropertiesBox extends Box
         }
 
         /**
-         * Returns a human-readable debug string summarising structured references associated with
-         * this HEIF-based file. Useful for logging or diagnostics.
+         * Logs a single diagnostic line for this box at the debug level.
          *
-         * @param prefix
-         *        Optional heading or label to prepend. Can be null
-         * 
-         * @return a formatted string suitable for debugging, inspection, or textual analysis
+         * <p>
+         * This is useful when traversing the box tree of a HEIF/ISO-BMFF structure for debugging or
+         * inspection purposes.
+         * </p>
          */
         @Override
-        public String toString(String prefix)
+        public void logBoxInfo()
         {
-            StringBuilder sb = new StringBuilder();
-
-            if (prefix != null && !prefix.isEmpty())
-            {
-                sb.append(prefix);
-            }
-
-            for (int i = 0; i < getHierarchyDepth(); i++)
-            {
-                sb.append("\t");
-            }
-
-            sb.append(String.format("%s '%s':%n", getClass().getSimpleName(), getTypeAsString()));
-
-            return sb.toString();
+            String tab = Box.repeatPrint("\t", getHierarchyDepth());
+            LOGGER.debug(String.format("%s%s '%s':", tab, getClass().getSimpleName(), getTypeAsString()));
         }
     }
 }

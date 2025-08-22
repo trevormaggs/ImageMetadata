@@ -17,7 +17,7 @@ import logger.LogFactory;
  * current scope of this box. Further testing is needed for edge cases and compatibility if
  * required.
  * </p>
- * 
+ *
  * @author Trevor Maggs
  * @version 1.0
  * @since 13 August 2025
@@ -43,7 +43,7 @@ public class ColourInformationBox extends Box
      *        the super Box object
      * @param reader
      *        a SequentialByteReader object for sequential byte array access
-     * 
+     *
      * @throws IllegalStateException
      *         if malformed data is encountered, such as a negative box size and corrupted data
      */
@@ -87,7 +87,6 @@ public class ColourInformationBox extends Box
             if (remainingBytes > 0)
             {
                 this.iccProfileData = reader.readBytes(remainingBytes);
-                LOGGER.info("Read [" + remainingBytes + "] bytes of ICC profile data for [" + colourType + "] colour type, but it is not used");
             }
         }
 
@@ -171,41 +170,20 @@ public class ColourInformationBox extends Box
     }
 
     /**
-     * Returns a string representation of this {@code ColourInformationBox}.
+     * Logs a single diagnostic line for this box at the debug level.
      *
-     * @return a formatted string describing the box contents.
+     * <p>
+     * This is useful when traversing the box tree of a HEIF/ISO-BMFF structure for debugging or
+     * inspection purposes.
+     * </p>
      */
     @Override
-    public String toString()
-    {
-        return toString(null);
-    }
-
-    /**
-     * Returns a human-readable debug string, summarising the colour information contained in this
-     * {@code ColourInformationBox}. Useful for logging or diagnostics.
-     *
-     * @param prefix
-     *        Optional heading or label to prepend. Can be null
-     * 
-     * @return a formatted string suitable for debugging, inspection, or textual analysis
-     */
-    @Override
-    public String toString(String prefix)
+    public void logBoxInfo()
     {
         StringBuilder sb = new StringBuilder();
+        String tab = Box.repeatPrint("\t", getHierarchyDepth());
 
-        if (prefix != null && !prefix.isEmpty())
-        {
-            sb.append(prefix);
-        }
-
-        for (int i = 0; i < getHierarchyDepth(); i++)
-        {
-            sb.append("\t");
-        }
-
-        sb.append(String.format("%s '%s': Type=%s", this.getClass().getSimpleName(), getTypeAsString(), colourType));
+        sb.append(String.format("%s%s '%s': Type=%s", tab, this.getClass().getSimpleName(), getTypeAsString(), colourType));
 
         if (TYPE_NCLX.equals(colourType))
         {
@@ -222,8 +200,6 @@ public class ColourInformationBox extends Box
             sb.append(" (Unknown colour type)");
         }
 
-        sb.append(System.lineSeparator());
-
-        return sb.toString();
+        LOGGER.debug(sb.toString());
     }
 }

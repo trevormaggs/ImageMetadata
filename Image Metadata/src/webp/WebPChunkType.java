@@ -169,7 +169,7 @@ public enum WebPChunkType
      * @param fourcc
      *        the 32-bit integer value of the FourCC
      *
-     * @return The matching WebPChunkType or OTHER if no match is found
+     * @return the matching WebPChunkType or OTHER if no match is found
      */
     public static WebPChunkType findType(int fourcc)
     {

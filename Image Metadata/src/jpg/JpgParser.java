@@ -57,7 +57,7 @@ public class JpgParser extends AbstractImageParser
 
         if (!ext.equalsIgnoreCase("jpg"))
         {
-            LOGGER.warn("File [" + getImageFile().getFileName() + "] has an incorrect extension name. Found [" + ext + "], updating to [jpg]");
+            LOGGER.warn("File [" + getImageFile().getFileName() + "] has an incorrect extension name. Should be [jpg], but found [" + ext + "]");
         }
     }
 
@@ -108,12 +108,12 @@ public class JpgParser extends AbstractImageParser
             byte flag = stream.readByte();
 
             // Make sure the loop stops when it has reached the End of Image marker (0xFF, 0xD9)
-            if (marker == EOS.marker && flag == EOS.flag)
+            if (marker == EOS.getMarker() && flag == EOS.getFlag())
             {
-                throw new EOFException("Metadata segment [" + segment.description + "] is missing in file [" + getImageFile() + "]");
+                throw new EOFException("Metadata segment [" + segment.getDescription() + "] is missing in file [" + getImageFile() + "]");
             }
 
-            if (marker == segment.marker && flag == segment.flag)
+            if (marker == segment.getMarker() && flag == segment.getFlag())
             {
                 // The segment length includes 2 bytes for the length itself,
                 // so take out 2 to get the correct payload length
@@ -121,7 +121,7 @@ public class JpgParser extends AbstractImageParser
 
                 if (segmentLength <= 0)
                 {
-                    throw new IllegalStateException("Segment [" + segment.description + "] has a zero or negative length in file [" + getImageFile() + "]");
+                    throw new IllegalStateException("Segment [" + segment.getDescription() + "] has a zero or negative length in file [" + getImageFile() + "]");
                 }
 
                 return stream.readBytes(segmentLength);
@@ -159,7 +159,7 @@ public class JpgParser extends AbstractImageParser
 
         catch (EOFException exc)
         {
-            LOGGER.warn("Metadata information not found in file [" + getImageFile() + "]");
+            LOGGER.info("Metadata information not found in file [" + getImageFile() + "]");
         }
 
         catch (NoSuchFileException exc)
@@ -190,7 +190,7 @@ public class JpgParser extends AbstractImageParser
     {
         if (metadata == null)
         {
-            LOGGER.warn("Metadata information has not been parsed yet.");
+            LOGGER.warn("No metadata information has been parsed yet");
             return new MetadataTIF();
         }
 
@@ -260,6 +260,7 @@ public class JpgParser extends AbstractImageParser
 
         catch (Exception exc)
         {
+            sb.append("Error generating diagnostics: ").append(exc.getMessage()).append(System.lineSeparator());
             LOGGER.error("Diagnostics failed for file [" + getImageFile() + "]", exc);
         }
 

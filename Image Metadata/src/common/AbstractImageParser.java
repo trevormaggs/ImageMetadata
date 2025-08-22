@@ -53,14 +53,14 @@ public abstract class AbstractImageParser
      * @param fpath
      *        the path to the image file to be parsed
      *
-     * @throws IllegalStateException
+     * @throws NullPointerException
      *         if the specified file is null
      */
     public AbstractImageParser(Path fpath)
     {
         if (fpath == null)
         {
-            throw new IllegalStateException("Image file cannot be null");
+            throw new NullPointerException("Image file cannot be null");
         }
 
         this.imageFile = fpath;

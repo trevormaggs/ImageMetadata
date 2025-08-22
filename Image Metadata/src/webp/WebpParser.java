@@ -120,7 +120,7 @@ public class WebpParser extends AbstractImageParser
 
         if (!ext.equalsIgnoreCase("webp"))
         {
-            LOGGER.warn("File [" + getImageFile().getFileName() + "] has an incorrect extension name. Found [" + ext + "], updating to [webp]");
+            LOGGER.warn("File [" + getImageFile().getFileName() + "] has an incorrect extension name. Should be [webp], but found [" + ext + "]");
         }
     }
 
@@ -215,8 +215,7 @@ public class WebpParser extends AbstractImageParser
     {
         if (metadata == null)
         {
-            LOGGER.warn("Metadata information has not been parsed yet.");
-
+            LOGGER.warn("No metadata information has been parsed yet");
             return new MetadataTIF();
         }
 
@@ -233,7 +232,7 @@ public class WebpParser extends AbstractImageParser
     {
         return DigitalSignature.WEBP;
     }
-    
+
     /**
      * Generates a human-readable diagnostic string containing metadata details.
      *
@@ -286,6 +285,7 @@ public class WebpParser extends AbstractImageParser
 
         catch (Exception exc)
         {
+            sb.append("Error generating diagnostics: ").append(exc.getMessage()).append(System.lineSeparator());
             LOGGER.error("Diagnostics failed for file [" + getImageFile() + "]", exc);
         }
 

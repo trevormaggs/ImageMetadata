@@ -9,6 +9,7 @@ import static tif.TagEntries.TagIFD.IFD_TAG_GPS_INFO_POINTER;
 import static tif.TagEntries.TagIFD.IFD_TAG_IFD_POINTER;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -26,21 +27,21 @@ import tif.TagEntries.TagSUBIFD;
 import tif.TagEntries.Taggable;
 
 /**
- * This {@code IFDHandler} class is responsible for parsing TIFF-based files by reading and
- * interpreting Image File Directories (IFDs) within the file's binary structure. It supports
- * standard TIFF parsing.
- *
- * This handler processes multiple TIFF directory types such as IFD0, EXIF, GPS, and INTEROP through
- * a recursive traversal of linked IFD structures identified by tag-defined pointers.
- *
+ * This {@code IFDHandler} parses TIFF-based files by reading and interpreting Image File
+ * Directories (IFDs) within the file's binary structure.
+ * 
  * <p>
- * <strong>Note:</strong> BigTIFF (version 43) is detected but not yet supported.
+ * It supports standard TIFF 6.0 parsing, including IFD0, EXIF, GPS, and INTEROP directories,
+ * traversed recursively via tag-defined pointers.
  * </p>
- *
+ * 
+ * <p>
+ * <strong>Note:</strong> BigTIFF (version 43) is detected but not supported.
+ * </p>
+ * 
  * @author Trevor Maggs
  * @version 1.0
- * @since 13 August 2025
- * 
+ * @since 22 August 2025
  * @see <a href="https://partners.adobe.com/public/developer/en/tiff/TIFF6.pdf">TIFF 6.0
  *      Specification (Adobe) for in-depth technical information</a>
  */
@@ -50,7 +51,7 @@ public class IFDHandler implements ImageHandler
     private static final int TIFF_STANDARD_VERSION = 42;
     private static final int TIFF_BIG_VERSION = 43;
     public static final int ENTRY_MAX_VALUE_LENGTH = 4;
-    public static final int ENTRY_MAX_VALUE_LENGTH_BIG = 8;
+    public static final int ENTRY_MAX_VALUE_LENGTH_BIG = 8; // reserved for BigTIFF
 
     private static final List<Class<? extends Enum<?>>> tagClassList;
     private static final Map<Taggable, DirectoryIdentifier> subIfdMap;
@@ -60,20 +61,18 @@ public class IFDHandler implements ImageHandler
     private int firstIFDoffset;
     private int tifHeaderOffset;
 
+    private static final Map<Integer, Taggable> TAG_LOOKUP;
+
     static
     {
-        tagClassList = new ArrayList<Class<? extends Enum<?>>>()
-        {
-            {
-                add(TagEXIF.class);
-                add(TagGPS.class);
-                add(TagIFD.class);
-                add(TagINTEROP.class);
-                add(TagSUBIFD.class);
-            }
-        };
+        tagClassList = Collections.unmodifiableList(Arrays.asList(
+                TagEXIF.class,
+                TagGPS.class,
+                TagIFD.class,
+                TagINTEROP.class,
+                TagSUBIFD.class));
 
-        subIfdMap = new HashMap<Taggable, DirectoryIdentifier>()
+        subIfdMap = Collections.unmodifiableMap(new HashMap<Taggable, DirectoryIdentifier>()
         {
             {
                 put(IFD_TAG_IFD_POINTER, EXIF_DIRECTORY_SUBIFD);
@@ -81,18 +80,20 @@ public class IFDHandler implements ImageHandler
                 put(IFD_TAG_GPS_INFO_POINTER, EXIF_DIRECTORY_GPS);
                 put(EXIF_TAG_INTEROP_POINTER, EXIF_DIRECTORY_INTEROP);
             }
-        };
-    }
+        });
 
-    /**
-     * Default constructor is unsupported and will always throw an exception.
-     *
-     * @throws UnsupportedOperationException
-     *         to indicate that instantiation is not supported
-     */
-    public IFDHandler()
-    {
-        throw new UnsupportedOperationException("Not intended for instantiation");
+        Map<Integer, Taggable> map = new HashMap<>();
+
+        for (Class<? extends Enum<?>> enumClass : tagClassList)
+        {
+            for (Enum<?> val : enumClass.getEnumConstants())
+            {
+                Taggable tag = (Taggable) val;
+                map.put(tag.getNumberID(), tag);
+            }
+        }
+
+        TAG_LOOKUP = Collections.unmodifiableMap(map);
     }
 
     /**
@@ -119,15 +120,14 @@ public class IFDHandler implements ImageHandler
     }
 
     /**
-     * Returns the length of the image file associated with the current InputStream resource.
+     * Currently not implemented.
      *
-     * @return the length of the file in bytes, or 0 if the size cannot be determined
+     * @return always throws an exception
      */
     @Override
     public long getSafeFileSize()
     {
-        // At this stage, its not needed
-        return 0L;
+        throw new UnsupportedOperationException("Not implemented yet");
     }
 
     /**
@@ -139,17 +139,19 @@ public class IFDHandler implements ImageHandler
      * </p>
      *
      * @return true if at least one metadata directory was successfully extracted, otherwise false
-     *
-     * @throws IllegalStateException
-     *         if the TIFF header is invalid or the stream data cannot be read correctly
      */
     @Override
     public boolean parseMetadata()
     {
-        readTifHeader();
+        if (!readTifHeader())
+        {
+            LOGGER.error("Invalid TIFF header detected. Metadata parsing cancelled");
+            return false;
+        }
+
         navigateImageFileDirectory(DirectoryIdentifier.TIFF_DIRECTORY_IFD0, tifHeaderOffset + firstIFDoffset);
 
-        return (directoryList.size() > 0);
+        return (!directoryList.isEmpty());
     }
 
     /**
@@ -169,60 +171,37 @@ public class IFDHandler implements ImageHandler
     }
 
     /**
-     * Retrieves the corresponding {@link Taggable} enumeration for the specified TIFF tag ID.
-     *
-     * @param tagid
-     *        the tag ID to identify the field
-     *
-     * @return the resolved tag enum or {@code null} if unknown
-     */
-    private static Taggable getTagName(int tagid)
-    {
-        for (Class<? extends Enum<?>> enumClass : tagClassList)
-        {
-            for (Enum<?> val : enumClass.getEnumConstants())
-            {
-                Taggable tag = (Taggable) val;
-
-                if (tagid == tag.getNumberID())
-                {
-                    return tag;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    /**
      * Reads the TIFF header to determine byte order, version (Standard or BigTIFF), and the offset
-     * to the first Image File Directory (IFD0).
+     * to the first Image File Directory (IFD0). Note, at this stage, the BigTIFF configuration is
+     * detectable but it is not fully supported yet.
      *
-     * @throws IllegalStateException
-     *         if the byte order is invalid or unsupported
+     * @return true if the TIFF header check is passed, otherwise false if malformed
      */
-    private void readTifHeader()
+    private boolean readTifHeader()
     {
         byte firstByte = reader.readByte();
         byte secondByte = reader.readByte();
+
+        isTiffBig = true;
 
         if (firstByte == secondByte)
         {
             if (firstByte == 0x49)
             {
                 reader.setByteOrder(ByteOrder.LITTLE_ENDIAN);
-                LOGGER.info("Byte order detected as [Intel]");
+                LOGGER.debug("Byte order detected as [Intel]");
             }
 
             else if (firstByte == 0x4D)
             {
                 reader.setByteOrder(ByteOrder.BIG_ENDIAN);
-                LOGGER.info("Byte order detected as [Motorola]");
+                LOGGER.debug("Byte order detected as [Motorola]");
             }
 
             else
             {
-                throw new IllegalStateException("Unknown byte order: [" + firstByte + "]");
+                LOGGER.warn("Unknown byte order [" + firstByte + "]");
+                return false;
             }
 
             /* Identify whether this is Standard TIFF (42) or Big TIFF (43) version */
@@ -230,8 +209,10 @@ public class IFDHandler implements ImageHandler
 
             if (tiffVer == TIFF_BIG_VERSION)
             {
-                isTiffBig = true;
+                /* TODO - develop and expand to support Big Tiff */
                 LOGGER.warn("BigTIFF detected (not fully supported yet)");
+
+                throw new UnsupportedOperationException("BigTIFF (version 43) not supported yet");
             }
 
             else if (tiffVer != TIFF_STANDARD_VERSION)
@@ -242,12 +223,16 @@ public class IFDHandler implements ImageHandler
 
             /* Advance by offset from base to IFD0 */
             firstIFDoffset = reader.readInteger();
+
+            return true;
         }
 
         else
         {
-            throw new IllegalStateException("Mismatched byte order bytes: [First byte: 0x" + Integer.toHexString(firstByte).toUpperCase() + "] and [Second byte: 0x" + Integer.toHexString(secondByte).toUpperCase() + "]");
+            LOGGER.warn(String.format("Mismatched byte order bytes [First byte: 0x%04X ] and [Second byte: 0x%04X]", firstByte, secondByte));
         }
+
+        return false;
     }
 
     /**
@@ -261,15 +246,12 @@ public class IFDHandler implements ImageHandler
      *        the directory type being processed
      * @param startOffset
      *        the file offset (from header base) where the IFD begins
-     *
-     * @throws IllegalStateException
-     *         if there is a problem during reading the stream data
      */
     private void navigateImageFileDirectory(DirectoryIdentifier dirType, long startOffset)
     {
         if (startOffset < 0 || startOffset >= reader.length())
         {
-            LOGGER.error("Invalid offset [" + startOffset + "] for directory [" + dirType + "]");
+            LOGGER.warn("Invalid offset [" + startOffset + "] for directory [" + dirType + "]");
             return;
         }
 
@@ -280,7 +262,7 @@ public class IFDHandler implements ImageHandler
         for (int i = 0; i < entryCount; i++)
         {
             int tagID = reader.readUnsignedShort();
-            Taggable tagEnum = getTagName(tagID);
+            Taggable tagEnum = TAG_LOOKUP.get(tagID);
 
             /*
              * To address rare instances where tag IDs are found to be undefined,
@@ -308,9 +290,12 @@ public class IFDHandler implements ImageHandler
              */
             if (totalBytes > ENTRY_MAX_VALUE_LENGTH)
             {
-                if ((tifHeaderOffset + offset + totalBytes) > reader.length())
+                // Using long to prevent integer wraparound risk
+                long end = (long) tifHeaderOffset + (long) offset + (long) totalBytes;
+
+                if (end > reader.length() || end < 0)
                 {
-                    LOGGER.error("Offset out of bounds for tag [" + tagEnum + "]");
+                    LOGGER.warn("Offset out of bounds for tag [" + tagEnum + "]");
                     continue;
                 }
 

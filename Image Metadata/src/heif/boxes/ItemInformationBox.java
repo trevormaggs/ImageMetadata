@@ -8,26 +8,28 @@ import java.util.List;
 import java.util.Optional;
 import common.ByteValueConverter;
 import common.SequentialByteReader;
+import logger.LogFactory;
 
 /**
  * Represents the {@code iinf} (Item Information Box), which describes items within the HEIF file.
  * This is often used to locate EXIF metadata, thumbnails, or other auxiliary images.
- * 
+ *
  * <p>
  * Specification Reference: ISO/IEC 14496-12:2015, Pages 81–83.
  * </p>
- * 
+ *
  * <p>
  * <strong>API Note:</strong> Additional testing is required to validate the reliability and
  * robustness of this implementation.
  * </p>
- * 
+ *
  * @author Trevor Maggs
  * @version 1.0
  * @since 13 August 2025
  */
 public class ItemInformationBox extends FullBox
 {
+    private static final LogFactory LOGGER = LogFactory.getLogger(ItemInformationBox.class);
     private static final String TYPE_URI = "uri ";
     private static final String TYPE_MIME = "mime";
     private static final String TYPE_EXIF = "Exif";
@@ -116,7 +118,7 @@ public class ItemInformationBox extends FullBox
      *
      * @param itemID
      *        the item ID to search for
-     * 
+     *
      * @return an Optional containing the matching entry if found, otherwise Optional.empty() is
      *         returned
      */
@@ -136,7 +138,7 @@ public class ItemInformationBox extends FullBox
     /**
      * Returns a combined list of all boxes contained in this {@code ItemInformationBox}, including
      * the ItemInfoEntry boxes ({@code infe}).
-     * 
+     *
      * @return a combined list of Box objects in reading order
      */
     @Override
@@ -150,44 +152,18 @@ public class ItemInformationBox extends FullBox
     }
 
     /**
-     * Returns a formatted string describing the box contents.
+     * Logs a single diagnostic line for this box at the debug level.
      *
-     * @return a string representation of this {@code ItemInformationBox} resource
+     * <p>
+     * This is useful when traversing the box tree of a HEIF/ISO-BMFF structure for debugging or
+     * inspection purposes.
+     * </p>
      */
     @Override
-    public String toString()
+    public void logBoxInfo()
     {
-        return toString(null);
-    }
-
-    /**
-     * Returns a human-readable debug string, summarising structured references associated with this
-     * HEIF-based file. Useful for logging or diagnostics.
-     * 
-     * @param prefix
-     *        Optional heading or label to prepend. Can be null
-     * 
-     * @return a formatted string suitable for debugging, inspection, or textual analysis
-     */
-    @Override
-    public String toString(String prefix)
-    {
-        StringBuilder sb = new StringBuilder();
-
-        if (prefix != null && !prefix.isEmpty())
-        {
-            sb.append(prefix);
-        }
-
-        for (int i = 0; i < getHierarchyDepth(); i++)
-        {
-            sb.append("\t");
-        }
-
-        sb.append(String.format("%s '%s':\tItem_count=%d", this.getClass().getSimpleName(), getTypeAsString(), entryCount));
-        sb.append(System.lineSeparator());
-
-        return sb.toString();
+        String tab = Box.repeatPrint("\t", getHierarchyDepth());
+        LOGGER.debug(String.format("%s%s '%s':\tItem_count=%d", tab, this.getClass().getSimpleName(), getTypeAsString(), entryCount));
     }
 
     /**
@@ -374,25 +350,19 @@ public class ItemInformationBox extends FullBox
             return (extensionType == null ? "" : extensionType);
         }
 
+        /**
+         * Logs a single diagnostic line for this box at the debug level.
+         *
+         * <p>
+         * This is useful when traversing the box tree of a HEIF/ISO-BMFF structure for debugging or
+         * inspection purposes.
+         * </p>
+         */
         @Override
-        public String toString(String prefix)
+        public void logBoxInfo()
         {
-            StringBuilder sb = new StringBuilder();
-
-            if (prefix != null && !prefix.isEmpty())
-            {
-                sb.append(prefix);
-            }
-
-            for (int i = 0; i < getHierarchyDepth(); i++)
-            {
-                sb.append("\t");
-            }
-
-            sb.append(String.format("%d)\t'%s': item_ID=%d,\titem_type='%s'", j++, getTypeAsString(), getItemID(), getItemType()));
-            sb.append(System.lineSeparator());
-
-            return sb.toString();
+            String tab = Box.repeatPrint("\t", getHierarchyDepth());
+            LOGGER.debug(String.format("%s%d)\t'%s': item_ID=%d,\titem_type='%s'", tab, j++, getTypeAsString(), getItemID(), getItemType()));
         }
     }
 }

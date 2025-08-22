@@ -56,7 +56,7 @@ public class HeifParser extends AbstractImageParser
 
         if (!ext.equalsIgnoreCase("heic"))
         {
-            LOGGER.warn("File [" + getImageFile().getFileName() + "] has an incorrect extension name. Found [" + ext + "], updating to [heic]");
+            LOGGER.warn("File [" + getImageFile().getFileName() + "] has an incorrect extension name. Should be [heic], but found [" + ext + "]");
         }
     }
 
@@ -75,16 +75,21 @@ public class HeifParser extends AbstractImageParser
     }
 
     /**
-     * Displays the output of each box for diagnostic purposes.
+     * Logs the hierarchy of boxes at the debug level for diagnostic purposes.
+     *
+     * <p>
+     * Each contained {@link Box} is traversed and its basic information (such as type and name) is
+     * output using {@link Box#logBoxInfo()}. This provides a structured view of the box tree that
+     * can assist with debugging or inspection of HEIF/ISO-BMFF files.
+     * </p>
      */
-    public void displayDiagnosticOutput()
+    public void logDebugBoxHierarchy()
     {
         LOGGER.debug("Box hierarchy:");
 
         for (Box box : handler)
         {
-            //System.out.printf("LOOK %s", box.toString(null));
-            LOGGER.debug(String.format("%s", box.toString(null)));
+            box.logBoxInfo();
         }
     }
 
@@ -146,8 +151,8 @@ public class HeifParser extends AbstractImageParser
             }
         }
 
-        handler.displayHierarchy();
-        // displayDiagnosticOutput();
+        // handler.displayHierarchy();
+        logDebugBoxHierarchy();
 
         return metadata;
     }
@@ -162,7 +167,7 @@ public class HeifParser extends AbstractImageParser
     {
         if (metadata == null)
         {
-            LOGGER.warn("Metadata information has not been parsed yet");
+            LOGGER.warn("No metadata information has been parsed yet");
             return new MetadataTIF();
         }
 
@@ -179,7 +184,7 @@ public class HeifParser extends AbstractImageParser
     {
         return DigitalSignature.HEIF;
     }
-    
+
     /**
      * Generates a human-readable diagnostic string containing metadata details.
      *
@@ -232,6 +237,7 @@ public class HeifParser extends AbstractImageParser
 
         catch (Exception exc)
         {
+            sb.append("Error generating diagnostics: ").append(exc.getMessage()).append(System.lineSeparator());
             LOGGER.error("Diagnostics failed for file [" + getImageFile() + "]", exc);
         }
 

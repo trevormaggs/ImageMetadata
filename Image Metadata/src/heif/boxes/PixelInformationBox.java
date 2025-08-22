@@ -1,28 +1,29 @@
 package heif.boxes;
 
 import java.util.Arrays;
-
 import common.SequentialByteReader;
+import logger.LogFactory;
 
 /**
  * Represents the {@code pixi} (Pixel Information Box), which provides bit depth and number of
  * channels for a reconstructed image.
- * 
+ *
  * <p>
  * Specification Reference: ISO/IEC 23008-12:2017 on Page 13.
  * </p>
- * 
+ *
  * <p>
  * <strong>API Note:</strong> Additional testing is required to validate the reliability and
  * robustness of this implementation.
  * </p>
- * 
+ *
  * @author Trevor Maggs
  * @version 1.0
  * @since 13 August 2025
  */
 public class PixelInformationBox extends FullBox
 {
+    private static final LogFactory LOGGER = LogFactory.getLogger(PixelInformationBox.class);
     private final int numChannels;
     private final int[] bitsPerChannel;
 
@@ -33,7 +34,7 @@ public class PixelInformationBox extends FullBox
      *        the parent {@link Box} containing size and type information
      * @param reader
      *        the reader for parsing box content
-     * 
+     *
      * @throws IllegalStateException
      *         if malformed data is encountered
      */
@@ -81,43 +82,17 @@ public class PixelInformationBox extends FullBox
     }
 
     /**
-     * Returns a string representation of this {@code PixelInformationBox} resource.
+     * Logs a single diagnostic line for this box at the debug level.
      *
-     * @return a formatted string describing the box contents
+     * <p>
+     * This is useful when traversing the box tree of a HEIF/ISO-BMFF structure for debugging or
+     * inspection purposes.
+     * </p>
      */
     @Override
-    public String toString()
+    public void logBoxInfo()
     {
-        return toString(null);
-    }
-
-    /**
-     * Returns a human-readable debug string, summarising structured references associated with this
-     * HEIF-based file. Useful for logging or diagnostics.
-     *
-     * @param prefix
-     *        Optional heading or label to prepend. Can be {@code null}.
-     * 
-     * @return A formatted string suitable for debugging, inspection, or textual analysis
-     */
-    @Override
-    public String toString(String prefix)
-    {
-        StringBuilder sb = new StringBuilder();
-
-        if (prefix != null && !prefix.isEmpty())
-        {
-            sb.append(prefix);
-        }
-
-        for (int i = 0; i < getHierarchyDepth(); i++)
-        {
-            sb.append("\t");
-        }
-
-        sb.append(String.format("%s '%s': numChannels=%s, bitsPerChannel=%s", this.getClass().getSimpleName(), getTypeAsString(), numChannels, Arrays.toString(bitsPerChannel)));
-        sb.append(System.lineSeparator());
-
-        return sb.toString();
+        String tab = Box.repeatPrint("\t", getHierarchyDepth());
+        LOGGER.debug(String.format("%s%s '%s': numChannels=%s, bitsPerChannel=%s", tab, this.getClass().getSimpleName(), getTypeAsString(), numChannels, Arrays.toString(bitsPerChannel)));
     }
 }

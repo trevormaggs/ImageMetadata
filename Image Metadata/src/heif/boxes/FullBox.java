@@ -2,6 +2,7 @@ package heif.boxes;
 
 import java.util.BitSet;
 import common.SequentialByteReader;
+import logger.LogFactory;
 
 /**
  * This code creates a complete class that stores ubiquitous high-level data applicable for the
@@ -18,6 +19,7 @@ import common.SequentialByteReader;
  */
 public class FullBox extends Box
 {
+    private static final LogFactory LOGGER = LogFactory.getLogger(FullBox.class);
     private final int version;
     private final BitSet flagBit;
 
@@ -135,42 +137,17 @@ public class FullBox extends Box
     }
 
     /**
-     * Returns a string representation of this {@code FullBox}.
+     * Logs a single diagnostic line for this box at the debug level.
      *
-     * @return a formatted string describing the box contents.
+     * <p>
+     * This is useful when traversing the box tree of a HEIF/ISO-BMFF structure for debugging or
+     * inspection purposes.
+     * </p>
      */
     @Override
-    public String toString()
+    public void logBoxInfo()
     {
-        return toString(null);
-    }
-
-    /**
-     * Returns a human-readable debug string, summarising structured references associated with this
-     * HEIF-based file. Useful for logging or diagnostics.
-     *
-     * @param prefix
-     *        Optional heading or label to prepend. Can be null
-     * 
-     * @return a formatted string suitable for debugging, inspection, or textual analysis
-     */
-    @Override
-    public String toString(String prefix)
-    {
-        StringBuilder sb = new StringBuilder();
-
-        if (prefix != null && !prefix.isEmpty())
-        {
-            sb.append(prefix);
-        }
-
-        for (int i = 0; i < getHierarchyDepth(); i++)
-        {
-            sb.append("\t");
-        }
-
-        sb.append(String.format("%s '%s':\t\t\t\t\t(%s)", this.getClass().getSimpleName(), getTypeAsString(), getHeifType().getBoxCategory()));
-
-        return sb.toString();
+        String tab = Box.repeatPrint("\t", getHierarchyDepth());
+        LOGGER.debug(String.format("%s%s '%s':%s(%s)", tab, this.getClass().getSimpleName(), getTypeAsString(), tab, getHeifType().getBoxCategory()));
     }
 }

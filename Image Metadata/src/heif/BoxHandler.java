@@ -434,6 +434,7 @@ public class BoxHandler implements ImageHandler, Iterable<Box>
         {
             private final Deque<Box> stack = new ArrayDeque<>();
 
+            // Instance initialiser block
             {
                 List<Box> roots = getTopLevelBoxes();
 

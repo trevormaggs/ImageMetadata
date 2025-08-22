@@ -21,7 +21,7 @@ import batch.BatchMetadataUtils;
  * <p>
  * <strong>Usage:</strong>
  * </p>
- * 
+ *
  * <ul>
  * <li>Subclass this to support format-specific parsing</li>
  * <li>Use {@link #readMetadata()} to trigger extraction</li>
@@ -30,7 +30,7 @@ import batch.BatchMetadataUtils;
  * <p>
  * <b>Example</b>
  * </p>
- * 
+ *
  * <pre>
  * AbstractImageParser parser = new JpgParser(Paths.get("image.jpg"));
  * Metadata metadata = parser.readMetadata();
@@ -49,10 +49,10 @@ public abstract class AbstractImageParser
 
     /**
      * Constructs an image parser.
-     * 
+     *
      * @param fpath
      *        the path to the image file to be parsed
-     * 
+     *
      * @throws IllegalStateException
      *         if the specified file is null
      */
@@ -82,9 +82,6 @@ public abstract class AbstractImageParser
      *
      * @return A formatted string containing file path, creation time, last access time, last
      *         modified time, and image format
-     * 
-     * @throws IOException
-     *         if a file system error occurs while reading the attributes
      */
     public String formatDiagnosticString()
     {
@@ -132,7 +129,7 @@ public abstract class AbstractImageParser
      * Reads and extracts metadata from the image file.
      *
      * @return a {@link Metadata} container with parsed metadata
-     * 
+     *
      * @throws ImageReadErrorException
      *         if a parsing error occurs
      * @throws IOException

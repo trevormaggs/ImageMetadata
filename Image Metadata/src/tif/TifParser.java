@@ -200,16 +200,14 @@ public class TifParser extends AbstractImageParser
                 {
                     sb.append("Directory Type - ")
                             .append(ifd.getDirectoryType().getDescription())
-                            .append(" (")
-                            .append(ifd.length())
-                            .append(" entries)")
-                            .append(System.lineSeparator())
+                            .append(String.format(" (%d entries)%n", ifd.length()))
                             .append(DIVIDER)
                             .append(System.lineSeparator());
 
                     for (EntryIFD entry : ifd)
                     {
                         String value = ifd.getStringValue(entry);
+
                         sb.append(String.format(FMT, "Tag Name", entry.getTag() + " (Tag ID: " + String.format("0x%04X", entry.getTagID()) + ")"));
                         sb.append(String.format(FMT, "Field Type", entry.getFieldType() + " (count: " + entry.getCount() + ")"));
                         sb.append(String.format(FMT, "Value", (value == null || value.isEmpty() ? "Empty" : value)));

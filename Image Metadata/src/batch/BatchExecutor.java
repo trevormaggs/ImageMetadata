@@ -21,7 +21,6 @@ import java.util.TreeSet;
 import common.AbstractImageParser;
 import common.DateParser;
 import common.ImageParserFactory;
-import common.ImageReadErrorException;
 import common.Metadata;
 import common.SystemInfo;
 import logger.LogFactory;
@@ -304,15 +303,22 @@ public class BatchExecutor implements Batchable, Iterable<MediaFile>
                 try
                 {
                     AbstractImageParser parser = ImageParserFactory.getParser(fpath);
-                    Date metadataDate = findDateTaken(parser, fpath);
-                    FileTime modifiedTime = selectDateTaken(metadataDate, fpath, attr.lastModifiedTime(), userDate, dateOffsetUpdate, forcedTest);
+                    Metadata<?> meta = parser.readMetadata();
+                    Date metadataDate = findDateTaken(meta);
+
+                    if (metadataDate == null)
+                    {
+                        LOGGER.info("No EXIF/metadata date found for [" + fpath + "]");
+                    }
+
+                    FileTime modifiedTime = prioritiseDateTaken(metadataDate, fpath, attr.lastModifiedTime(), userDate, dateOffsetUpdate, forcedTest);
                     MediaFile media = new MediaFile(fpath, modifiedTime, parser.getImageFormat(), (metadataDate == null), forcedTest);
 
                     if (media != null)
                     {
                         imageSet.add(media);
                     }
-                    
+
                     // TESTING
                     System.out.printf("%s\n", parser.formatDiagnosticString());
                 }
@@ -326,45 +332,37 @@ public class BatchExecutor implements Batchable, Iterable<MediaFile>
             }
 
             /**
-             * Finds the best fit {@code Date Taken} time-stamp from the Exif data segment within
-             * the specified file. If the relevant data is found, a new {@link MediaFile} object is
-             * returned with the desired information.
+             * Attempts to find best available {@code Date Taken} time-stamp from the specified
+             * metadata. The value is extracted from either:
+             * 
+             * <ul>
+             * <li>the Exif payload in TIFF-based metadata, for example: JPG, TIFF, HEIF or,</li>
+             * <li>a textual chunk in PNG metadata</li>
+             * </ul>
              *
-             * @param fpath
-             *        the path of the file to be processed
-             *
-             * @return a Date object with the populated {@code Date Taken} time-stamp, otherwise
-             *         null if no relevant information is found
-             *
-             * @throws IOException
-             *         if an error occurs while reading the file
-             * @throws ImageReadErrorException
-             *         if any image parsing problems occur
+             * @param meta
+             *        the metadata instance to inspect (may be null)
+             * 
+             * @return the best available Date Taken time-stamp, or null if none found
              */
-            private Date findDateTaken(AbstractImageParser parser, Path fpath) throws ImageReadErrorException, IOException
+            private Date findDateTaken(Metadata<?> meta)
             {
-                Date metadataDate = null;
-                Metadata<?> meta = parser.readMetadata();
-
-                if (meta != null && meta.hasMetadata())
+                if (meta == null || !meta.hasMetadata())
                 {
-                    if (meta instanceof MetadataTIF)
-                    {
-                        metadataDate = extractExifDate((MetadataTIF) meta);
-                    }
-
-                    else if (meta instanceof MetadataPNG)
-                    {
-                        metadataDate = extractPngDate((MetadataPNG<?>) meta);
-                    }
+                    return null;
                 }
 
-                if (metadataDate == null)
+                if (meta instanceof MetadataTIF)
                 {
-                    LOGGER.info("No EXIF/metadata date found for [" + fpath + "]");
+                    return extractExifDate((MetadataTIF) meta);
                 }
 
-                return metadataDate;
+                else if (meta instanceof MetadataPNG)
+                {
+                    return extractPngDate((MetadataPNG<?>) meta);
+                }
+
+                return null;
             }
 
             /**
@@ -395,7 +393,7 @@ public class BatchExecutor implements Batchable, Iterable<MediaFile>
              *
              * @return a {@link FileTime} representing the resolved "Date Taken" value
              */
-            private FileTime selectDateTaken(Date metadataDate, Path fpath, FileTime modifiedTime, String userDateTime, long dateOffset, boolean force)
+            private FileTime prioritiseDateTaken(Date metadataDate, Path fpath, FileTime modifiedTime, String userDateTime, long dateOffset, boolean force)
             {
                 // 1. User-provided date takes precedence if forced
                 if (force)
@@ -453,7 +451,6 @@ public class BatchExecutor implements Batchable, Iterable<MediaFile>
 
                 return Optional.of(FileTime.fromMillis(newTime));
             }
-
         };
     }
 
@@ -515,7 +512,7 @@ public class BatchExecutor implements Batchable, Iterable<MediaFile>
      * @param png
      *        the {@code MetadataPNG} instance
      *
-     * @return a {@code Date} object from the PNG data, or {@code null} if not found
+     * @return a Date object from the PNG data, or null if not found
      */
     private static Date extractPngDate(MetadataPNG<?> png)
     {

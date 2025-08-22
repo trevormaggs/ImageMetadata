@@ -24,6 +24,7 @@ import tif.TagEntries.Taggable;
 public class MetadataPNG<T extends BaseMetadata> implements Metadata<T>
 {
     private final List<T> components;
+    //private final Map<Class<?>, DirectoryLookupStrategy<T, ?>> strategies;
 
     /**
      * Constructs an empty PNG metadata container.
@@ -31,6 +32,13 @@ public class MetadataPNG<T extends BaseMetadata> implements Metadata<T>
     public MetadataPNG()
     {
         this.components = new ArrayList<>();
+        //this.strategies = new ConcurrentHashMap<>();
+
+        // Register the lookup strategies
+        //strategies.put(ChunkType.Category.class, new CategoryLookupStrategy<>());
+        //strategies.put(Taggable.class, new TaggableLookupStrategy<>());
+        //strategies.put(TextKeyword.class, new TextKeywordLookupStrategy<>());
+        //strategies.put(Class.class, new ClassLookupStrategy<>());
 
         /*
          * Some examples of exiftool usages

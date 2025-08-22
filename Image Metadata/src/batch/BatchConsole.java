@@ -51,7 +51,7 @@ public final class BatchConsole extends BatchExecutor
         super(builder);
 
         start();
-        //updateAndCopyFiles();
+        // updateAndCopyFiles();
     }
 
     /**
@@ -125,73 +125,6 @@ public final class BatchConsole extends BatchExecutor
                 // System.err.printf("%s\t%s\n", media.getPath(), copied);
                 Files.copy(media.getPath(), copied, StandardCopyOption.COPY_ATTRIBUTES);
             }
-
-            BatchMetadataUtils.changeFileTimeProperties(copied, captureTime);
-        }
-    }
-
-    public void updateAndCopyFiles2() throws IOException
-    {
-        int k = 0;
-        Path copied;
-        FileTime captureTime;
-
-        for (MediaFile media : this)
-        {
-            String originalFileName = media.getPath().getFileName().toString();
-            String fileExtension = media.getMediaFormat().getFileExtensionName();
-            String fname;
-
-            k++;
-
-            // ConsoleBar.updateProgressBar(k, getImageCount());
-
-            if (media.isVideoFormat())
-            {
-                if (skipVideoFiles())
-                {
-                    LOGGER.info("File [" + media.getPath() + "] skipped");
-                    continue;
-                }
-
-                fname = originalFileName.toLowerCase();
-                LOGGER.info("File [" + media.getPath() + "] is a video media type. Copied only");
-            }
-
-            else
-            {
-                fname = String.format("%s%d%s.%s", getPrefix(), k, (embedDateTime() ? DF.format(media.getTimestamp()) : ""), fileExtension);
-            }
-
-            copied = getTargetDirectory().resolve(fname);
-            captureTime = FileTime.fromMillis(media.getTimestamp());
-
-            if (media.isMetadataEmpty())
-            {
-                if (media.isJPG())
-                {
-                    BatchMetadataUtils.updateDateTakenMetadataJPG(media.getPath().toFile(), copied.toFile(), captureTime);
-                }
-
-                else if (media.isTIF())
-                {
-                    BatchMetadataUtils.updateDateTakenMetadataTIF(media.getPath().toFile(), copied.toFile(), captureTime);
-                }
-
-                else if (media.isPNG())
-                {
-                    BatchMetadataUtils.updateDateTakenTextualPNG(media.getPath().toFile(), copied.toFile(), captureTime);
-                }
-
-                else Files.copy(media.getPath(), copied, StandardCopyOption.COPY_ATTRIBUTES);
-            }
-
-            else
-            {
-                Files.copy(media.getPath(), copied, StandardCopyOption.COPY_ATTRIBUTES);
-            }
-
-            // System.err.printf("%s\t%s\n", media.getPath(), copied);
 
             BatchMetadataUtils.changeFileTimeProperties(copied, captureTime);
         }
@@ -309,7 +242,8 @@ public final class BatchConsole extends BatchExecutor
                 .descending(cli.existsOption("--desc"))
                 .userDate(cli.getValueByOption("-m"))
                 .embedDateTime(cli.existsOption("-e"))
-                .skipVideo(cli.existsOption("-k"));
+                .skipVideo(cli.existsOption("-k"))
+                .debug(true);
 
         if (cli.existsOption("-f"))
         {
@@ -318,7 +252,7 @@ public final class BatchConsole extends BatchExecutor
             {
                 files[k] = cli.getValueByOption("-f", k);
             }
-            
+
             batch.fileSet(files);
         }
 

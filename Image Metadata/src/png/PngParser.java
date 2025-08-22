@@ -154,7 +154,6 @@ public class PngParser extends AbstractImageParser
     @Override
     public Metadata<? extends BaseMetadata> readMetadata() throws ImageReadErrorException
     {
-        // For full metadata parsing (image properties + text), include IHDR, sRGB, etc.
         EnumSet<ChunkType> chunkSet = EnumSet.of(ChunkType.tEXt, ChunkType.zTXt, ChunkType.iTXt, ChunkType.eXIf);
         Metadata<BaseMetadata> png = new MetadataPNG<>();
 
@@ -223,8 +222,7 @@ public class PngParser extends AbstractImageParser
     {
         if (metadata == null)
         {
-            LOGGER.warn("Metadata information has not been parsed yet.");
-
+            LOGGER.warn("Metadata information has not been parsed yet");
             return new MetadataPNG<>();
         }
 
@@ -267,7 +265,6 @@ public class PngParser extends AbstractImageParser
             {
                 MetadataPNG<?> png = (MetadataPNG<?>) meta;
 
-                // --- Textual chunks ---
                 if (png.hasTextualData())
                 {
                     sb.append("Textual Chunks").append(System.lineSeparator());
@@ -305,7 +302,6 @@ public class PngParser extends AbstractImageParser
 
                 sb.append(System.lineSeparator());
 
-                // --- Exif chunks ---
                 if (png.hasExifData())
                 {
                     Object obj = png.getDirectory(MetadataTIF.class);
@@ -321,8 +317,7 @@ public class PngParser extends AbstractImageParser
                         {
                             sb.append("Directory Type - ")
                                     .append(ifd.getDirectoryType().getDescription())
-                                    .append(System.lineSeparator())
-                                    .append(System.lineSeparator());
+                                    .append(System.lineSeparator()).append(System.lineSeparator());
 
                             for (EntryIFD entry : ifd)
                             {

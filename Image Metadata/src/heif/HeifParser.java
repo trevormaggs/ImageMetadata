@@ -15,8 +15,10 @@ import common.Metadata;
 import common.SequentialByteReader;
 import heif.boxes.Box;
 import logger.LogFactory;
+import tif.DirectoryIFD;
 import tif.MetadataTIF;
 import tif.TifParser;
+import tif.DirectoryIFD.EntryIFD;
 
 /**
  * Parses HEIF/HEIC image files and extracts embedded metadata.
@@ -81,7 +83,7 @@ public class HeifParser extends AbstractImageParser
 
         for (Box box : handler)
         {
-            // System.out.printf("%s", box.toString(null));
+            //System.out.printf("LOOK %s", box.toString(null));
             LOGGER.debug(String.format("%s", box.toString(null)));
         }
     }
@@ -144,7 +146,7 @@ public class HeifParser extends AbstractImageParser
             }
         }
 
-        // handler.displayHierarchy();
+        handler.displayHierarchy();
         // displayDiagnosticOutput();
 
         return metadata;
@@ -160,8 +162,7 @@ public class HeifParser extends AbstractImageParser
     {
         if (metadata == null)
         {
-            LOGGER.warn("Metadata information has not been parsed yet.");
-
+            LOGGER.warn("Metadata information has not been parsed yet");
             return new MetadataTIF();
         }
 
@@ -177,5 +178,63 @@ public class HeifParser extends AbstractImageParser
     public DigitalSignature getImageFormat()
     {
         return DigitalSignature.HEIF;
+    }
+    
+    /**
+     * Generates a human-readable diagnostic string containing metadata details.
+     *
+     * <p>
+     * Currently this includes EXIF directory types, entry tags, field types, counts, and values.
+     * </p>
+     *
+     * @return a formatted string suitable for diagnostics, logging, or inspection
+     */
+    @Override
+    public String formatDiagnosticString()
+    {
+        Metadata<?> meta = getSafeMetadata();
+        StringBuilder sb = new StringBuilder();
+
+        try
+        {
+            sb.append("\t\t\tHEIF Metadata Summary").append(System.lineSeparator()).append(System.lineSeparator());
+            sb.append(super.formatDiagnosticString());
+
+            if (meta instanceof MetadataTIF && meta.hasExifData())
+            {
+                MetadataTIF tif = (MetadataTIF) meta;
+
+                for (DirectoryIFD ifd : tif)
+                {
+                    sb.append("Directory Type - ")
+                            .append(ifd.getDirectoryType().getDescription())
+                            .append(String.format(" (%d entries)%n", ifd.length()))
+                            .append(DIVIDER)
+                            .append(System.lineSeparator());
+
+                    for (EntryIFD entry : ifd)
+                    {
+                        String value = ifd.getStringValue(entry);
+
+                        sb.append(String.format(FMT, "Tag Name", entry.getTag() + " (Tag ID: " + String.format("0x%04X", entry.getTagID()) + ")"));
+                        sb.append(String.format(FMT, "Field Type", entry.getFieldType() + " (count: " + entry.getCount() + ")"));
+                        sb.append(String.format(FMT, "Value", (value == null || value.isEmpty() ? "Empty" : value)));
+                        sb.append(System.lineSeparator());
+                    }
+                }
+            }
+
+            else
+            {
+                sb.append("No EXIF metadata found").append(System.lineSeparator());
+            }
+        }
+
+        catch (Exception exc)
+        {
+            LOGGER.error("Diagnostics failed for file [" + getImageFile() + "]", exc);
+        }
+
+        return sb.toString();
     }
 }

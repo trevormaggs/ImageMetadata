@@ -20,6 +20,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import common.AbstractImageParser;
 import common.DateParser;
+import common.DigitalSignature;
 import common.ImageParserFactory;
 import common.Metadata;
 import common.SystemInfo;
@@ -312,12 +313,14 @@ public class BatchExecutor implements Batchable, Iterable<MediaFile>
                     }
 
                     // TESTING
-                    System.out.printf("%s\n", parser.formatDiagnosticString());
+
+                    if (parser.getImageFormat() == DigitalSignature.JPG) System.out.printf("%s\n", parser.formatDiagnosticString());
                 }
 
                 catch (Exception exc)
                 {
                     LOGGER.error("Unexpected error while processing [" + fpath + "]", exc);
+                    LOGGER.error("BOOM: [" + exc.getMessage() + "]", exc);
                 }
 
                 return FileVisitResult.CONTINUE;

@@ -234,7 +234,7 @@ public class Box
     /**
      * Generates a line of padded characters to n of times.
      * 
-     * @param subject
+     * @param ch
      *        string to be padded
      * @param n
      *        number of times to pad in integer form

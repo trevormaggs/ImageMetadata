@@ -225,8 +225,6 @@ public final class BatchConsole extends BatchExecutor
      *
      * @param arguments
      *        an array of strings containing the command line arguments
-     *
-     * @return an instance of BatchConsole
      */
     static void readCommand(String[] arguments)
     {

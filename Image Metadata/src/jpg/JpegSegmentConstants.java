@@ -1,68 +1,171 @@
 package jpg;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * This enumeration represents the recognised segment identifiers often present in JPEG files.
  * 
- * Refer to the following resources for more information:
- * https://www.media.mit.edu/pia/Research/deepview/exif.html
- * https://download.osgeo.org/libtiff/doc/TIFF6.pdf
- * http://www.ozhiker.com/electronics/pjmt/jpeg_info/app_segments.html
- * http://www.sno.phy.queensu.ca/~phil/exiftool/TagNames/JPEG.html
- * https://docs.fileformat.com/image/jpeg/
+ * <p>
+ * JPEG files are structured as a series of segments, each beginning with a marker (0xFF) followed
+ * by a flag byte. Some segments, especially APPn segments, can contain metadata such as EXIF, XMP,
+ * ICC profiles, or Photoshop-specific data.
+ * </p>
  * 
- * @author Trevor Maggs
- * @version 1.0
- * @since 13 August 2025
+ * <p>
+ * The enum provides helper methods to identify segment types, determine APP numbers, and quickly
+ * check if a segment may contain metadata.
+ * </p>
+ * 
+ * @author Trevor
+ * @version 1.1
+ * @since 22 August 2025
  */
 public enum JpegSegmentConstants
 {
-    /* Marker for the start of the image data */
     START_OF_IMAGE(0xFF, 0xD8, "Start of Image"),
-
-    /* Segment identifier for APP0, which usually includes JFIF or JFXX */
-    APP0_SEGMENT(0xFF, 0xE0, "APP0 Segment for JFIF"),
-
-    /* Segment identifier for APP1, typically containing Exif data */
-    APP1_SEGMENT(0xFF, 0xE1, "APP1 Segment for EXIF"),
-
-    /* Start Of Scan */
-    START_OF_STREAM(0xFF, 0xDA, "Start Of Stream"),
-
-    /* JPEG comment section */
+    START_OF_STREAM(0xFF, 0xDA, "Start Of Scan"),
+    END_OF_IMAGE(0xFF, 0xD9, "End of Image"),
     COMMENT(0xFF, 0xFE, "Comment Segment for JPG"),
 
-    /* Marker for the end of the image data */
-    END_OF_IMAGE(0xFF, 0xD9, "End of Image");
+    APP0_SEGMENT(0xFF, 0xE0, "APP0 Segment for JFIF"),
+    APP1_SEGMENT(0xFF, 0xE1, "APP1 Segment for EXIF"),
+    APP2_SEGMENT(0xFF, 0xE2, "APP2 Segment (ICC)"),
+    APP3_SEGMENT(0xFF, 0xE3, "APP3 Segment"),
+    APP4_SEGMENT(0xFF, 0xE4, "APP4 Segment"),
+    APP5_SEGMENT(0xFF, 0xE5, "APP5 Segment"),
+    APP6_SEGMENT(0xFF, 0xE6, "APP6 Segment"),
+    APP7_SEGMENT(0xFF, 0xE7, "APP7 Segment"),
+    APP8_SEGMENT(0xFF, 0xE8, "APP8 Segment"),
+    APP9_SEGMENT(0xFF, 0xE9, "APP9 Segment"),
+    APP10_SEGMENT(0xFF, 0xEA, "APP10 Segment"),
+    APP11_SEGMENT(0xFF, 0xEB, "APP11 Segment"),
+    APP12_SEGMENT(0xFF, 0xEC, "APP12 Segment"),
+    APP13_SEGMENT(0xFF, 0xED, "APP13 Segment (Photoshop)"),
+    APP14_SEGMENT(0xFF, 0xEE, "APP14 Segment"),
+    APP15_SEGMENT(0xFF, 0xEF, "APP15 Segment");
 
-    private final byte marker;
-    private final byte flag;
-    private final String description;
+    public final byte marker;
+    public final byte flag;
+    public final String description;
 
-    JpegSegmentConstants(int first, int second, String desc)
+    private static final Map<Integer, JpegSegmentConstants> LOOKUP = new HashMap<>();
+
+    static
     {
-        marker = (byte) (first & 0xFF);
-        flag = (byte) (second & 0xFF);
-        description = desc;
+        for (JpegSegmentConstants seg : values())
+        {
+            int key = ((seg.marker & 0xFF) << 8) | (seg.flag & 0xFF);
+            LOOKUP.put(key, seg);
+        }
     }
 
-    public byte getMarker()
+    JpegSegmentConstants(int marker, int flag, String description)
     {
-        return marker;
-    }
-    
-    public byte getFlag()
-    {
-        return flag;
-    }
-    
-    public String getDescription()
-    {
-        return description;
+        this.marker = (byte) (marker & 0xFF);
+        this.flag = (byte) (flag & 0xFF);
+        this.description = description;
     }
 
+    /**
+     * Retrieves a segment constant from its marker and flag bytes.
+     * 
+     * @param marker
+     *        the first byte (0xFF)
+     * @param flag
+     *        the second byte identifying the segment
+     * @return the corresponding {@code JpegSegmentConstants2 }, or {@code null} if unknown
+     */
+    public static JpegSegmentConstants fromBytes(byte marker, byte flag)
+    {
+        int key = ((marker & 0xFF) << 8) | (flag & 0xFF);
+
+        return LOOKUP.get(key);
+    }
+
+    /**
+     * Returns true if this segment is an APPn segment (0xFFE0–0xFFEF).
+     * 
+     * @return true if an APP segment
+     */
+    public boolean isAppSegment()
+    {
+        int unsignedFlag = flag & 0xFF;
+
+        return unsignedFlag >= 0xE0 && unsignedFlag <= 0xEF;
+    }
+
+    /**
+     * Returns the APP segment number (0–15), or -1 if not an APP segment.
+     * 
+     * @return APP number, or -1
+     */
+    public int getAppNumber()
+    {
+        if (!isAppSegment())
+        {
+            return -1;
+        }
+
+        return (flag & 0xFF) - 0xE0;
+    }
+
+    /**
+     * Returns true if this segment is a standard marker (non-APP).
+     * 
+     * @return true if standard marker
+     */
+    public boolean isStandardMarker()
+    {
+        return !isAppSegment();
+    }
+
+    /**
+     * Indicates whether this segment may contain metadata, such as EXIF, ICC profile, or Photoshop
+     * info.
+     * 
+     * @return true if likely to contain metadata
+     */
+    public boolean canContainMetadata()
+    {
+        if (!isAppSegment())
+        {
+            return false;
+        }
+
+        switch (getAppNumber())
+        {
+            case 1: // APP1 - EXIF/XMP
+            case 2: // APP2 - ICC profile
+            case 13: // APP13 - Photoshop
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Checks whether a given byte pair from a JPEG stream represents a metadata-carrying segment.
+     * 
+     * @param marker
+     *        the first byte (should be 0xFF)
+     * @param flag
+     *        the second byte identifying the segment
+     * @return true if the segment is an APP segment that may contain metadata
+     */
+    public static boolean isMetadataSegment(byte marker, byte flag)
+    {
+        JpegSegmentConstants seg = fromBytes(marker, flag);
+
+        return seg != null && seg.canContainMetadata();
+    }
+
+    /**
+     * Displays all defined JPEG markers with their description.
+     */
     public static void displayAllMarkers()
     {
-        for (JpegSegmentConstants segment : JpegSegmentConstants.values())
+        for (JpegSegmentConstants segment : values())
         {
             System.out.printf("%02X %02X\t%s%n", segment.marker, segment.flag, segment.description);
         }

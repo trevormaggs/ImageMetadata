@@ -120,7 +120,7 @@ public class WebpParser extends AbstractImageParser
 
         if (!ext.equalsIgnoreCase("webp"))
         {
-            LOGGER.warn("File [" + getImageFile().getFileName() + "] has an incorrect extension name. Should be [webp], but found [" + ext + "]");
+            LOGGER.warn("Incorrect extension name detected in file [" + getImageFile().getFileName() + "]. Should be [webp], but found [" + ext + "]");
         }
     }
 

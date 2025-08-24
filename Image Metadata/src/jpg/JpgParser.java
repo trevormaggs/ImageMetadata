@@ -1,6 +1,5 @@
 package jpg;
 
-import java.awt.Point;
 import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
@@ -63,7 +62,7 @@ public class JpgParser extends AbstractImageParser
 
         if (!ext.equalsIgnoreCase("jpg"))
         {
-            LOGGER.warn("File [" + getImageFile().getFileName() + "] has an incorrect extension name. Should be [jpg], but found [" + ext + "]");
+            LOGGER.warn("Incorrect extension name detected in file [" + getImageFile().getFileName() + "]. Should be [jpg], but found [" + ext + "]");
         }
     }
 
@@ -82,30 +81,22 @@ public class JpgParser extends AbstractImageParser
     }
 
     /**
-     * Reads the next JPEG segment marker from the provided input stream.
+     * Reads the next JPEG segment marker from the specified input stream.
      *
      * <p>
-     * JPEG files consist of segments, each starting with a 0xFF marker byte followed by a flag byte
-     * that identifies the segment type. Sometimes extra 0xFF bytes (fill bytes or padding) can
-     * appear before the actual flag, this method skips them to locate the true segment flag.
-     * </p>
-     *
-     * <p>
-     * This method does <strong>not</strong> read the segment payload, only the marker and flag
-     * bytes.
+     * This method scans forward until it finds a valid marker sequence (0xFF followed by a non-0xFF
+     * flag). It does <strong>not</strong> read the segment payload, only the marker and flag bytes.
      * </p>
      *
      * @param stream
      *        the input stream of the JPEG file, positioned at the current read location
-     * @return an Optional&lt;Point&gt; where x is the marker byte (always 0xFF) and y is the
-     *         segment
-     *         flag, returns Optional.empty() if the end of file (EOF) is reached before a valid
-     *         segment is found
-     * 
+     * @return an {@code Optional<JpegSegmentConstants>} representing the marker (always 0xFF) and
+     *         its flag, or {@code Optional.empty()} if end-of-file is reached
+     *
      * @throws IOException
      *         if an I/O error occurs while reading from the stream
      */
-    private Optional<Point> fetchNextSegment(ImageFileInputStream stream) throws IOException
+    private Optional<JpegSegmentConstants> fetchNextSegment(ImageFileInputStream stream) throws IOException
     {
         while (true)
         {
@@ -116,7 +107,6 @@ public class JpgParser extends AbstractImageParser
             {
                 marker = stream.readUnsignedByte();
             }
-
             catch (EOFException eof)
             {
                 return Optional.empty();
@@ -138,9 +128,9 @@ public class JpgParser extends AbstractImageParser
             }
 
             /*
-             * In some cases, JPEG allows multiple 0xFF bytes (fill bytes) before the actual segment
-             * flag. These are not part of any segment and should be skipped to find the next true
-             * segment type. Note, fill bytes can also mean padding bytes.
+             * In some cases, JPEG allows multiple 0xFF bytes (fill or padding bytes)
+             * before the actual segment flag. These are not part of any segment and
+             * should be skipped to find the next true segment type.
              */
             while (flag == 0xFF)
             {
@@ -155,7 +145,7 @@ public class JpgParser extends AbstractImageParser
                 }
             }
 
-            return Optional.of(new Point(marker, flag));
+            return Optional.ofNullable(JpegSegmentConstants.fromBytes((byte) marker, (byte) flag));
         }
     }
 
@@ -165,7 +155,7 @@ public class JpgParser extends AbstractImageParser
      * <p>
      * JPEG files may contain one or more APP1 segments with EXIF data. This method can either:
      * </p>
-     * 
+     *
      * <ul>
      * <li>Stop after reading the first valid EXIF APP1 segment ({@code readAll = false}), or</li>
      * <li>Collect and concatenate all EXIF APP1 segments ({@code readAll = true})</li>
@@ -183,7 +173,7 @@ public class JpgParser extends AbstractImageParser
      *        if false, stops after the first valid EXIF APP1 segment
      * @return an Optional containing the concatenated EXIF payload bytes, or Optional.empty() if no
      *         valid EXIF segments are found
-     * 
+     *
      * @throws IOException
      *         if an I/O error occurs while reading the stream
      */
@@ -194,18 +184,16 @@ public class JpgParser extends AbstractImageParser
 
         while (true)
         {
-            Optional<Point> optPoint = fetchNextSegment(stream);
+            Optional<JpegSegmentConstants> optSeg = fetchNextSegment(stream);
 
-            if (!optPoint.isPresent())
+            if (!optSeg.isPresent())
             {
                 break;
             }
 
-            Point p = optPoint.get();
+            JpegSegmentConstants segment = optSeg.get();
 
-            JpegSegmentConstants segment = JpegSegmentConstants.fromBytes((byte) p.x, (byte) p.y);
-
-            if (segment == null)
+            if (segment == JpegSegmentConstants.UNKNOWN_SEGMENT)
             {
                 // Unknown segment - skip any existing payload
                 int len = stream.readUnsignedShort() - 2;
@@ -215,10 +203,12 @@ public class JpgParser extends AbstractImageParser
                     stream.skip(len);
                 }
 
+                LOGGER.debug("Skipping unknown segment [0xFF" + String.format("%02X", segment.flag & 0xFF) + "] and length [" + len + "]");
+
                 continue;
             }
 
-            if (segment == JpegSegmentConstants.START_OF_IMAGE)
+            else if (segment == JpegSegmentConstants.START_OF_IMAGE)
             {
                 // SOI
                 continue;
@@ -245,10 +235,9 @@ public class JpgParser extends AbstractImageParser
 
             else
             {
-                int segLen = stream.readUnsignedShort();
-                int payloadLen = segLen - 2;
+                int length = stream.readUnsignedShort() - 2;
 
-                if (payloadLen < 0)
+                if (length < 0)
                 {
                     // corrupt segment, try to resync
                     continue;
@@ -256,7 +245,7 @@ public class JpgParser extends AbstractImageParser
 
                 if (segment == JpegSegmentConstants.APP1_SEGMENT)
                 {
-                    byte[] payload = stream.readBytes(payloadLen);
+                    byte[] payload = stream.readBytes(length);
 
                     if (payload.length >= JPG_EXIF_IDENTIFIER.length && Arrays.equals(Arrays.copyOf(payload, JPG_EXIF_IDENTIFIER.length), JPG_EXIF_IDENTIFIER))
                     {
@@ -272,12 +261,18 @@ public class JpgParser extends AbstractImageParser
                             return Optional.of(exif); // stop at first segment
                         }
                     }
+
+                    else
+                    {
+                        LOGGER.debug("Skipping non-EXIF APP1 segment [0xFF" + String.format("%02X", segment.flag & 0xFF) + "] length [" + length + "]");
+                    }
                 }
 
-                else if (payloadLen > 0)
+                else if (length > 0)
                 {
                     // skip other segments
-                    stream.skip(payloadLen);
+                    stream.skip(length);
+                    LOGGER.debug("Skipping segment [" + segment.description + "] [0xFF" + String.format("%02X", segment.flag & 0xFF) + "] length [" + length + "]");
                 }
             }
 
@@ -294,19 +289,22 @@ public class JpgParser extends AbstractImageParser
             return Optional.empty();
         }
 
-        if (exifSegments.size() == 1)
+        else if (exifSegments.size() == 1)
         {
             return Optional.of(exifSegments.get(0));
         }
 
-        ByteArrayOutputStream baos = new ByteArrayOutputStream(totalLength);
-
-        for (byte[] seg : exifSegments)
+        else
         {
-            baos.write(seg, 0, seg.length);
-        }
+            ByteArrayOutputStream baos = new ByteArrayOutputStream(totalLength);
 
-        return Optional.of(baos.toByteArray());
+            for (byte[] seg : exifSegments)
+            {
+                baos.write(seg, 0, seg.length);
+            }
+
+            return Optional.of(baos.toByteArray());
+        }
     }
 
     /**
@@ -439,4 +437,135 @@ public class JpgParser extends AbstractImageParser
 
         return sb.toString();
     }
+
+    // TESTING
+    private Optional<byte[]> readApp1ExifSegments2(ImageFileInputStream stream, boolean readAll) throws IOException
+    {
+        int totalLength = 0;
+        List<byte[]> exifSegments = new ArrayList<>();
+
+        while (true)
+        {
+            Optional<JpegSegmentConstants> optSeg = fetchNextSegment(stream);
+
+            if (!optSeg.isPresent())
+            {
+                break;
+            }
+
+            JpegSegmentConstants segment = optSeg.get();
+
+            switch (segment)
+            {
+                case START_OF_IMAGE:
+                // SOI - do nothing
+                break;
+
+                case END_OF_IMAGE:
+                case START_OF_STREAM:
+                    // EOI or SOS - stop parsing
+                    if (segment == JpegSegmentConstants.START_OF_STREAM)
+                    {
+                        int sosLen = stream.readUnsignedShort() - 2;
+
+                        if (sosLen > 0)
+                        {
+                            stream.skip(sosLen);
+                        }
+                    }
+                    return exifSegments.isEmpty() ? Optional.empty() : exifSegments.size() == 1 ? Optional.of(exifSegments.get(0)) : Optional.of(concatenateSegments(exifSegments, totalLength));
+
+                case APP1_SEGMENT:
+                    int length = stream.readUnsignedShort() - 2;
+                    if (length < 0)
+                     {
+                        break; // corrupt segment
+                    }
+
+                    byte[] payload = stream.readBytes(length);
+                    if (payload.length >= JPG_EXIF_IDENTIFIER.length && Arrays.equals(Arrays.copyOf(payload, JPG_EXIF_IDENTIFIER.length), JPG_EXIF_IDENTIFIER))
+                    {
+                        byte[] exif = Arrays.copyOfRange(payload, JPG_EXIF_IDENTIFIER.length, payload.length);
+
+                        exifSegments.add(exif);
+                        totalLength += exif.length;
+
+                        LOGGER.debug("Valid EXIF APP1 segment found. Length [" + exif.length + "]");
+
+                        if (!readAll)
+                        {
+                            return Optional.of(exif);
+                        }
+                    }
+
+                    else
+                    {
+                        LOGGER.debug("Skipping non-EXIF APP1 segment [0xFF" +
+                                String.format("%02X", segment.flag & 0xFF) + "] length [" + length + "]");
+                    }
+
+                break;
+
+                case UNKNOWN_SEGMENT:
+                    int unkLength = stream.readUnsignedShort() - 2;
+                    if (unkLength > 0)
+                    {
+                        stream.skip(unkLength);
+                    }
+
+                    LOGGER.debug("Skipping unknown segment [0xFF" + String.format("%02X", segment.flag & 0xFF) + "] and length [" + unkLength + "]");
+                break;
+
+                default:
+                    int otherLen = stream.readUnsignedShort() - 2;
+
+                    if (otherLen > 0)
+                    {
+                        stream.skip(otherLen);
+                        LOGGER.debug("Skipping segment [" + segment.description + "] [0xFF" +
+                                String.format("%02X", segment.flag & 0xFF) + "] length [" + otherLen + "]");
+                    }
+
+                break;
+            }
+        }
+
+        if (exifSegments.isEmpty())
+        {
+            LOGGER.info("No EXIF APP1 segments found in file [" + getImageFile() + "]");
+            return Optional.empty();
+        }
+
+        if (exifSegments.size() == 1)
+        {
+            return Optional.of(exifSegments.get(0));
+        }
+
+        return Optional.of(concatenateSegments(exifSegments, totalLength));
+    }
+
+    /**
+     * Helper method to concatenate multiple byte arrays.
+     */
+    private byte[] concatenateSegments(List<byte[]> segments, int totalLength)
+    {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream(totalLength);
+
+        for (byte[] seg : segments)
+        {
+            try
+            {
+                baos.write(seg);
+            }
+
+            catch (IOException e)
+            {
+                // This should not happen with ByteArrayOutputStream
+                LOGGER.error("Error concatenating EXIF segments", e);
+            }
+        }
+
+        return baos.toByteArray();
+    }
+
 }

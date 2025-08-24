@@ -43,7 +43,9 @@ public enum JpegSegmentConstants
     APP12_SEGMENT(0xFF, 0xEC, "APP12 Segment"),
     APP13_SEGMENT(0xFF, 0xED, "APP13 Segment (Photoshop)"),
     APP14_SEGMENT(0xFF, 0xEE, "APP14 Segment"),
-    APP15_SEGMENT(0xFF, 0xEF, "APP15 Segment");
+    APP15_SEGMENT(0xFF, 0xEF, "APP15 Segment"),
+
+    UNKNOWN_SEGMENT(0x00, 0x00, "Unknown"); // fallback for unmapped segments
 
     public final byte marker;
     public final byte flag;
@@ -80,7 +82,7 @@ public enum JpegSegmentConstants
     {
         int key = ((marker & 0xFF) << 8) | (flag & 0xFF);
 
-        return LOOKUP.get(key);
+        return LOOKUP.getOrDefault(key, UNKNOWN_SEGMENT);
     }
 
     /**
@@ -155,9 +157,7 @@ public enum JpegSegmentConstants
      */
     public static boolean isMetadataSegment(byte marker, byte flag)
     {
-        JpegSegmentConstants seg = fromBytes(marker, flag);
-
-        return seg != null && seg.canContainMetadata();
+        return fromBytes(marker, flag).canContainMetadata();
     }
 
     /**

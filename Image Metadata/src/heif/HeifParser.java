@@ -56,7 +56,7 @@ public class HeifParser extends AbstractImageParser
 
         if (!ext.equalsIgnoreCase("heic"))
         {
-            LOGGER.warn("File [" + getImageFile().getFileName() + "] has an incorrect extension name. Should be [heic], but found [" + ext + "]");
+            LOGGER.warn("Incorrect extension name detected in file [" + getImageFile().getFileName() + "]. Should be [heic], but found [" + ext + "]");
         }
     }
 

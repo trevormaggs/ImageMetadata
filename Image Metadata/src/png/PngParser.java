@@ -115,7 +115,7 @@ public class PngParser extends AbstractImageParser
 
         if (!ext.equalsIgnoreCase("png"))
         {
-            LOGGER.warn("File [" + getImageFile().getFileName() + "] has an incorrect extension name. Should be [png], but found [" + ext + "]");
+            LOGGER.warn("Incorrect extension name detected in file [" + getImageFile().getFileName() + "]. Should be [png], but found [" + ext + "]");
         }
     }
 

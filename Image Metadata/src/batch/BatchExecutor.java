@@ -314,7 +314,7 @@ public class BatchExecutor implements Batchable, Iterable<MediaFile>
 
                     // TESTING
 
-                    if (parser.getImageFormat() == DigitalSignature.JPG) System.out.printf("%s\n", parser.formatDiagnosticString());
+                    //if (parser.getImageFormat() == DigitalSignature.JPG) System.out.printf("%s\n", parser.formatDiagnosticString());
                 }
 
                 catch (Exception exc)

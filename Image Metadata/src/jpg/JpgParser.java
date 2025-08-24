@@ -567,5 +567,4 @@ public class JpgParser extends AbstractImageParser
 
         return baos.toByteArray();
     }
-
 }

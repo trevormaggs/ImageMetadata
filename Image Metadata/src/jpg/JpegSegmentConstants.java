@@ -13,8 +13,8 @@ import java.util.Map;
  * </p>
  * 
  * <p>
- * The enum also provides helper methods to identify segment types, determine APP numbers, and
- * quickly check if a segment may contain metadata.
+ * The enum provides helper methods to identify segment types, determine APP numbers, and quickly
+ * check if a segment may contain metadata.
  * </p>
  * 
  * @author Trevor

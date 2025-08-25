@@ -50,11 +50,11 @@ import tif.TifParser;
 public class JpgParserAdvanced extends AbstractImageParser
 {
     private static final LogFactory LOGGER = LogFactory.getLogger(JpgParserAdvanced.class);
-    public static final byte[] EXIF_IDENTIFIER = "Exif\0\0".getBytes(StandardCharsets.US_ASCII);
+    public static final byte[] EXIF_IDENTIFIER = "Exif\0\0".getBytes(StandardCharsets.UTF_8);
 
     // Identifiers for other common metadata formats in APP segments
-    public static final byte[] ICC_IDENTIFIER = "ICC_PROFILE\0".getBytes(StandardCharsets.US_ASCII);
-    public static final byte[] XMP_IDENTIFIER = "http://ns.adobe.com/xap/1.0/\0".getBytes(StandardCharsets.US_ASCII);
+    public static final byte[] ICC_IDENTIFIER = "ICC_PROFILE\0".getBytes(StandardCharsets.UTF_8);
+    public static final byte[] XMP_IDENTIFIER = "http://ns.adobe.com/xap/1.0/\0".getBytes(StandardCharsets.UTF_8);
 
     private Optional<byte[]> exifMetadata = Optional.empty();
     private Optional<byte[]> xmpMetadata = Optional.empty();

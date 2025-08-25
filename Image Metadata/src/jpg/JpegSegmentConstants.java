@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * This enumeration represents the recognised segment identifiers often present in JPEG files.
+ * This enumeration represents the known segment identifiers, that are often present in JPEG files.
  * 
  * <p>
  * JPEG files are structured as a series of segments, each beginning with a marker (0xFF) followed
@@ -13,45 +13,57 @@ import java.util.Map;
  * </p>
  * 
  * <p>
- * The enum provides helper methods to identify segment types, determine APP numbers, and quickly
- * check if a segment may contain metadata.
+ * The enum also provides helper methods to identify segment types, determine APP numbers, and
+ * quickly check if a segment may contain metadata.
  * </p>
  * 
  * @author Trevor
  * @version 1.1
- * @since 22 August 2025
+ * @since 25 August 2025
  */
 public enum JpegSegmentConstants
 {
-    START_OF_IMAGE(0xFF, 0xD8, "Start of Image"),
-    START_OF_STREAM(0xFF, 0xDA, "Start Of Scan"),
-    END_OF_IMAGE(0xFF, 0xD9, "End of Image"),
-    COMMENT(0xFF, 0xFE, "Comment Segment for JPG"),
+    START_OF_IMAGE(0xFF, 0xD8, "Start of Image", false),
+    START_OF_STREAM(0xFF, 0xDA, "Start Of Scan", true), // SOS has a length field for its header
+    END_OF_IMAGE(0xFF, 0xD9, "End of Image", false),
+    COMMENT(0xFF, 0xFE, "Comment Segment for JPG", true),
+    UNKNOWN(0xFF, 0x00, "Fallback: Unknown or unsupported marker", false),
 
-    APP0_SEGMENT(0xFF, 0xE0, "APP0 Segment for JFIF"),
-    APP1_SEGMENT(0xFF, 0xE1, "APP1 Segment for EXIF"),
-    APP2_SEGMENT(0xFF, 0xE2, "APP2 Segment (ICC)"),
-    APP3_SEGMENT(0xFF, 0xE3, "APP3 Segment"),
-    APP4_SEGMENT(0xFF, 0xE4, "APP4 Segment"),
-    APP5_SEGMENT(0xFF, 0xE5, "APP5 Segment"),
-    APP6_SEGMENT(0xFF, 0xE6, "APP6 Segment"),
-    APP7_SEGMENT(0xFF, 0xE7, "APP7 Segment"),
-    APP8_SEGMENT(0xFF, 0xE8, "APP8 Segment"),
-    APP9_SEGMENT(0xFF, 0xE9, "APP9 Segment"),
-    APP10_SEGMENT(0xFF, 0xEA, "APP10 Segment"),
-    APP11_SEGMENT(0xFF, 0xEB, "APP11 Segment"),
-    APP12_SEGMENT(0xFF, 0xEC, "APP12 Segment"),
-    APP13_SEGMENT(0xFF, 0xED, "APP13 Segment (Photoshop)"),
-    APP14_SEGMENT(0xFF, 0xEE, "APP14 Segment"),
-    APP15_SEGMENT(0xFF, 0xEF, "APP15 Segment"),
+    APP0_SEGMENT(0xFF, 0xE0, "APP0 Segment for JFIF", true),
+    APP1_SEGMENT(0xFF, 0xE1, "APP1 Segment for EXIF", true),
+    APP2_SEGMENT(0xFF, 0xE2, "APP2 Segment (ICC)", true),
+    APP3_SEGMENT(0xFF, 0xE3, "APP3 Segment", true),
+    APP4_SEGMENT(0xFF, 0xE4, "APP4 Segment", true),
+    APP5_SEGMENT(0xFF, 0xE5, "APP5 Segment", true),
+    APP6_SEGMENT(0xFF, 0xE6, "APP6 Segment", true),
+    APP7_SEGMENT(0xFF, 0xE7, "APP7 Segment", true),
+    APP8_SEGMENT(0xFF, 0xE8, "APP8 Segment", true),
+    APP9_SEGMENT(0xFF, 0xE9, "APP9 Segment", true),
+    APP10_SEGMENT(0xFF, 0xEA, "APP10 Segment", true),
+    APP11_SEGMENT(0xFF, 0xEB, "APP11 Segment", true),
+    APP12_SEGMENT(0xFF, 0xEC, "APP12 Segment", true),
+    APP13_SEGMENT(0xFF, 0xED, "APP13 Segment (Photoshop)", true),
+    APP14_SEGMENT(0xFF, 0xEE, "APP14 Segment", true),
+    APP15_SEGMENT(0xFF, 0xEF, "APP15 Segment", true),
 
-    UNKNOWN_SEGMENT(0x00, 0x00, "Unknown"); // fallback for unmapped segments
+    // Restart markers (RST0–RST7) – no length field
+    RST0(0xFF, 0xD0, "Restart Marker 0", false),
+    RST1(0xFF, 0xD1, "Restart Marker 1", false),
+    RST2(0xFF, 0xD2, "Restart Marker 2", false),
+    RST3(0xFF, 0xD3, "Restart Marker 3", false),
+    RST4(0xFF, 0xD4, "Restart Marker 4", false),
+    RST5(0xFF, 0xD5, "Restart Marker 5", false),
+    RST6(0xFF, 0xD6, "Restart Marker 6", false),
+    RST7(0xFF, 0xD7, "Restart Marker 7", false),
 
-    public final byte marker;
-    public final byte flag;
-    public final String description;
+    // TEM marker – no length field
+    TEM(0xFF, 0x01, "Temporary Private Use Marker", false);
 
     private static final Map<Integer, JpegSegmentConstants> LOOKUP = new HashMap<>();
+    private final int marker;
+    private final int flag;
+    private final String description;
+    private final boolean hasLength;
 
     static
     {
@@ -62,27 +74,68 @@ public enum JpegSegmentConstants
         }
     }
 
-    JpegSegmentConstants(int marker, int flag, String description)
+    private JpegSegmentConstants(int marker, int flag, String description, boolean hasLength)
     {
-        this.marker = (byte) (marker & 0xFF);
-        this.flag = (byte) (flag & 0xFF);
+        this.marker = (marker & 0xFF);
+        this.flag = (flag & 0xFF);
         this.description = description;
+        this.hasLength = hasLength;
+    }
+
+    /**
+     * Gets the marker byte for this JPG segment.
+     * 
+     * @return a byte value of the segment marker
+     */
+    public int getMarker()
+    {
+        return marker;
+    }
+
+    /**
+     * Gets the flag byte for this JPG segment.
+     * 
+     * @return a byte value of the segment flag
+     */
+    public int getFlag()
+    {
+        return flag;
+    }
+
+    /**
+     * Gets the description of the segment that is assigned to this enum.
+     * 
+     * @return the description in string
+     */
+    public String getDescription()
+    {
+        return description;
+    }
+
+    /**
+     * Returns true if this segment has a 2-byte length field following the marker.
+     * 
+     * @return true if the segment is expected to have a length of data, otherwise false
+     */
+    public boolean hasLengthField()
+    {
+        return hasLength;
     }
 
     /**
      * Retrieves a segment constant from its marker and flag bytes.
-     * 
+     *
      * @param marker
-     *        the first byte (0xFF)
+     *        the first byte (usually 0xFF)
      * @param flag
      *        the second byte identifying the segment
-     * @return the corresponding {@code JpegSegmentConstants2 }, or {@code null} if unknown
+     * @return the matching JpegSegmentConstants, or {@link #UNKNOWN} if not known
      */
-    public static JpegSegmentConstants fromBytes(byte marker, byte flag)
+    public static JpegSegmentConstants fromBytes(int marker, int flag)
     {
         int key = ((marker & 0xFF) << 8) | (flag & 0xFF);
 
-        return LOOKUP.getOrDefault(key, UNKNOWN_SEGMENT);
+        return LOOKUP.getOrDefault(key, UNKNOWN);
     }
 
     /**
@@ -119,7 +172,7 @@ public enum JpegSegmentConstants
      */
     public boolean isStandardMarker()
     {
-        return !isAppSegment();
+        return this != UNKNOWN && !isAppSegment();
     }
 
     /**
@@ -153,9 +206,10 @@ public enum JpegSegmentConstants
      *        the first byte (should be 0xFF)
      * @param flag
      *        the second byte identifying the segment
+     * 
      * @return true if the segment is an APP segment that may contain metadata
      */
-    public static boolean isMetadataSegment(byte marker, byte flag)
+    public static boolean isMetadataSegment(int marker, int flag)
     {
         return fromBytes(marker, flag).canContainMetadata();
     }
@@ -167,7 +221,9 @@ public enum JpegSegmentConstants
     {
         for (JpegSegmentConstants segment : values())
         {
-            System.out.printf("%02X %02X\t%s%n", segment.marker, segment.flag, segment.description);
+            String extra = segment.isAppSegment() ? String.format(" (APP%d)", segment.getAppNumber()) : "";
+
+            System.out.printf("%02X %02X\t%s%s [hasLengthField=%s]%n", segment.marker, segment.flag, segment.description, extra, segment.hasLength);
         }
     }
 }

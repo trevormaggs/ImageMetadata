@@ -3,6 +3,7 @@ package jpg;
 import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -28,11 +29,14 @@ import tif.TifParser;
  * embedded EXIF data. This data is processed using an internal TIFF parser to provide a structured
  * metadata representation.
  *
+ * Currently, this parser supports only the extraction of EXIF (APP1) metadata.
+ * 
  * <p>
- * Currently, this parser supports only the extraction of EXIF metadata. It expects well-formed APP1
- * segments beginning with the "Exif\0\0" identifier.
+ * Note: EXIF metadata is always stored in a single APP1 segment. Concatenating multiple APP1
+ * segments is non-standard. If support for multi-segment metadata is required, it will only apply
+ * to ICC profiles (APP2) and possibly XMP (APP1) in the future.
  * </p>
- *
+ * 
  * @author Trevor Maggs
  * @version 1.2
  * @since 20 August 2025
@@ -40,8 +44,12 @@ import tif.TifParser;
 public class JpgParser extends AbstractImageParser
 {
     private static final LogFactory LOGGER = LogFactory.getLogger(JpgParser.class);
-    private static final boolean MULTI_EXIF_SEGMENT = true;
-    public static final byte[] JPG_EXIF_IDENTIFIER = "Exif\0\0".getBytes();
+    private static final boolean MULTI_EXIF_SEGMENT = false;
+    public static final byte[] EXIF_IDENTIFIER = "Exif\0\0".getBytes(StandardCharsets.US_ASCII);
+
+    // May be useful when extending to parse ICC Profile and XMP (Adobe)
+    public static final byte[] ICC_IDENTIFIER = "ICC_PROFILE".getBytes(StandardCharsets.US_ASCII);
+    public static final byte[] XMP_IDENTIFIER = "http://ns.adobe.com/xap/1.0/".getBytes(StandardCharsets.US_ASCII);
 
     /**
      * Constructs a new instance with the specified file path.
@@ -56,13 +64,13 @@ public class JpgParser extends AbstractImageParser
     {
         super(fpath);
 
-        LOGGER.info("Image file [" + getImageFile() + "] loaded");
+        LOGGER.info(String.format("Image file [%s] loaded", getImageFile()));
 
         String ext = BatchMetadataUtils.getFileExtension(getImageFile());
 
         if (!ext.equalsIgnoreCase("jpg"))
         {
-            LOGGER.warn("Incorrect extension name detected in file [" + getImageFile().getFileName() + "]. Should be [jpg], but found [" + ext + "]");
+            LOGGER.warn(String.format("Incorrect extension name detected in file [%s]. Should be [jpg], but found [%s]", getImageFile().getFileName(), ext));
         }
     }
 
@@ -107,6 +115,7 @@ public class JpgParser extends AbstractImageParser
             {
                 marker = stream.readUnsignedByte();
             }
+
             catch (EOFException eof)
             {
                 return Optional.empty();
@@ -114,7 +123,8 @@ public class JpgParser extends AbstractImageParser
 
             if (marker != 0xFF)
             {
-                continue; // resync to marker
+                // resync to marker
+                continue;
             }
 
             try
@@ -145,40 +155,26 @@ public class JpgParser extends AbstractImageParser
                 }
             }
 
-            return Optional.ofNullable(JpegSegmentConstants.fromBytes((byte) marker, (byte) flag));
+            return Optional.ofNullable(JpegSegmentConstants.fromBytes(marker, flag));
         }
     }
 
     /**
-     * Reads the APP1 segments from a JPEG file, extracting EXIF metadata blocks.
-     *
-     * <p>
-     * JPEG files may contain one or more APP1 segments with EXIF data. This method can either:
-     * </p>
-     *
-     * <ul>
-     * <li>Stop after reading the first valid EXIF APP1 segment ({@code readAll = false}), or</li>
-     * <li>Collect and concatenate all EXIF APP1 segments ({@code readAll = true})</li>
-     * </ul>
-     *
-     * <p>
-     * Each APP1 segment is verified to start with the {@code "Exif\0\0"} identifier before
-     * inclusion. Non-EXIF APP1 segments and other segment types are skipped.
-     * </p>
+     * Reads all APP1 segments containing EXIF data.
      *
      * @param stream
-     *        the input stream of the JPEG file, positioned at the current read location
+     *        the input JPEG stream
      * @param readAll
-     *        if true, reads all EXIF APP1 segments and concatenates them;
-     *        if false, stops after the first valid EXIF APP1 segment
-     * @return an Optional containing the concatenated EXIF payload bytes, or Optional.empty() if no
-     *         valid EXIF segments are found
-     *
+     *        whether to read all EXIF APP1 segments or stop at the first
+     * 
+     * @return Optional of concatenated EXIF bytes
+     * 
      * @throws IOException
-     *         if an I/O error occurs while reading the stream
+     *         if an I/O error occurs
      */
     private Optional<byte[]> readApp1ExifSegments(ImageFileInputStream stream, boolean readAll) throws IOException
     {
+        int length;
         int totalLength = 0;
         List<byte[]> exifSegments = new ArrayList<>();
 
@@ -193,114 +189,94 @@ public class JpgParser extends AbstractImageParser
 
             JpegSegmentConstants segment = optSeg.get();
 
-            if (segment == JpegSegmentConstants.UNKNOWN_SEGMENT)
+            if (!segment.hasLengthField())
             {
-                // Unknown segment - skip any existing payload
-                int len = stream.readUnsignedShort() - 2;
-
-                if (len > 0)
+                if (segment == JpegSegmentConstants.START_OF_IMAGE)
                 {
-                    stream.skip(len);
+                    continue;
                 }
 
-                LOGGER.debug("Skipping unknown segment [0xFF" + String.format("%02X", segment.flag & 0xFF) + "] and length [" + len + "]");
-
-                continue;
-            }
-
-            else if (segment == JpegSegmentConstants.START_OF_IMAGE)
-            {
-                // SOI
-                continue;
-            }
-
-            else if (segment == JpegSegmentConstants.END_OF_IMAGE)
-            {
-                // EOI
-                break;
-            }
-
-            else if (segment == JpegSegmentConstants.START_OF_STREAM)
-            {
-                // SOS
-                int sosLen = stream.readUnsignedShort() - 2;
-
-                if (sosLen > 0)
+                else if (segment == JpegSegmentConstants.END_OF_IMAGE)
                 {
-                    stream.skip(sosLen);
+                    LOGGER.debug("EOI marker reached, stopping metadata parsing");
+                    break;
                 }
 
-                break;
+                else if (segment == JpegSegmentConstants.START_OF_STREAM)
+                {
+                    LOGGER.debug("SOS marker reached, stopping metadata parsing");
+                    break;
+                }
+
+                else
+                {
+                    LOGGER.debug(String.format("Marker [0xFF%02X] has no length, skipping", segment.getFlag()));
+                    continue;
+                }
+            }
+
+            if (segment == JpegSegmentConstants.APP1_SEGMENT)
+            {
+                length = stream.readUnsignedShort() - 2;
+
+                if (length <= 0)
+                {
+                    continue;
+                }
+
+                byte[] payload = stream.readBytes(length);
+
+                if (payload.length >= JpgParser.EXIF_IDENTIFIER.length && Arrays.equals(Arrays.copyOfRange(payload, 0, JpgParser.EXIF_IDENTIFIER.length), JpgParser.EXIF_IDENTIFIER))
+                {
+                    byte[] exif = Arrays.copyOfRange(payload, JpgParser.EXIF_IDENTIFIER.length, payload.length);
+
+                    exifSegments.add(exif);
+                    totalLength += exif.length;
+
+                    LOGGER.debug(String.format("Valid EXIF APP1 segment found. Length [%d]", exif.length));
+
+                    if (!readAll)
+                    {
+                        return Optional.of(exif);
+                    }
+                }
+
+                else
+                {
+                    LOGGER.debug(String.format("Non-EXIF or unhandled segment [0xFF%02X] skipped", segment.getFlag()));
+                }
             }
 
             else
             {
-                int length = stream.readUnsignedShort() - 2;
+                // skip unknown or other APPn segments
+                length = stream.readUnsignedShort() - 2;
 
-                if (length < 0)
+                if (length > 0)
                 {
-                    // corrupt segment, try to resync
-                    continue;
-                }
-
-                if (segment == JpegSegmentConstants.APP1_SEGMENT)
-                {
-                    byte[] payload = stream.readBytes(length);
-
-                    if (payload.length >= JPG_EXIF_IDENTIFIER.length && Arrays.equals(Arrays.copyOf(payload, JPG_EXIF_IDENTIFIER.length), JPG_EXIF_IDENTIFIER))
-                    {
-                        byte[] exif = Arrays.copyOfRange(payload, JPG_EXIF_IDENTIFIER.length, payload.length);
-
-                        exifSegments.add(exif);
-                        totalLength += exif.length;
-
-                        LOGGER.debug("Valid EXIF APP1 segment found. Length [" + exif.length + "]");
-
-                        if (!readAll)
-                        {
-                            return Optional.of(exif); // stop at first segment
-                        }
-                    }
-
-                    else
-                    {
-                        LOGGER.debug("Skipping non-EXIF APP1 segment [0xFF" + String.format("%02X", segment.flag & 0xFF) + "] length [" + length + "]");
-                    }
-                }
-
-                else if (length > 0)
-                {
-                    // skip other segments
                     stream.skip(length);
-                    LOGGER.debug("Skipping segment [" + segment.description + "] [0xFF" + String.format("%02X", segment.flag & 0xFF) + "] length [" + length + "]");
                 }
-            }
 
-            if (segment == JpegSegmentConstants.END_OF_IMAGE || segment == JpegSegmentConstants.START_OF_STREAM)
-            {
-                // stop parsing
-                break;
+                LOGGER.debug(String.format("Non-EXIF APP1 segment [0xFF%02X] skipped", (segment.getFlag() & 0xFF)));
             }
         }
 
         if (exifSegments.isEmpty())
         {
-            LOGGER.info("No EXIF APP1 segments found in file [" + getImageFile() + "]");
             return Optional.empty();
         }
 
-        else if (exifSegments.size() == 1)
+        if (exifSegments.size() == 1)
         {
             return Optional.of(exifSegments.get(0));
         }
 
-        else
+        // Concatenate multiple EXIF segments if required
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream(totalLength))
         {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream(totalLength);
-
             for (byte[] seg : exifSegments)
             {
-                baos.write(seg, 0, seg.length);
+                baos.write(seg);
             }
 
             return Optional.of(baos.toByteArray());
@@ -436,135 +412,5 @@ public class JpgParser extends AbstractImageParser
         }
 
         return sb.toString();
-    }
-
-    // TESTING
-    private Optional<byte[]> readApp1ExifSegments2(ImageFileInputStream stream, boolean readAll) throws IOException
-    {
-        int totalLength = 0;
-        List<byte[]> exifSegments = new ArrayList<>();
-
-        while (true)
-        {
-            Optional<JpegSegmentConstants> optSeg = fetchNextSegment(stream);
-
-            if (!optSeg.isPresent())
-            {
-                break;
-            }
-
-            JpegSegmentConstants segment = optSeg.get();
-
-            switch (segment)
-            {
-                case START_OF_IMAGE:
-                // SOI - do nothing
-                break;
-
-                case END_OF_IMAGE:
-                case START_OF_STREAM:
-                    // EOI or SOS - stop parsing
-                    if (segment == JpegSegmentConstants.START_OF_STREAM)
-                    {
-                        int sosLen = stream.readUnsignedShort() - 2;
-
-                        if (sosLen > 0)
-                        {
-                            stream.skip(sosLen);
-                        }
-                    }
-                    return exifSegments.isEmpty() ? Optional.empty() : exifSegments.size() == 1 ? Optional.of(exifSegments.get(0)) : Optional.of(concatenateSegments(exifSegments, totalLength));
-
-                case APP1_SEGMENT:
-                    int length = stream.readUnsignedShort() - 2;
-                    if (length < 0)
-                     {
-                        break; // corrupt segment
-                    }
-
-                    byte[] payload = stream.readBytes(length);
-                    if (payload.length >= JPG_EXIF_IDENTIFIER.length && Arrays.equals(Arrays.copyOf(payload, JPG_EXIF_IDENTIFIER.length), JPG_EXIF_IDENTIFIER))
-                    {
-                        byte[] exif = Arrays.copyOfRange(payload, JPG_EXIF_IDENTIFIER.length, payload.length);
-
-                        exifSegments.add(exif);
-                        totalLength += exif.length;
-
-                        LOGGER.debug("Valid EXIF APP1 segment found. Length [" + exif.length + "]");
-
-                        if (!readAll)
-                        {
-                            return Optional.of(exif);
-                        }
-                    }
-
-                    else
-                    {
-                        LOGGER.debug("Skipping non-EXIF APP1 segment [0xFF" +
-                                String.format("%02X", segment.flag & 0xFF) + "] length [" + length + "]");
-                    }
-
-                break;
-
-                case UNKNOWN_SEGMENT:
-                    int unkLength = stream.readUnsignedShort() - 2;
-                    if (unkLength > 0)
-                    {
-                        stream.skip(unkLength);
-                    }
-
-                    LOGGER.debug("Skipping unknown segment [0xFF" + String.format("%02X", segment.flag & 0xFF) + "] and length [" + unkLength + "]");
-                break;
-
-                default:
-                    int otherLen = stream.readUnsignedShort() - 2;
-
-                    if (otherLen > 0)
-                    {
-                        stream.skip(otherLen);
-                        LOGGER.debug("Skipping segment [" + segment.description + "] [0xFF" +
-                                String.format("%02X", segment.flag & 0xFF) + "] length [" + otherLen + "]");
-                    }
-
-                break;
-            }
-        }
-
-        if (exifSegments.isEmpty())
-        {
-            LOGGER.info("No EXIF APP1 segments found in file [" + getImageFile() + "]");
-            return Optional.empty();
-        }
-
-        if (exifSegments.size() == 1)
-        {
-            return Optional.of(exifSegments.get(0));
-        }
-
-        return Optional.of(concatenateSegments(exifSegments, totalLength));
-    }
-
-    /**
-     * Helper method to concatenate multiple byte arrays.
-     */
-    private byte[] concatenateSegments(List<byte[]> segments, int totalLength)
-    {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream(totalLength);
-
-        for (byte[] seg : segments)
-        {
-            try
-            {
-                baos.write(seg);
-            }
-
-            catch (IOException e)
-            {
-                // This should not happen with ByteArrayOutputStream
-                LOGGER.error("Error concatenating EXIF segments", e);
-            }
-        }
-
-        return baos.toByteArray();
     }
 }

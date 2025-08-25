@@ -109,9 +109,9 @@ public class WebpHandler implements ImageHandler
                  * to contain the JPG premable within the TIFF header block for some strange
                  * reasons, the snippet below makes sure the JPEG segment is skipped.
                  */
-                if (data.length >= JpgParser.JPG_EXIF_IDENTIFIER.length && Arrays.equals(Arrays.copyOf(data, JpgParser.JPG_EXIF_IDENTIFIER.length), JpgParser.JPG_EXIF_IDENTIFIER))
+                if (data.length >= JpgParser.EXIF_IDENTIFIER.length && Arrays.equals(Arrays.copyOf(data, JpgParser.EXIF_IDENTIFIER.length), JpgParser.EXIF_IDENTIFIER))
                 {
-                    data = Arrays.copyOfRange(data, JpgParser.JPG_EXIF_IDENTIFIER.length, data.length);
+                    data = Arrays.copyOfRange(data, JpgParser.EXIF_IDENTIFIER.length, data.length);
                 }
 
                 return Optional.of(data);
